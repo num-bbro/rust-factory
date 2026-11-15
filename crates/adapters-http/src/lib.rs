@@ -1,19 +1,20 @@
 //! HTTP adapter: translates HTTP requests into use-case calls and results into responses.
 //!
 //! No business rules here — only mapping. Errors from the domain become status codes:
-//! invalid input → 422, overlap → 409, storage failure → 503.
+//! invalid input → 422, overlap → 409, unknown reservation → 404, storage failure → 503.
+//! See ADR 0007 for the cancel endpoint.
 
 use std::sync::Arc;
 
-use application::{BookSlot, BookingError, ScheduleRepository};
+use application::{BookSlot, BookingError, CancelReservation, RepositoryError, ScheduleRepository};
 use axum::{
     Json, Router,
-    extract::State,
+    extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::{delete, get, post},
 };
-use domain::ScheduleError;
+use domain::{ReservationId, Schedule, ScheduleError};
 use serde::{Deserialize, Serialize};
 
 /// Build the HTTP API around a repository implementation.
@@ -24,7 +25,41 @@ where
     Router::new()
         .route("/health", get(|| async { "ok" }))
         .route("/reservations", post(book::<R>))
-        .with_state(Arc::new(BookSlot::new(repo)))
+        .route("/reservations/{id}", delete(cancel::<R>))
+        .with_state(Arc::new(UseCases::new(repo)))
+}
+
+/// A repository shared by several use cases.
+struct Shared<R>(Arc<R>);
+
+impl<R> Clone for Shared<R> {
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
+}
+
+impl<R: ScheduleRepository> ScheduleRepository for Shared<R> {
+    fn load(&self) -> Result<Schedule, RepositoryError> {
+        self.0.load()
+    }
+    fn save(&self, schedule: &Schedule) -> Result<(), RepositoryError> {
+        self.0.save(schedule)
+    }
+}
+
+struct UseCases<R> {
+    book: BookSlot<Shared<R>>,
+    cancel: CancelReservation<Shared<R>>,
+}
+
+impl<R: ScheduleRepository> UseCases<R> {
+    fn new(repo: R) -> Self {
+        let shared = Shared(Arc::new(repo));
+        Self {
+            book: BookSlot::new(shared.clone()),
+            cancel: CancelReservation::new(shared),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -44,26 +79,39 @@ struct Problem {
 }
 
 async fn book<R: ScheduleRepository>(
-    State(use_case): State<Arc<BookSlot<R>>>,
+    State(use_cases): State<Arc<UseCases<R>>>,
     Json(req): Json<BookRequest>,
 ) -> Response {
-    match use_case.execute(req.start, req.end) {
+    match use_cases.book.execute(req.start, req.end) {
         Ok(id) => (StatusCode::CREATED, Json(Booked { id: id.get() })).into_response(),
-        Err(err) => {
-            let status = match &err {
-                BookingError::Rule(ScheduleError::Overlap { .. }) => StatusCode::CONFLICT,
-                BookingError::Rule(_) => StatusCode::UNPROCESSABLE_ENTITY,
-                BookingError::Storage(_) => StatusCode::SERVICE_UNAVAILABLE,
-            };
-            (
-                status,
-                Json(Problem {
-                    error: err.to_string(),
-                }),
-            )
-                .into_response()
-        }
+        Err(err) => problem(&err),
     }
+}
+
+async fn cancel<R: ScheduleRepository>(
+    State(use_cases): State<Arc<UseCases<R>>>,
+    Path(id): Path<u64>,
+) -> Response {
+    match use_cases.cancel.execute(ReservationId::new(id)) {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(err) => problem(&err),
+    }
+}
+
+fn problem(err: &BookingError) -> Response {
+    let status = match err {
+        BookingError::Rule(ScheduleError::Overlap { .. }) => StatusCode::CONFLICT,
+        BookingError::Rule(ScheduleError::NotFound(_)) => StatusCode::NOT_FOUND,
+        BookingError::Rule(_) => StatusCode::UNPROCESSABLE_ENTITY,
+        BookingError::Storage(_) => StatusCode::SERVICE_UNAVAILABLE,
+    };
+    (
+        status,
+        Json(Problem {
+            error: err.to_string(),
+        }),
+    )
+        .into_response()
 }
 
 #[cfg(test)]
@@ -101,6 +149,24 @@ mod tests {
         (status, serde_json::from_slice(&bytes).unwrap())
     }
 
+    struct BrokenRepo;
+
+    impl ScheduleRepository for BrokenRepo {
+        fn load(&self) -> Result<Schedule, RepositoryError> {
+            Err(RepositoryError("disk on fire".into()))
+        }
+        fn save(&self, _: &Schedule) -> Result<(), RepositoryError> {
+            Err(RepositoryError("disk on fire".into()))
+        }
+    }
+
+    async fn delete(app: &Router, uri: &str) -> (StatusCode, axum::body::Bytes) {
+        let req = Request::delete(uri).body(Body::empty()).unwrap();
+        let res = app.clone().oneshot(req).await.unwrap();
+        let status = res.status();
+        (status, res.into_body().collect().await.unwrap().to_bytes())
+    }
+
     #[tokio::test]
     async fn health_says_ok() {
         let app = router(MemRepo::default());
@@ -127,5 +193,73 @@ mod tests {
         let app = router(MemRepo::default());
         let (status, _) = post(&app, r#"{"start":600,"end":540}"#).await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    }
+
+    #[tokio::test]
+    async fn cancel_returns_204_and_frees_the_slot() {
+        let app = router(MemRepo::default());
+        let (_, body) = post(&app, r#"{"start":540,"end":600}"#).await;
+        let uri = format!("/reservations/{}", body["id"]);
+        let (status, bytes) = delete(&app, &uri).await;
+        assert_eq!(status, StatusCode::NO_CONTENT);
+        assert!(bytes.is_empty());
+        let (status, _) = post(&app, r#"{"start":540,"end":600}"#).await;
+        assert_eq!(status, StatusCode::CREATED);
+    }
+
+    #[tokio::test]
+    async fn cancel_removes_only_the_given_reservation() {
+        let app = router(MemRepo::default());
+        post(&app, r#"{"start":540,"end":600}"#).await;
+        post(&app, r#"{"start":600,"end":660}"#).await;
+        delete(&app, "/reservations/1").await;
+        let (status, _) = post(&app, r#"{"start":600,"end":660}"#).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+    }
+
+    #[tokio::test]
+    async fn cancel_unknown_id_returns_404_with_error_body() {
+        let app = router(MemRepo::default());
+        let (status, bytes) = delete(&app, "/reservations/42").await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(body["error"].is_string());
+    }
+
+    #[tokio::test]
+    async fn cancel_twice_returns_404_the_second_time() {
+        let app = router(MemRepo::default());
+        post(&app, r#"{"start":540,"end":600}"#).await;
+        assert_eq!(
+            delete(&app, "/reservations/1").await.0,
+            StatusCode::NO_CONTENT
+        );
+        assert_eq!(
+            delete(&app, "/reservations/1").await.0,
+            StatusCode::NOT_FOUND
+        );
+    }
+
+    #[tokio::test]
+    async fn cancel_storage_failure_returns_503_with_error_body() {
+        let app = router(BrokenRepo);
+        let (status, bytes) = delete(&app, "/reservations/1").await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(body["error"].is_string());
+    }
+
+    #[tokio::test]
+    async fn booking_storage_failure_returns_503() {
+        let app = router(BrokenRepo);
+        let (status, _) = post(&app, r#"{"start":540,"end":600}"#).await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[tokio::test]
+    async fn non_numeric_id_is_rejected_by_the_framework_with_400() {
+        let app = router(MemRepo::default());
+        let (status, _) = delete(&app, "/reservations/abc").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
     }
 }
