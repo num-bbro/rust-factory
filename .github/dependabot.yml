@@ -1,0 +1,27 @@
+# Dependabot: weekly update PRs, grouped so they arrive as one PR per ecosystem.
+# Every update PR runs the full CI (including cargo-deny) and needs a human merge, like any PR.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      crates:
+        patterns: ["*"]
+    commit-message:
+      prefix: build
+    labels: [type:task, complexity:simple]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+    labels: [type:task, complexity:simple]

@@ -50,6 +50,12 @@ anything that needs a password or secret.
 - Keep PRs small: one task, one PR. The PR body links the issue (`Closes #42`) and states the
   worker model used.
 - Never force-push to `main`, never commit secrets, never commit build output (`target/`).
+- **CI** (`.github/workflows/ci.yml`) runs on every PR: `gates` (= `just check`), `architecture
+  model` (report attached to the run) and `mutants (changed code)`. All three are required by the
+  `main` ruleset, and the branch must be up to date with `main`. A red check means fix the code, never
+  the workflow or the gate settings. If CI fails, read the log (`gh run view <id> --log-failed`)
+  and reproduce locally with the matching `just` recipe.
+- Dependabot opens grouped weekly update PRs (crates, actions); treat them as simple tasks.
 
 ## Quality bar (non-negotiable), see ADR 0003
 - `just check` must pass before a PR: format, clippy (warnings are errors), all tests,
@@ -124,7 +130,7 @@ The factory is being built stage by stage. Only rely on what is marked done.
 - [x] Stage 3 — TOGAF docs, ADRs, ArchiMate model pipeline (see "Architecture" above)
 - [x] Stage 4 — Rust workspace template + local quality gates (see "Quality bar")
 - [x] Stage 5 — agent team (subagents, skills, routing, cost report; see "How the team is wired")
-- [ ] Stage 6 — CI/CD pipelines
+- [x] Stage 6 — CI on GitHub: gates, model report, mutants; required on `main` (see "Git workflow")
 - [ ] Stage 7 — acceptance builds
 - [ ] Stage 8 — pilot and rollout deploys
 - [ ] Stage 9 — sample domain end to end, parallel workers
