@@ -149,7 +149,7 @@ project repo="num-bbro/rust-factory" title="":
 model:
     scripts/archimate/build.sh
 
-# Validate the ArchiMate text model and doc references only (fast, no Archi needed).
+# Validate the ArchiMate text model and doc references only (fast; reads the relationship rules from the pinned Archi install, does not start Archi).
 model-check:
     scripts/archimate/build.sh --check
 

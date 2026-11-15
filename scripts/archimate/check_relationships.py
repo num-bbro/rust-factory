@@ -24,7 +24,9 @@ def load_rules(archi_home):
     folders = sorted(glob.glob(pattern))
     if not folders:
         fail(f"Archi rules not found at {pattern} — run ./bootstrap.sh")
-    folder = Path(folders[-1])
+    if len(folders) > 1:
+        fail("More than one Archi model plugin found, cannot pick the rules:\n  " + "\n  ".join(folders))
+    folder = Path(folders[0])
     try:
         keys = {
             k.get("char"): k.get("relationship")
@@ -53,19 +55,19 @@ def main():
     relations = read_csv(model_dir / "relations.csv")
     problems = []
     for rel in relations:
-        rid, rtype, src, dst = rel["ID"], rel["Type"], rel["Source"], rel["Target"]
-        missing = [i for i in (src, dst) if i not in types]
-        for ident in missing:
-            problems.append(f"{rid}: {ident} is not in elements.csv")
+        rid, rtype, src, dst = (rel[k] or "" for k in ("ID", "Type", "Source", "Target"))
+        missing = [(end, rel[end] or "") for end in ("Source", "Target") if (rel[end] or "") not in types]
+        for end, ident in missing:
+            problems.append(f"{rid}: {end} '{ident}' is not an element ID")
         if rtype not in known_types:
-            problems.append(f"{rid}: unknown relationship type {rtype}")
+            problems.append(f"{rid}: unknown relationship type '{rtype}'")
         if missing or rtype not in known_types:
             continue
         allowed = rules.get((types[src], types[dst]), set())
         if rtype not in allowed:
             names = ", ".join(sorted(allowed)) or "none"
             problems.append(
-                f"{rid}: {rtype} is not allowed from {types[src]} ({src}) to {types[dst]} ({dst});"
+                f"{rid}: {rtype} is not allowed from {types[src]} ('{src}') to {types[dst]} ('{dst}');"
                 f" allowed: {names}"
             )
     for problem in problems:

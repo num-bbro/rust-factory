@@ -81,3 +81,7 @@ validity is not checked.
   but says nothing about the direction or meaning of the link; *an extra `BusinessActor` per
   agent* (actor assigned to role, component realizing the actor) adds three elements and three
   relationships for no new information and crowds the views.
+- Also considered: *Realization* from the agent component to the business process it carries out
+  (allowed by the rules, e.g. the workers realizing `id-bus-proc-implement`). Not chosen here
+  because bug #27 is about the agent-to-role links and those IDs must keep their ends; it can be
+  added later as additional relationships, not as a replacement.
