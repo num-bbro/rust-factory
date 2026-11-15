@@ -5,6 +5,8 @@ task to a **worker** agent. The work goes through GitHub issues, pull requests, 
 and pilot and production deploys. The business and architecture are documented with TOGAF and
 ArchiMate.
 
+[![CI](https://github.com/num-bbro/rust-factory/actions/workflows/ci.yml/badge.svg)](https://github.com/num-bbro/rust-factory/actions/workflows/ci.yml)
+
 > Status: under construction, built stage by stage. See "Factory build-out status" in
 > [CLAUDE.md](CLAUDE.md).
 
@@ -40,6 +42,8 @@ gh auth login              # once per machine
 | `scripts/board.sh` | Put an issue/PR on the Project board and set its fields |
 | `.claude/agents/` | Worker agents with pinned models: scout (Haiku), implementers (Sonnet / Opus), architect, reviewer |
 | `.claude/skills/` | Conductor workflows: `/plan-epic`, `/split-tasks`, `/implement`, `/review` |
+| `.github/workflows/ci.yml`, `.github/actions/setup/` | CI: same gates as `just check`, on every PR and on `main`; machines set up by `bootstrap.sh` |
+| `.github/dependabot.yml` | Weekly grouped dependency update PRs |
 | `scripts/issue-link.sh` | Sub-issues and "blocked by" links between issues |
 | `scripts/cost-report.py`, `tools/model-prices.toml` | `just cost`: agent spend per model, agent and task |
 | `docs/togaf/` | One document per TOGAF ADM phase (narrative) |
