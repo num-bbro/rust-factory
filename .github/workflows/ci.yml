@@ -66,6 +66,16 @@ jobs:
             build/architecture/model.xml
             build/architecture/report/
 
+  acceptance:
+    name: acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Build release image, run acceptance tests against it, check health and shutdown
+        run: just acceptance
+
   mutants:
     name: mutants (changed code)
     if: github.event_name == 'pull_request'

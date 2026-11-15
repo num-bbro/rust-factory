@@ -19,6 +19,7 @@ const ALLOWED_INTERNAL: &[(&str, &[&str])] = &[
         &["application", "domain", "adapters-db", "adapters-http"],
     ),
     ("architecture-tests", &[]),
+    ("acceptance-tests", &[]),
 ];
 
 /// External crates the domain may use. Keep this list tiny: anything here becomes part of every
@@ -44,6 +45,8 @@ struct Workspace {
     members: BTreeSet<String>,
     /// crate → normal dependency names
     deps: BTreeMap<String, BTreeSet<String>>,
+    /// crate → all dependency names (normal, dev and build)
+    all_deps: BTreeMap<String, BTreeSet<String>>,
 }
 
 fn workspace() -> Workspace {
@@ -71,7 +74,19 @@ fn workspace() -> Workspace {
             (p.name.to_string(), normal)
         })
         .collect();
-    Workspace { members, deps }
+    let all_deps = meta
+        .workspace_packages()
+        .iter()
+        .map(|p| {
+            let all = p.dependencies.iter().map(|d| d.name.clone()).collect();
+            (p.name.to_string(), all)
+        })
+        .collect();
+    Workspace {
+        members,
+        deps,
+        all_deps,
+    }
 }
 
 #[test]
@@ -134,5 +149,20 @@ fn core_layers_have_no_infrastructure() {
         found.is_empty(),
         "infrastructure in a core layer:\n  {}",
         found.join("\n  ")
+    );
+}
+
+#[test]
+fn acceptance_tests_are_black_box() {
+    // Acceptance tests must judge the service only from the outside (over HTTP), so they may not
+    // depend on any workspace crate, not even as a dev-dependency.
+    let ws = workspace();
+    let internal: Vec<_> = ws.all_deps["acceptance-tests"]
+        .iter()
+        .filter(|d| ws.members.contains(*d))
+        .collect();
+    assert!(
+        internal.is_empty(),
+        "acceptance-tests must stay black-box; remove dependencies on {internal:?}"
     );
 }
