@@ -48,3 +48,15 @@ reasoning pays off. Per million tokens, Fable 5.2 costs 2× Opus 5.5, 4× Sonnet
   testing. Pin exact model IDs.
 - Follow-up: verify the sub-issue / blocked-by write calls of `scripts/issue-link.sh` on the first
   real `/split-tasks` run (only the read path was exercised in this stage).
+
+## Amendment 2026-11-15: parallel workers
+- **What changed**: `/implement` now runs ready tasks in waves of up to 3 concurrent workers, one
+  git worktree each, instead of sequentially.
+- **Why it is safe**: every worker already has its own worktree and branch; a task joins a wave
+  only if it has no open "blocked by" link and shares no crate or file with another task of the
+  wave (`/split-tasks` links tasks that edit the same files). PRs are still reviewed and merged one
+  by one by the human, and each later PR is brought up to date with `gh pr update-branch` and
+  re-checked by CI before the merge request.
+- **Why a cap of 3**: it limits the cost burst and the number of PRs the human has to review at
+  once.
+- **Cost effect**: the same total tokens, a shorter wall-clock time, and larger spending bursts.

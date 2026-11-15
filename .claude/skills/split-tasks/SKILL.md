@@ -15,6 +15,9 @@ PR. Do not write code.
    `#$ARGUMENTS scout: <question>`). Do not read source files yourself.
 2. **Design the split**: usually domain rule → use case → adapter → acceptance test, but follow the
    story. Each task: one clear outcome, checkable "Done when" items, the crates it touches.
+   Tasks that edit the same files or crate get a "blocked by" link even when there is no logical
+   order between them, because `/implement` runs unblocked tasks in parallel. Tasks in different
+   crates with no dependency get no link, so they can run together.
 3. **Route each task** with the rule from `CLAUDE.md`:
    - `complexity:simple` (→ Sonnet) only if **all three** hold: clear acceptance criteria, touches
      **one crate**, needs **no new design decision**;
