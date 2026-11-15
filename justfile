@@ -4,6 +4,65 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 default:
     @just --list
 
+# --- Code quality gates -------------------------------------------------------------------
+# `just check` is the full local gate: the same checks CI runs. Fix what it reports; never
+# bypass it. `just check-fast` is the quick subset agents run before handing work back.
+
+# Lines-covered threshold (%). main.rs is startup wiring, covered by acceptance tests instead.
+coverage_min := "85"
+coverage_ignore := "crates/app/src/main.rs"
+
+# Run every gate: format, lint, tests, dependency policy, coverage, architecture model.
+check: fmt-check lint test deny coverage model-check
+    @echo "✔ all gates passed"
+
+# Quick gate for the edit loop: format, lint, tests.
+check-fast: fmt-check lint test
+
+# Format all code in place.
+fmt:
+    cargo fmt --all
+
+# Fail if any file is not formatted.
+fmt-check:
+    cargo fmt --all --check
+
+# Clippy with the workspace lint set; any warning fails.
+lint:
+    cargo clippy --workspace --all-targets --locked -- -D warnings
+
+# Run all tests (unit, property, HTTP, architecture rules).
+test *args:
+    cargo nextest run --workspace --locked {{args}}
+
+# Dependency policy: vulnerabilities, licenses, sources (deny.toml).
+deny:
+    cargo deny --log-level error check
+
+# Line coverage, failing below the threshold. HTML report: just coverage-html
+coverage:
+    cargo llvm-cov nextest --workspace --locked --summary-only \
+      --ignore-filename-regex '{{coverage_ignore}}' --fail-under-lines {{coverage_min}}
+
+# Open a browsable coverage report.
+coverage-html:
+    cargo llvm-cov nextest --workspace --locked --ignore-filename-regex '{{coverage_ignore}}' --open
+
+# Mutation testing: are the tests really testing? Slow; pass e.g. `-p domain` to narrow it.
+mutants *args:
+    cargo mutants --workspace {{args}}
+
+# Mutation-test only the code changed against main (what CI will run on PRs).
+mutants-diff base="origin/main":
+    git diff {{base}} > target/mutants.diff
+    cargo mutants --workspace --in-diff target/mutants.diff
+
+# Run the service locally (PORT defaults to 8080).
+run:
+    cargo run -p app
+
+# --- Factory setup ----------------------------------------------------------------------------
+
 # Prepare this machine (Arch or Ubuntu/WSL). Safe to re-run. Pass --dry-run to preview.
 bootstrap *args:
     ./bootstrap.sh {{args}}

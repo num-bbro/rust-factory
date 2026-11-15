@@ -1,0 +1,15 @@
+[package]
+name = "adapters-db"
+description = "Persistence adapter implementing the application's repository port"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+application.workspace = true
+domain.workspace = true
+
+[lints]
+workspace = true

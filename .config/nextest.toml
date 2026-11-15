@@ -1,0 +1,12 @@
+# cargo-nextest configuration. https://nexte.st/docs/configuration/
+[profile.default]
+fail-fast = true
+slow-timeout = { period = "30s", terminate-after = 4 }
+
+# CI: run everything (no fail-fast) and write a JUnit report for the PR checks view.
+[profile.ci]
+fail-fast = false
+retries = 0
+
+[profile.ci.junit]
+path = "junit.xml"
