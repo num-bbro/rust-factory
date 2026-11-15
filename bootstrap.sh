@@ -217,12 +217,21 @@ else
   fi
 fi
 # Desktop launcher so Archi appears in your application menu.
-DESKTOP="$HOME/.local/share/applications/archi.desktop"
-if [[ -f "$DESKTOP" ]] && grep -qF "$ARCHI_DIR/Archi" "$DESKTOP"; then
+# The file MUST be named Archi.desktop (capital A): on Wayland the window manager links a window
+# to its launcher by the app id Archi reports ("Archi"). With any other name the window gets a
+# nameless taskbar icon and is easy to lose behind other windows.
+APPS="$HOME/.local/share/applications"
+DESKTOP="$APPS/Archi.desktop"
+OLD_DESKTOP="$APPS/archi.desktop"   # written by an earlier version of this script
+if [[ -f "$OLD_DESKTOP" ]] && grep -qF "$ARCHI_DIR/Archi" "$OLD_DESKTOP"; then
+  todo "remove old launcher $OLD_DESKTOP (wrong name for Wayland)"
+  run rm -f "$OLD_DESKTOP"
+fi
+if [[ -f "$DESKTOP" ]] && grep -qF "$ARCHI_DIR/Archi" "$DESKTOP" && grep -q '^StartupWMClass=Archi$' "$DESKTOP"; then
   ok "application-menu entry"
 else
   todo "add Archi to the application menu"
-  run bash -c "mkdir -p '$(dirname "$DESKTOP")' && printf '[Desktop Entry]\nType=Application\nName=Archi %s\nComment=ArchiMate modelling tool\nExec=%s %%f\nIcon=%s\nCategories=Development;\n' '$ARCHI_VERSION' '$ARCHI_DIR/Archi' '$ARCHI_DIR/icon.xpm' > '$DESKTOP'"
+  run bash -c "mkdir -p '$APPS' && printf '[Desktop Entry]\nType=Application\nName=Archi %s\nComment=ArchiMate modelling tool\nExec=%s %%f\nIcon=%s\nStartupWMClass=Archi\nCategories=Development;\n' '$ARCHI_VERSION' '$ARCHI_DIR/Archi' '$ARCHI_DIR/icon.xpm' > '$DESKTOP'"
 fi
 
 # ---------------------------------------------------------------------------
