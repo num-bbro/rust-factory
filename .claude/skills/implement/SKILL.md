@@ -21,6 +21,14 @@ worktree) each. A single ready task is simply a wave of one.
    only if its "Crates / modules touched" field shares no crate or file with a task already in the
    wave. A task that overlaps is *held* ("touches the same crate as #N; run it after that PR is
    merged"), because two branches editing the same files conflict when the second PR is updated.
+   A task is also *held* if it shares a crate or file with a task that is already running or whose
+   PR is still open and unmerged (earlier wave or earlier `/implement`). To see them:
+   `gh pr list --state open --json number,title,body`, then for each PR's `Closes #N` task read
+   its "Crates / modules touched" field. Held reason: "touches the same crate as #N, whose PR #P
+   is still open; run it after that PR is merged".
+   A task whose "Crates / modules touched" field is empty or too vague to compare (e.g.
+   "several") counts as overlapping everything: it runs alone, as a wave of one, when nothing else
+   is running or open. Say so in the report so the human can fix the task issue.
    At most **3** workers per wave (cost burst and the human's review load); the rest are held for
    the next wave.
 3. **Route** each task of the wave
@@ -40,7 +48,9 @@ worktree) each. A single ready task is simply a wave of one.
      `gh issue comment <N> --body "Escalated from implementer-simple to implementer-hard: <reason>. Branch: <branch>."`;
      `scripts/board.sh <issue-url> Model=opus`;
      relaunch as **implementer-hard** with description `#<N> escalated: <title>`, passing the
-     branch, without waiting for the rest of the wave.
+     branch, without waiting for the rest of the wave. The relaunch takes over the slot of the
+     worker it replaces: it is not an extra worker against the cap of 3, and no new task is added
+     to the wave because of it.
    - `BLOCKED reason=…` → `gh issue edit <N> --add-label needs-human`, comment the reason, and tell
      the human what decision is needed. Do not retry.
 6. **After a merge, later PRs fall behind `main`** (the ruleset requires an up-to-date branch).
