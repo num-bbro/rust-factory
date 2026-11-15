@@ -8,9 +8,10 @@
 #   ./bootstrap.sh --dry-run  show what would change, change nothing
 #
 # Layers:
-#   1. OS packages   (pacman on Arch, apt on Ubuntu)  — compilers, podman, gh, mise
+#   1. OS packages   (pacman on Arch, apt on Ubuntu)  — compilers, podman, gh, mise, python, Xvfb
 #   2. Rust          (rustup + the toolchain pinned in rust-toolchain.toml)
 #   3. Dev tools     (mise installs the versions pinned in mise.toml: just, cargo-* tools)
+#   3b. Archi        (version pinned in tools/archi.env, checksum-verified, into ~/.local/opt)
 #   4. Shell hook    (mise activation in your shell rc file)
 set -euo pipefail
 
@@ -68,7 +69,7 @@ fi
 log "Layer 1: OS packages"
 
 if [[ $DISTRO == arch ]]; then
-  PKGS=(base-devel git curl unzip pkgconf openssl podman github-cli mise)
+  PKGS=(base-devel git curl unzip pkgconf openssl podman github-cli mise python xorg-server-xvfb)
   # pacman -T prints only the packages that are NOT installed.
   mapfile -t MISSING < <(pacman -T "${PKGS[@]}" || true)
   if (( ${#MISSING[@]} )); then
@@ -110,7 +111,8 @@ else # ubuntu
     ok "mise apt repository configured"
   fi
 
-  PKGS=(build-essential git curl unzip ca-certificates pkg-config libssl-dev podman gh mise)
+  # fonts-thai-tlwg: Thai glyphs for Archi diagrams (WSL images often ship without them)
+  PKGS=(build-essential git curl unzip ca-certificates pkg-config libssl-dev podman gh mise python3 xvfb fonts-thai-tlwg)
   MISSING=()
   for p in "${PKGS[@]}"; do
     dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q "install ok installed" || MISSING+=("$p")
@@ -190,6 +192,46 @@ else
   else
     ok "all tools from mise.toml installed"
   fi
+fi
+
+# ---------------------------------------------------------------------------
+log "Layer 3b: Archi (ArchiMate modeling tool)"
+
+# shellcheck disable=SC1091
+. "$REPO_DIR/tools/archi.env"
+ARCHI_DIR="$HOME/.local/opt/archi-$ARCHI_VERSION"
+if [[ -x "$ARCHI_DIR/Archi" ]]; then
+  ok "Archi $ARCHI_VERSION in $ARCHI_DIR"
+else
+  todo "download Archi $ARCHI_VERSION (~170 MB) from $ARCHI_URL, verify SHA-256, install to $ARCHI_DIR"
+  if (( DRY_RUN )); then
+    CHANGES=$((CHANGES + 1))
+  else
+    TMP_DL="$(mktemp -d)"
+    run curl -fSL --progress-bar -o "$TMP_DL/archi.tgz" "$ARCHI_URL"
+    echo "$ARCHI_SHA256  $TMP_DL/archi.tgz" | sha256sum -c --quiet - \
+      || { rm -rf "$TMP_DL"; die "Archi download checksum mismatch — not installing"; }
+    mkdir -p "$ARCHI_DIR"
+    tar -xzf "$TMP_DL/archi.tgz" -C "$ARCHI_DIR" --strip-components=1
+    rm -rf "$TMP_DL"
+  fi
+fi
+# Desktop launcher so Archi appears in your application menu.
+# The file MUST be named Archi.desktop (capital A): on Wayland the window manager links a window
+# to its launcher by the app id Archi reports ("Archi"). With any other name the window gets a
+# nameless taskbar icon and is easy to lose behind other windows.
+APPS="$HOME/.local/share/applications"
+DESKTOP="$APPS/Archi.desktop"
+OLD_DESKTOP="$APPS/archi.desktop"   # written by an earlier version of this script
+if [[ -f "$OLD_DESKTOP" ]] && grep -qF "$ARCHI_DIR/Archi" "$OLD_DESKTOP"; then
+  todo "remove old launcher $OLD_DESKTOP (wrong name for Wayland)"
+  run rm -f "$OLD_DESKTOP"
+fi
+if [[ -f "$DESKTOP" ]] && grep -qF "$ARCHI_DIR/Archi" "$DESKTOP" && grep -q '^StartupWMClass=Archi$' "$DESKTOP"; then
+  ok "application-menu entry"
+else
+  todo "add Archi to the application menu"
+  run bash -c "mkdir -p '$APPS' && printf '[Desktop Entry]\nType=Application\nName=Archi %s\nComment=ArchiMate modelling tool\nExec=%s %%f\nIcon=%s\nStartupWMClass=Archi\nCategories=Development;\n' '$ARCHI_VERSION' '$ARCHI_DIR/Archi' '$ARCHI_DIR/icon.xpm' > '$DESKTOP'"
 fi
 
 # ---------------------------------------------------------------------------

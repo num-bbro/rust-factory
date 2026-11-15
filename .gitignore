@@ -1,5 +1,6 @@
 # Rust build output
 target/
+/build/
 
 # Test, coverage and mutation-testing output
 /coverage/
@@ -22,3 +23,6 @@ mise.local.toml
 *.swp
 .DS_Store
 Thumbs.db
+
+# Python bytecode cache
+__pycache__/

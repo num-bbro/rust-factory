@@ -1,0 +1,7 @@
+"ID","Key","Value"
+"id-model-factory","Source","Generated from docs/architecture/model/*.csv by scripts/archimate/build_exchange.py; do not edit the .archimate by hand"
+"id-app-comp-conductor","Model","claude-fable-5-2"
+"id-app-comp-hard","Model","claude-opus-5-5"
+"id-app-comp-simple","Model","claude-sonnet-5-5"
+"id-app-comp-scout","Model","claude-haiku-5-5"
+"id-mot-req-togaf","ADR","docs/adr/0002-archimate-model-as-text.md"
