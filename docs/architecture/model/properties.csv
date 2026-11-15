@@ -23,3 +23,7 @@
 "id-app-svc-book","Code","BookSlot"
 "id-app-data-schedule","Crate","crates/domain"
 "id-app-data-schedule","Code","Schedule"
+"id-app-comp-application","ADR","docs/adr/0008-atomic-schedule-update-through-the-port.md"
+"id-app-comp-db","ADR","docs/adr/0008-atomic-schedule-update-through-the-port.md"
+"id-app-data-schedule","ADR","docs/adr/0008-atomic-schedule-update-through-the-port.md"
+"id-app-data-schedule","Issue","#26"

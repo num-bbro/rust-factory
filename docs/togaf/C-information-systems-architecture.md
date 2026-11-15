@@ -31,9 +31,13 @@ Cancelling is `DELETE /reservations/{id}`: `204 No Content` on success, `404 Not
 usual `{error}` body for an unknown or already cancelled id; a non-numeric id gets the
 framework's plain-text `400`. The reservation is removed, not marked; see ADR 0007 for the
 options considered. The domain rule already exists
-(`Schedule::cancel`); the change adds a use case and an HTTP route. Known risk, not fixed by
-this epic: load, change and save of the schedule are not atomic, so concurrent requests can
-lose or duplicate reservations (bug #26).
+(`Schedule::cancel`); the change adds a use case and an HTTP route.
+
+Every change to the schedule goes through one atomic `update` operation on the
+`ScheduleRepository` port: reading, changing and storing the schedule happen as one step, and a
+change refused by a business rule stores nothing. Concurrent requests therefore cannot lose,
+duplicate or bring back reservations (bug #26, fixed by ADR 0008). Each host still keeps its own
+in-memory schedule.
 
 ## Open questions
 - _none yet_

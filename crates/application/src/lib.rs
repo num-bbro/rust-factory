@@ -7,9 +7,21 @@
 use domain::{ReservationId, Schedule, ScheduleError, TimeSlot};
 
 /// Port: where the schedule is stored. Implemented by an adapter (see `adapters-db`).
+///
+/// Every change goes through [`update`](Self::update), which reads, changes and stores the
+/// schedule as **one atomic step**, so concurrent changes never overwrite each other (ADR 0008).
 pub trait ScheduleRepository: Send + Sync {
-    fn load(&self) -> Result<Schedule, RepositoryError>;
-    fn save(&self, schedule: &Schedule) -> Result<(), RepositoryError>;
+    /// Run `change` on the current schedule and store the result, atomically: no other change
+    /// can happen between reading the schedule and storing it.
+    ///
+    /// - `change` returns `Ok(value)`: the changed schedule is stored and `Ok(value)` returned.
+    /// - `change` returns `Err(e)`: nothing is stored (even if `change` modified the schedule
+    ///   before failing) and `Err(e)` is returned.
+    /// - Storage fails: the [`RepositoryError`] is returned as `E`; `change` may not have run.
+    fn update<T, E, F>(&self, change: F) -> Result<T, E>
+    where
+        F: FnOnce(&mut Schedule) -> Result<T, E>,
+        E: From<RepositoryError>;
 }
 
 /// A storage failure, described without leaking the storage technology.
@@ -38,10 +50,8 @@ impl<R: ScheduleRepository> BookSlot<R> {
 
     pub fn execute(&self, start: u16, end: u16) -> Result<ReservationId, BookingError> {
         let slot = TimeSlot::new(start, end)?;
-        let mut schedule = self.repo.load()?;
-        let id = schedule.book(slot)?;
-        self.repo.save(&schedule)?;
-        Ok(id)
+        self.repo
+            .update(|schedule| schedule.book(slot).map_err(BookingError::from))
     }
 }
 
@@ -57,10 +67,10 @@ impl<R: ScheduleRepository> CancelReservation<R> {
     }
 
     pub fn execute(&self, id: ReservationId) -> Result<(), BookingError> {
-        let mut schedule = self.repo.load()?;
-        schedule.cancel(id)?;
-        self.repo.save(&schedule)?;
-        Ok(())
+        self.repo.update(|schedule| {
+            schedule.cancel(id)?;
+            Ok(())
+        })
     }
 }
 
@@ -70,29 +80,36 @@ mod tests {
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    /// Test double for the port: keeps the schedule in memory, can be told to fail.
+    /// Test double for the port: keeps the schedule in memory, can be told to fail, counts
+    /// the changes it stores.
     #[derive(Default)]
     struct FakeRepo {
         schedule: Mutex<Schedule>,
+        /// Storage unavailable: fails before the change runs.
         broken: bool,
-        save_broken: bool,
-        saves: AtomicUsize,
+        /// Storing fails after the change ran.
+        store_broken: bool,
+        commits: AtomicUsize,
     }
 
     impl ScheduleRepository for &FakeRepo {
-        fn load(&self) -> Result<Schedule, RepositoryError> {
+        fn update<T, E, F>(&self, change: F) -> Result<T, E>
+        where
+            F: FnOnce(&mut Schedule) -> Result<T, E>,
+            E: From<RepositoryError>,
+        {
             if self.broken {
-                return Err(RepositoryError("disk on fire".into()));
+                return Err(RepositoryError("disk on fire".into()).into());
             }
-            Ok(self.schedule.lock().unwrap().clone())
-        }
-        fn save(&self, schedule: &Schedule) -> Result<(), RepositoryError> {
-            if self.save_broken {
-                return Err(RepositoryError("disk full".into()));
+            let mut stored = self.schedule.lock().unwrap();
+            let mut copy = stored.clone();
+            let value = change(&mut copy)?;
+            if self.store_broken {
+                return Err(RepositoryError("disk full".into()).into());
             }
-            self.saves.fetch_add(1, Ordering::SeqCst);
-            *self.schedule.lock().unwrap() = schedule.clone();
-            Ok(())
+            *stored = copy;
+            self.commits.fetch_add(1, Ordering::SeqCst);
+            Ok(value)
         }
     }
 
@@ -115,6 +132,7 @@ mod tests {
             BookingError::Rule(ScheduleError::Overlap { .. })
         ));
         assert_eq!(repo.schedule.lock().unwrap().reservations().count(), 1);
+        assert_eq!(repo.commits.load(Ordering::SeqCst), 1);
     }
 
     #[test]
@@ -171,11 +189,11 @@ mod tests {
             err,
             BookingError::Rule(ScheduleError::NotFound(_))
         ));
-        assert_eq!(repo.saves.load(Ordering::SeqCst), 0);
+        assert_eq!(repo.commits.load(Ordering::SeqCst), 0);
     }
 
     #[test]
-    fn cancel_load_failure_is_reported() {
+    fn cancel_storage_unavailable_is_reported() {
         let repo = FakeRepo {
             broken: true,
             ..FakeRepo::default()
@@ -187,15 +205,27 @@ mod tests {
     }
 
     #[test]
-    fn cancel_save_failure_is_reported() {
+    fn cancel_store_failure_is_reported() {
         let repo = FakeRepo::default();
         let id = BookSlot::new(&repo).execute(540, 600).unwrap();
         let failing = FakeRepo {
             schedule: Mutex::new(repo.schedule.lock().unwrap().clone()),
-            save_broken: true,
+            store_broken: true,
             ..FakeRepo::default()
         };
         let err = CancelReservation::new(&failing).execute(id).unwrap_err();
         assert!(matches!(err, BookingError::Storage(_)));
+        assert_eq!(failing.schedule.lock().unwrap().reservations().count(), 1);
+    }
+
+    #[test]
+    fn booking_store_failure_is_reported_and_nothing_is_kept() {
+        let repo = FakeRepo {
+            store_broken: true,
+            ..FakeRepo::default()
+        };
+        let err = BookSlot::new(&repo).execute(540, 600).unwrap_err();
+        assert!(matches!(err, BookingError::Storage(_)));
+        assert_eq!(repo.schedule.lock().unwrap().reservations().count(), 0);
     }
 }

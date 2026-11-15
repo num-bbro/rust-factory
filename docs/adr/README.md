@@ -19,3 +19,4 @@ that supersedes the old one, and set the old one's status to `Superseded by NNNN
 | [0005](0005-release-image-and-acceptance.md) | Release image built once, accepted, then promoted unchanged | Accepted |
 | [0006](0006-pilot-and-rollout-with-quadlet.md) | Pilot and rollout with Podman Quadlet, health checks and automatic rollback | Accepted |
 | [0007](0007-cancel-reservation-by-delete.md) | Cancel a reservation by deleting it: `DELETE /reservations/{id}` | Accepted |
+| [0008](0008-atomic-schedule-update-through-the-port.md) | Atomic schedule changes through one `update` operation on the repository port | Accepted |
