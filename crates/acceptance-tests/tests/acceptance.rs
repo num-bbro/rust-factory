@@ -12,6 +12,8 @@ struct Api {
     client: reqwest::Client,
     status: u16,
     body: Value,
+    /// Id returned by the last successful `POST /reservations`.
+    reservation_id: Option<u64>,
 }
 
 impl Api {
@@ -21,6 +23,7 @@ impl Api {
             client: reqwest::Client::new(),
             status: 0,
             body: Value::Null,
+            reservation_id: None,
         }
     }
 
@@ -29,6 +32,18 @@ impl Api {
             .client
             .post(format!("{}/reservations", self.base))
             .json(&json!({ "start": minutes(from), "end": minutes(to) }))
+            .send()
+            .await
+            .expect("service reachable");
+        self.status = res.status().as_u16();
+        self.body = res.json().await.unwrap_or(Value::Null);
+        self.reservation_id = self.body["id"].as_u64();
+    }
+
+    async fn cancel(&mut self, id: u64) {
+        let res = self
+            .client
+            .delete(format!("{}/reservations/{id}", self.base))
             .send()
             .await
             .expect("service reachable");
@@ -76,6 +91,18 @@ async fn already_reserved(api: &mut Api, from: String, to: String) {
 #[when(expr = "I reserve {word} to {word}")]
 async fn reserve(api: &mut Api, from: String, to: String) {
     api.reserve(&from, &to).await;
+}
+
+#[given("I cancel that reservation")]
+#[when("I cancel that reservation")]
+async fn cancel(api: &mut Api) {
+    let id = api.reservation_id.expect("a reservation was made earlier");
+    api.cancel(id).await;
+}
+
+#[then("the cancellation is accepted")]
+fn cancellation_accepted(api: &mut Api) {
+    assert_eq!(api.status, 204, "body: {}", api.body);
 }
 
 #[then("the reservation is accepted")]
