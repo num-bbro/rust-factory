@@ -85,3 +85,10 @@ validity is not checked.
   (allowed by the rules, e.g. the workers realizing `id-bus-proc-implement`). Not chosen here
   because bug #27 is about the agent-to-role links and those IDs must keep their ends; it can be
   added later as additional relationships, not as a replacement.
+
+## Note 2026-11-16: superseded by ADR 0009
+Issue: #41 (change request) / task #42. This ADR is superseded by
+[ADR 0009](0009-archimate-exchange-model-as-source.md): the Open Group exchange XML becomes the
+single edited source of the architecture, the ADRs and TOGAF documents move into the model, and
+the CSV files are removed. The text above stays as it was accepted; it describes the setup until
+the cutover (step 2 of #41).
