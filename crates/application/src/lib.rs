@@ -45,16 +45,38 @@ impl<R: ScheduleRepository> BookSlot<R> {
     }
 }
 
+/// Use case: cancel a reservation by its id, freeing its slot at once.
+#[derive(Debug)]
+pub struct CancelReservation<R> {
+    repo: R,
+}
+
+impl<R: ScheduleRepository> CancelReservation<R> {
+    pub fn new(repo: R) -> Self {
+        Self { repo }
+    }
+
+    pub fn execute(&self, id: ReservationId) -> Result<(), BookingError> {
+        let mut schedule = self.repo.load()?;
+        schedule.cancel(id)?;
+        self.repo.save(&schedule)?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     /// Test double for the port: keeps the schedule in memory, can be told to fail.
     #[derive(Default)]
     struct FakeRepo {
         schedule: Mutex<Schedule>,
         broken: bool,
+        save_broken: bool,
+        saves: AtomicUsize,
     }
 
     impl ScheduleRepository for &FakeRepo {
@@ -65,6 +87,10 @@ mod tests {
             Ok(self.schedule.lock().unwrap().clone())
         }
         fn save(&self, schedule: &Schedule) -> Result<(), RepositoryError> {
+            if self.save_broken {
+                return Err(RepositoryError("disk full".into()));
+            }
+            self.saves.fetch_add(1, Ordering::SeqCst);
             *self.schedule.lock().unwrap() = schedule.clone();
             Ok(())
         }
@@ -111,6 +137,65 @@ mod tests {
             ..FakeRepo::default()
         };
         let err = BookSlot::new(&repo).execute(540, 600).unwrap_err();
+        assert!(matches!(err, BookingError::Storage(_)));
+    }
+
+    #[test]
+    fn cancelled_slot_can_be_booked_again() {
+        let repo = FakeRepo::default();
+        let book = BookSlot::new(&repo);
+        let id = book.execute(540, 600).unwrap();
+        CancelReservation::new(&repo).execute(id).unwrap();
+        assert_eq!(repo.schedule.lock().unwrap().reservations().count(), 0);
+        book.execute(540, 600).unwrap();
+    }
+
+    #[test]
+    fn cancel_removes_only_the_given_reservation() {
+        let repo = FakeRepo::default();
+        let book = BookSlot::new(&repo);
+        let first = book.execute(540, 600).unwrap();
+        let second = book.execute(600, 660).unwrap();
+        CancelReservation::new(&repo).execute(first).unwrap();
+        let saved: Vec<_> = repo.schedule.lock().unwrap().reservations().collect();
+        assert_eq!(saved, vec![(second, TimeSlot::new(600, 660).unwrap())]);
+    }
+
+    #[test]
+    fn cancel_unknown_id_is_a_rule_error_and_nothing_is_saved() {
+        let repo = FakeRepo::default();
+        let err = CancelReservation::new(&repo)
+            .execute(ReservationId::new(42))
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            BookingError::Rule(ScheduleError::NotFound(_))
+        ));
+        assert_eq!(repo.saves.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn cancel_load_failure_is_reported() {
+        let repo = FakeRepo {
+            broken: true,
+            ..FakeRepo::default()
+        };
+        let err = CancelReservation::new(&repo)
+            .execute(ReservationId::new(1))
+            .unwrap_err();
+        assert!(matches!(err, BookingError::Storage(_)));
+    }
+
+    #[test]
+    fn cancel_save_failure_is_reported() {
+        let repo = FakeRepo::default();
+        let id = BookSlot::new(&repo).execute(540, 600).unwrap();
+        let failing = FakeRepo {
+            schedule: Mutex::new(repo.schedule.lock().unwrap().clone()),
+            save_broken: true,
+            ..FakeRepo::default()
+        };
+        let err = CancelReservation::new(&failing).execute(id).unwrap_err();
         assert!(matches!(err, BookingError::Storage(_)));
     }
 }
