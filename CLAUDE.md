@@ -136,7 +136,7 @@ Every artifact should link to its neighbors in this chain.
 - GitHub: use the `gh` CLI for issues, PRs and repo operations.
 
 ## Factory build-out status
-The factory is being built stage by stage. Only rely on what is marked done.
+All stages are done: the factory is complete as a template.
 - [x] Stage 0 — machine bootstrap (`bootstrap.sh`, `mise.toml`, `rust-toolchain.toml`, `just doctor`)
 - [x] Stage 1 — repo skeleton, conventions, protected `main`
 - [x] Stage 2 — issue templates, labels, Project board (see "Work items" below)
@@ -146,4 +146,4 @@ The factory is being built stage by stage. Only rely on what is marked done.
 - [x] Stage 6 — CI on GitHub: gates, model report, mutants; required on `main` (see "Git workflow")
 - [x] Stage 7 — release image + acceptance tests + GHCR releases (ADR 0005)
 - [x] Stage 8 — pilot and rollout with Quadlet, health checks, automatic rollback (ADR 0006)
-- [ ] Stage 9 — sample domain end to end, parallel workers
+- [x] Stage 9 — sample domain end to end (epic #17, v0.2.0), parallel workers (see "How the team is wired")
