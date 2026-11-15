@@ -2,7 +2,7 @@
 # build.sh — text model → Open Exchange XML → Archi model (.archimate) + HTML report.
 #
 #   scripts/archimate/build.sh            build into build/architecture/
-#   scripts/archimate/build.sh --check    validate the text model only (fast, no Archi needed)
+#   scripts/archimate/build.sh --check    validate the text model only (fast; reads the relationship rules from the pinned Archi)
 #
 # Outputs (not committed; regenerate any time):
 #   build/architecture/model.xml          Open Exchange XML (standard, tool-neutral)
@@ -33,10 +33,18 @@ check_doc_refs() {
   return $missing
 }
 
+# Every relationship must be allowed by ArchiMate between its two element types. The rules are
+# read from the pinned Archi install, not copied into the repo.
+check_relationships() {
+  python3 -I "$ROOT/scripts/archimate/check_relationships.py" "$MODEL_DIR" \
+    "${ARCHI_HOME:-$HOME/.local/opt/archi-$ARCHI_VERSION}"
+}
+
 if [[ "${1:-}" == "--check" ]]; then
   TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
   python3 -I "$ROOT/scripts/archimate/build_exchange.py" "$MODEL_DIR" "$TMP/model.xml" | sed "s|$TMP/||"
   check_doc_refs
+  check_relationships
   exit
 fi
 check_doc_refs

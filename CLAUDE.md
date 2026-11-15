@@ -118,7 +118,8 @@ Every artifact should link to its neighbors in this chain.
   IDs never change once merged; rename the Name instead.
 - Types use ArchiMate 3.2 names (`BusinessProcess`, `ApplicationComponent`, `Node`, …).
   Relationship types end in `Relationship` (`ServingRelationship`). Only use relationships that
-  ArchiMate allows between the two types (not yet checked automatically).
+  ArchiMate allows between the two types: `just model-check` checks every relationship against the
+  rules of the pinned Archi (`relationships.xml`) and fails with the allowed types for the pair.
 - Run `just model-check` after every model or doc change (fast), and `just model` to build the
   `.archimate` and HTML report the human reviews.
 - Views are laid out automatically: you only choose *which* elements a view shows. Keep views

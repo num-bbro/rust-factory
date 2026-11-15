@@ -60,3 +60,24 @@ Chosen: **option 1**.
 | Archi CSV import of our `elements.csv` into a loaded model | works: our files are in Archi's CSV format |
 | CSV import into `--createEmptyModel` | hung until killed after 3 min; not investigated, not needed |
 | Diagrams | Archi's CSV format has no diagram data → views must come from Exchange XML |
+
+## Amendment 2026-11-15: relationship validity is checked
+Issue: #27 (bug) / task #39. This supersedes the "Bad" bullet above that says relationship
+validity is not checked.
+
+- **The check.** `just model-check` (and so `just check` and the CI `gates` job) now runs
+  `scripts/archimate/check_relationships.py`. For every row of `relations.csv` it reports, with
+  the relationship ID, an unknown source or target, an unknown relationship type, and a type that
+  ArchiMate does not allow between the two element types (listing the types that are allowed).
+  The rules are read from `relationships.xml` of the pinned Archi install, not copied into the
+  repo: they are Archi's own copy of the ArchiMate 3.2 specification, they move together with the
+  pinned version in `tools/archi.env`, and a copy would be a second source of truth that could
+  drift. If the install is missing the check fails and points to `./bootstrap.sh`; it never
+  passes silently.
+- **Agents and roles.** The check found `id-rel-030`..`032`: Assignment from an
+  `ApplicationComponent` to a `BusinessRole`, which ArchiMate does not allow (only Flow,
+  Association, Triggering, Serving). They are now `ServingRelationship`, with documentation that
+  the agent performs the work of the role. Alternatives rejected: *Association* is always valid
+  but says nothing about the direction or meaning of the link; *an extra `BusinessActor` per
+  agent* (actor assigned to role, component realizing the actor) adds three elements and three
+  relationships for no new information and crowds the views.
