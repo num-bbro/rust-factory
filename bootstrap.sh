@@ -91,7 +91,12 @@ else # ubuntu
   KEYRINGS=/etc/apt/keyrings
   NEED_APT_UPDATE=0
 
-  if [[ ! -f /etc/apt/sources.list.d/github-cli.list ]]; then
+  # Add a vendor repository only when the tool is missing: machines that already have it
+  # (e.g. GitHub's runners, or a WSL user who installed it earlier) may list the same repository
+  # under another file name, and a second copy with a different key path breaks `apt-get update`.
+  if have gh; then
+    ok "gh already installed ($(gh --version | head -1 | awk '{print $3}'))"
+  elif [[ ! -f /etc/apt/sources.list.d/github-cli.list ]]; then
     todo "add GitHub CLI apt repository (cli.github.com)"
     run sudo install -dm 755 "$KEYRINGS"
     run sudo bash -c "curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o $KEYRINGS/githubcli-archive-keyring.gpg && chmod go+r $KEYRINGS/githubcli-archive-keyring.gpg"
@@ -101,7 +106,9 @@ else # ubuntu
     ok "GitHub CLI apt repository configured"
   fi
 
-  if [[ ! -f /etc/apt/sources.list.d/mise.list ]]; then
+  if have mise; then
+    ok "mise already installed ($(mise --version | awk '{print $1}'))"
+  elif [[ ! -f /etc/apt/sources.list.d/mise.list ]]; then
     todo "add mise apt repository (mise.jdx.dev)"
     run sudo install -dm 755 "$KEYRINGS"
     run sudo bash -c "curl -fsSL https://mise.jdx.dev/gpg-key.pub -o $KEYRINGS/mise-archive-keyring.asc"
@@ -115,6 +122,7 @@ else # ubuntu
   PKGS=(build-essential git curl unzip ca-certificates pkg-config libssl-dev podman gh mise python3 xvfb fonts-thai-tlwg)
   MISSING=()
   for p in "${PKGS[@]}"; do
+    [[ ( $p == gh || $p == mise ) ]] && have "$p" && continue   # installed some other way: fine
     dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q "install ok installed" || MISSING+=("$p")
   done
   if (( ${#MISSING[@]} )); then
