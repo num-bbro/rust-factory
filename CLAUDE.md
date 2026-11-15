@@ -63,9 +63,30 @@ anything that needs a password or secret.
 Story/requirement issue → ADR → ArchiMate element id → crate/module → test → release.
 Every artifact should link to its neighbors in this chain.
 
+## Architecture (TOGAF + ArchiMate), see ADR 0002
+- **Narrative** lives in `docs/togaf/` (one document per ADM phase). **Structure** lives in the
+  ArchiMate text model `docs/architecture/model/`. Documents refer to elements by ID in backticks,
+  e.g. `` `id-bus-proc-review` ``, and never duplicate the model.
+- Edit the model only through its CSV files (Archi's CSV format):
+  `elements.csv` (ID, Type, Name, Documentation), `relations.csv` (ID, Type, …, Source, Target),
+  `properties.csv` (ID, Key, Value), `views.csv` (ID, Name, Viewpoint, space-separated Elements).
+  Never edit generated files under `build/`.
+- ID convention: `id-<layer>-<kind>-<slug>`, with layer one of `mot`, `str`, `bus`, `app`, `tech`,
+  `impl`, e.g. `id-app-comp-booking-api`. Relationships: `id-rel-NNN`. Views: `id-view-<slug>`.
+  IDs never change once merged; rename the Name instead.
+- Types use ArchiMate 3.2 names (`BusinessProcess`, `ApplicationComponent`, `Node`, …).
+  Relationship types end in `Relationship` (`ServingRelationship`). Only use relationships that
+  ArchiMate allows between the two types (not yet checked automatically).
+- Run `just model-check` after every model or doc change (fast), and `just model` to build the
+  `.archimate` and HTML report the human reviews.
+- Any PR that changes behaviour across a layer boundary, adds a component, or makes a significant
+  choice updates the model and adds an ADR (`docs/adr/template.md`). Architecture changes need
+  human sign-off (gate 1).
+
 ## Toolchain
 - Rust version: pinned in `rust-toolchain.toml`. Dev tools: pinned in `mise.toml`.
 - Machine setup: `./bootstrap.sh` (Arch Linux, Ubuntu/WSL). Health check: `just doctor`.
+- Archi: version pinned in `tools/archi.env`, installed to `~/.local/opt/archi-<version>`.
 - GitHub: use the `gh` CLI for issues, PRs and repo operations.
 
 ## Factory build-out status
@@ -73,7 +94,7 @@ The factory is being built stage by stage. Only rely on what is marked done.
 - [x] Stage 0 — machine bootstrap (`bootstrap.sh`, `mise.toml`, `rust-toolchain.toml`, `just doctor`)
 - [x] Stage 1 — repo skeleton, conventions, protected `main`
 - [x] Stage 2 — issue templates, labels, Project board (see "Work items" below)
-- [ ] Stage 3 — TOGAF docs, ADRs, ArchiMate model pipeline
+- [x] Stage 3 — TOGAF docs, ADRs, ArchiMate model pipeline (see "Architecture" above)
 - [ ] Stage 4 — Rust workspace template + local quality gates
 - [ ] Stage 5 — agent team (subagents, skills, routing, cost report)
 - [ ] Stage 6 — CI/CD pipelines

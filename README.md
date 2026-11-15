@@ -24,7 +24,7 @@ gh auth login              # once per machine
 
 | Path | Purpose |
 |---|---|
-| `bootstrap.sh` | Machine setup: OS packages → Rust → dev tools → shell hook |
+| `bootstrap.sh` | Machine setup: OS packages → Rust → dev tools → Archi → shell hook |
 | `rust-toolchain.toml` | Pinned Rust version |
 | `mise.toml` | Pinned dev tool versions |
 | `justfile` | Task runner: `just` lists the recipes |
@@ -34,3 +34,18 @@ gh auth login              # once per machine
 | `.github/labels.txt` | Label set (`just labels`) |
 | `.github/pull_request_template.md` | PR checklist: issue, ADR / ArchiMate links, tests, worker model |
 | `scripts/setup-project.sh` | Creates the Project board with lifecycle columns (`just project`) |
+| `docs/togaf/` | One document per TOGAF ADM phase (narrative) |
+| `docs/architecture/model/` | ArchiMate model as text (CSV), built with `just model` |
+| `docs/adr/` | Architecture Decision Records |
+| `scripts/archimate/` | Model builder: CSV → Open Exchange XML → Archi model + HTML report |
+| `tools/archi.env` | Pinned Archi version and checksum |
+
+## Architecture model
+
+```bash
+just model-check    # fast: validate the model and the element IDs mentioned in docs
+just model          # build build/architecture/model.archimate and report/index.html
+just model-report   # build, then open the HTML report in the browser
+```
+Open `build/architecture/model.archimate` in Archi to review. To change the model, edit the CSV
+files, not the generated `.archimate`. See [ADR 0002](docs/adr/0002-archimate-model-as-text.md).

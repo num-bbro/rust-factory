@@ -16,6 +16,18 @@ labels *args:
 project repo="num-bbro/rust-factory" title="":
     scripts/setup-project.sh {{repo}} {{title}}
 
+# Build the ArchiMate model: text → build/architecture/model.archimate + report/index.html
+model:
+    scripts/archimate/build.sh
+
+# Validate the ArchiMate text model and doc references only (fast, no Archi needed).
+model-check:
+    scripts/archimate/build.sh --check
+
+# Build the model, then open the HTML report in your browser.
+model-report: model
+    xdg-open build/architecture/report/index.html >/dev/null 2>&1 &
+
 # Show every factory tool's version and flag anything missing.
 doctor:
     #!/usr/bin/env bash
@@ -48,6 +60,10 @@ doctor:
     check gh             gh --version
     check podman         podman --version
     check claude         claude --version
+    echo "Architecture"
+    check python3        python3 --version
+    check archi          bash -c '. tools/archi.env; f="${ARCHI_HOME:-$HOME/.local/opt/archi-$ARCHI_VERSION}/Archi"; [[ -x $f ]] && echo "Archi $ARCHI_VERSION ($f)"'
+    check xvfb-run       bash -c 'command -v xvfb-run'
     if gh auth status >/dev/null 2>&1; then
       printf '  \033[32m✔\033[0m %-15s %s\n' "github login" "ok"
     else
