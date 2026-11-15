@@ -24,6 +24,9 @@ documented in TOGAF / ArchiMate. Read this file fully before doing any work here
 - **Every worker launch description starts with the task's issue number**, e.g.
   `#42 implement booking cancel`. `just cost` attributes spend by it; untagged work counts as
   planning.
+- `/implement` runs up to 3 ready tasks at once, one worktree each; tasks run together only if
+  there is no "blocked by" link and no shared crate; PRs are still reviewed and merged one by one
+  by the human.
 - Issue links: `scripts/issue-link.sh` (sub-issues, blocked-by, open blockers). Board fields:
   `scripts/board.sh`.
 
