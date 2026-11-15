@@ -1,0 +1,11 @@
+# Normalize all text files to LF, so Arch, WSL and Windows editors produce identical diffs.
+* text=auto eol=lf
+
+# Shell scripts must be LF or they break on Linux.
+*.sh text eol=lf
+
+# Binary files: never touch.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.zip binary

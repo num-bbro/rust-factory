@@ -1,0 +1,6 @@
+# Pinned Rust toolchain — the same on every machine and in CI.
+# Bump deliberately (one PR, with CI green), never implicitly.
+[toolchain]
+channel = "1.99"
+components = ["rustfmt", "clippy", "llvm-tools"]
+profile = "minimal"

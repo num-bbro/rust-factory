@@ -1,0 +1,11 @@
+# Dev tools for the software factory, managed by mise (https://mise.jdx.dev).
+# Same versions on Arch, Ubuntu/WSL and CI. Install with: ./bootstrap.sh  (or: mise install)
+# Versions are pinned exactly. Upgrade deliberately: `mise outdated`, edit here, commit.
+
+[tools]
+just = "1.59.0"                     # task runner (justfile)
+cargo-binstall = "1.27.0"           # downloads prebuilt cargo tools instead of compiling them
+"cargo:cargo-nextest" = "0.9.152"   # faster, clearer test runner
+"cargo:cargo-deny" = "0.20.2"       # dependency advisories, licenses, bans
+"cargo:cargo-llvm-cov" = "0.9.1"    # code coverage
+"cargo:cargo-mutants" = "27.1.0"    # mutation testing (are the tests really testing?)
