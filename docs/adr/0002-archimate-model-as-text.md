@@ -39,9 +39,13 @@ Chosen: **option 1**.
   Exchange XML is a by-product.
 - Good: elements/relations round-trip with Archi's File › Export › CSV if the owner wants to
   model in the GUI and hand the result back.
-- Bad: diagram layout is automatic and simple (straight lines can cross). Hand-tuned layouts
-  made in Archi are not preserved. If a presentation-quality view is needed, a later ADR can add
-  optional coordinates.
+- Diagram layout is automatic (`scripts/archimate/layout.py`), following hand-drawing
+  conventions: one band per layer, one row per aspect (active structure / behaviour / passive),
+  composition and aggregation inside a layer shown by nesting, elements ordered so related ones
+  line up, triggering/flow chains kept left to right, lines routed at right angles around boxes.
+- Bad: hand-tuned layouts made in Archi are not preserved, and very dense views can still have
+  long detours. If a presentation-quality view is needed, a later ADR can add optional fixed
+  coordinates per view.
 - Bad: ArchiMate relationship-validity rules (which relationships are allowed between which
   types) are not checked yet; Archi's importer checks only the XML schema.
 - Follow-up: CI needs a virtual display (Xvfb). Archi's command line exits with

@@ -79,6 +79,10 @@ Every artifact should link to its neighbors in this chain.
   ArchiMate allows between the two types (not yet checked automatically).
 - Run `just model-check` after every model or doc change (fast), and `just model` to build the
   `.archimate` and HTML report the human reviews.
+- Views are laid out automatically: you only choose *which* elements a view shows. Keep views
+  focused (about 25 elements at most) and split a crowded view rather than fighting the layout.
+  Model "is part of" with Composition/Aggregation inside the same layer: those are drawn by
+  nesting, which keeps views readable.
 - Any PR that changes behaviour across a layer boundary, adds a component, or makes a significant
   choice updates the model and adds an ADR (`docs/adr/template.md`). Architecture changes need
   human sign-off (gate 1).
