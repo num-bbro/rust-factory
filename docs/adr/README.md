@@ -17,3 +17,4 @@ that supersedes the old one, and set the old one's status to `Superseded by NNNN
 | [0003](0003-layered-cargo-workspace.md) | Layered Cargo workspace with enforced dependency direction | Accepted |
 | [0004](0004-agent-team-and-cost-routing.md) | Agent team with cost-aware model routing | Accepted |
 | [0005](0005-release-image-and-acceptance.md) | Release image built once, accepted, then promoted unchanged | Accepted |
+| [0006](0006-pilot-and-rollout-with-quadlet.md) | Pilot and rollout with Podman Quadlet, health checks and automatic rollback | Accepted |

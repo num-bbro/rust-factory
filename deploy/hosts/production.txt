@@ -1,0 +1,7 @@
+# Production environment: updated one host at a time, only after the pilot is healthy and a
+# human runs `just promote <version>`.
+# name     target                 port
+prod-1     local                  18082
+prod-2     local                  18083
+# Real VMs later, e.g.:
+# prod-3   ssh:deploy@10.0.0.13   8080
