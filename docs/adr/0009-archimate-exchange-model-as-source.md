@@ -56,10 +56,12 @@ How to represent a decision (ArchiMate has no "decision" element type):
   `relationships.xml`, see the spike).
 - *Requirement*: already used for user stories and business requirements; decisions would be
   indistinguishable from them in views and catalogs.
-- *Principle*: too general (a principle holds for many decisions), and core elements cannot
-  realize a principle's specific choice.
+- *Principle*: too general. A principle applies to any system in a context; a decision is
+  specific to one problem and one choice. (The relationship rules would allow it: Realization
+  from an ApplicationComponent to a Principle is allowed.)
 - *Assessment*: an assessment is the *outcome of analysing* a driver, not the choice made; core
-  elements may only be associated with it, so "this component implements ADR N" cannot be said.
+  elements may only associate with it or influence it (no Realization), so "this component
+  implements ADR N" cannot be said.
 
 ## Decision
 Chosen: **option 1**, because it is the only option that meets all five requirements, and the
@@ -158,6 +160,29 @@ The human opens `docs/architecture/model.xml` in Archi (File › Import › Open
 look, not to edit. A later "edit in Archi" feature would export, then normalise with
 `just model-fmt`; spike item 5 lists what it would have to undo.
 
+### Refinements to the approved plan found by the spike
+Rules that go beyond the plan in #41, collected here (details in the sections above and in the
+spike):
+- `xml:lang="en"` on every name, label, documentation and value.
+- An empty `documentation` is omitted.
+- No trailing newline in `documentation` text.
+- No XML comments (and no CDATA).
+- `Access` relationships always state `accessType`.
+- Every property definition is used.
+- `xsi:schemaLocation` is always written.
+- The formatter generates node identifiers (as well as coordinates and connections).
+- Two extra checks: every `View` property names an existing view; every diagram connection's
+  ends match its relationship's ends.
+- `build.sh` runs `xmllint` before Archi, and Archi under a timeout.
+- A Plateau uses Association where ArchiMate does not allow Aggregation.
+- The "ArchiMate elements" header lines of the ADRs are replaced by relationships, as the `ADR`
+  property rows are.
+- `views.lock` also stores each view's dimensions; checks never compare re-rendered bytes, and
+  `just model` always renders under Xvfb.
+- Archi's HTML report is not reproducible and is never compared.
+- Size estimate: about 125–150 KB / 2,000–2,200 lines (plan: 110 KB / 1,700 lines).
+- "PNG dimensions equal on dev and CI" moves from step 0 to step 4.
+
 ## Consequences
 - Good: one standard file holds the whole architecture; any conformant tool can import it, and the
   schema check on every PR keeps it conformant.
@@ -179,15 +204,26 @@ look, not to edit. A later "edit in Archi" feature would export, then normalise 
 - Bad: agents must write Markdown as escaped XML text (`&lt;`, `&amp;`); the formatter and the
   generated page make mistakes visible, but diffs of long text are less pleasant than in a `.md`
   file.
-- Bad: Archi's HTML report renders each source line break as a line break, so hard-wrapped
-  paragraphs look ragged there (they read normally on GitHub).
+- **Open question for the human, to decide before step 3: line breaks inside paragraphs.**
+  Archi's HTML report renders every single line break in a documentation text as a `<br/>`
+  (spike item 1), and the ADRs and TOGAF files are hard-wrapped at about 100 characters. Two
+  options:
+  - **(A) Unwrap each paragraph to one line at migration.** The text then reads well in Archi's
+    report, on the site and in other tools. The lossless proof of step 3 and 5 then compares
+    whitespace-normalised text, not the sha256 of the bytes.
+  - **(B) Keep the text byte-identical.** The sha256 proof planned in #41 holds as written, and
+    the report (and so the site's element pages) shows ragged paragraphs.
 - Follow-up (each one task issue under #41, one PR each; `main` stays green after each):
   1. Canonical reader/writer and `just model-fmt`, schema validation, xmllint in bootstrap and
      doctor, tests on fixtures.
   2. Cutover: `model.xml` replaces the CSV; `build.sh` and `check_relationships.py` read XML; the
-     CSV files and `build_exchange.py` are deleted; lossless proof; rules updated.
+     CSV files and `build_exchange.py` are deleted; lossless proof; rules updated. `build.sh`
+     validates with `xmllint` before starting Archi and runs Archi under a timeout. The intended
+     access type (Read / Write / ReadWrite / Access) of each of the 7 `Access` relationships is
+     stated explicitly; the choice per relationship is put to the human in that PR.
   3. ADRs into the model (including this one); generator and check; templates.
-  4. Committed view images and `views.lock`.
+  4. Committed view images and `views.lock`; check that PNG dimensions are equal on the dev
+     machine and on CI (moved here from step 0, see spike item 4).
   5. TOGAF documents into the model; pages with diagrams and catalogs.
   6. Release Plateaus (v0.1.0, v0.2.0, v0.2.1).
   7. Pages workflow and site (human step: Settings › Pages › Source = "GitHub Actions").
@@ -221,7 +257,7 @@ of the above, and `xsi:schemaLocation`. Result: 58 elements, 74 relationships, 5
   the fenced Rust block (as `<pre><code class="language-rust">`, with `<`, `>` and `&` correct)
   and the ADR 0002 table (as an HTML `<table>`). All 62 element pages with documentation are
   rendered the same way. Each single line break in the source becomes a `<br/>`, so hard-wrapped
-  paragraphs show ragged lines (readable; noted under Consequences).
+  paragraphs show ragged lines (open question under Consequences).
 - The view image map links every box to its element page (`<area … href="../elements/<id>.html">`,
   7 of 7 boxes on the spike view). An element page lists its relationships, so
   `id-app-comp-application` links to the ADR 0008 Constraint and to the Plateau.

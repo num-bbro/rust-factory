@@ -1,6 +1,6 @@
 # 0002. ArchiMate model as text, built into Archi in CI
 
-- Status: Accepted
+- Status: Superseded by 0009
 - Date: 2026-11-15
 - Issue: #3
 - Deciders: product owner, conductor
