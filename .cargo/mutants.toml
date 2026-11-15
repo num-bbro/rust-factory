@@ -1,0 +1,4 @@
+# cargo-mutants configuration (https://mutants.rs).
+# main.rs is startup wiring, verified by the acceptance tests against the running container;
+# like coverage (justfile `coverage_ignore`), mutation testing skips it.
+exclude_globs = ["crates/app/src/main.rs"]

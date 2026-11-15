@@ -56,6 +56,12 @@ anything that needs a password or secret.
   the workflow or the gate settings. If CI fails, read the log (`gh run view <id> --log-failed`)
   and reproduce locally with the matching `just` recipe.
 - Dependabot opens grouped weekly update PRs (crates, actions); treat them as simple tasks.
+- **Acceptance tests** (`crates/acceptance-tests/tests/features/*.feature`, Gherkin) are the
+  executable form of user-story scenarios: add or update the scenarios of the story you implement.
+  They test the running container over HTTP only (black-box; enforced). Run: `just acceptance`.
+- **Releases**: bump `[workspace.package] version` in a PR, merge, then `just release X.Y.Z`
+  (human decision). The Release workflow builds the image once, accepts it, and publishes it to
+  GHCR. Never deploy anything but a released image, by digest.
 
 ## Quality bar (non-negotiable), see ADR 0003
 - `just check` must pass before a PR: format, clippy (warnings are errors), all tests,
@@ -131,6 +137,6 @@ The factory is being built stage by stage. Only rely on what is marked done.
 - [x] Stage 4 — Rust workspace template + local quality gates (see "Quality bar")
 - [x] Stage 5 — agent team (subagents, skills, routing, cost report; see "How the team is wired")
 - [x] Stage 6 — CI on GitHub: gates, model report, mutants; required on `main` (see "Git workflow")
-- [ ] Stage 7 — acceptance builds
+- [x] Stage 7 — release image + acceptance tests + GHCR releases (ADR 0005)
 - [ ] Stage 8 — pilot and rollout deploys
 - [ ] Stage 9 — sample domain end to end, parallel workers

@@ -31,9 +31,10 @@ fmt-check:
 lint:
     cargo clippy --workspace --all-targets --locked -- -D warnings
 
-# Run all tests (unit, property, HTTP, architecture rules).
+# Run all tests (unit, property, HTTP, architecture rules). Acceptance tests need a running
+# service and have their own recipe: just acceptance
 test *args:
-    cargo nextest run --workspace --locked {{args}}
+    cargo nextest run --workspace --exclude acceptance-tests --locked {{args}}
 
 # Dependency policy: vulnerabilities, licenses, sources (deny.toml).
 deny:
@@ -41,12 +42,12 @@ deny:
 
 # Line coverage, failing below the threshold. HTML report: just coverage-html
 coverage:
-    cargo llvm-cov nextest --workspace --locked --summary-only \
+    cargo llvm-cov nextest --workspace --exclude acceptance-tests --locked --summary-only \
       --ignore-filename-regex '{{coverage_ignore}}' --fail-under-lines {{coverage_min}}
 
 # Open a browsable coverage report.
 coverage-html:
-    cargo llvm-cov nextest --workspace --locked --ignore-filename-regex '{{coverage_ignore}}' --open
+    cargo llvm-cov nextest --workspace --exclude acceptance-tests --locked --ignore-filename-regex '{{coverage_ignore}}' --open
 
 # Mutation testing: are the tests really testing? Slow; pass e.g. `-p domain` to narrow it.
 mutants *args:
@@ -60,6 +61,55 @@ mutants-diff base="origin/main":
 # Run the service locally (PORT defaults to 8080).
 run:
     cargo run -p app
+
+# --- Release image & acceptance -------------------------------------------------------------
+
+image_name := "localhost/rust-factory"
+
+# Build the release image (Docker format, so the HEALTHCHECK is kept). Extra podman flags can be
+# passed in IMAGE_BUILD_FLAGS (e.g. "--network host" where rootless networking is unavailable).
+image tag="dev":
+    podman build --format docker {{env_var_or_default("IMAGE_BUILD_FLAGS", "")}} \
+      --build-arg VERSION={{tag}} -t {{image_name}}:{{tag}} -f Dockerfile .
+
+# Run the acceptance tests against a container of the given image, then check the container's
+# health check and graceful shutdown. Default: build and test the local dev image.
+acceptance image=(image_name + ":dev"):
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ "{{image}}" == "{{image_name}}:dev" ]]; then just image dev; fi
+    port=$(python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
+    name="acceptance-$port"
+    # Host networking: no port mapping or tun device needed; the service listens on $port.
+    podman run -d --name "$name" --network host -e PORT="$port" "{{image}}" >/dev/null
+    trap 'podman rm -f "$name" >/dev/null 2>&1 || true' EXIT
+    echo "service under test: {{image}} on http://127.0.0.1:$port"
+    ACCEPTANCE_BASE_URL="http://127.0.0.1:$port" ACCEPTANCE_REQUIRED=1 \
+      cargo test --locked -p acceptance-tests --test acceptance
+    echo "container health check (/app healthcheck inside the image):"
+    podman healthcheck run "$name" && echo "  healthy"
+    echo "graceful shutdown on SIGTERM (what podman stop sends):"
+    podman stop -t 10 "$name" >/dev/null
+    code=$(podman inspect "$name" --format '{{{{.State.ExitCode}}')
+    podman logs "$name" 2>&1 | grep -q 'stopped' && [[ "$code" == 0 ]] \
+      && echo "  stopped cleanly (exit code 0)" \
+      || { echo "  did not shut down cleanly (exit code $code)"; podman logs "$name"; exit 1; }
+
+# Cut a release: tag vVERSION on an up-to-date, clean main. The Release workflow then builds,
+# accepts and publishes the image. Bump [workspace.package] version in Cargo.toml via a PR first.
+release version:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    git fetch -q origin main --tags
+    [[ "$(git branch --show-current)" == main ]] || { echo "switch to main first"; exit 1; }
+    [[ -z "$(git status --porcelain)" ]] || { echo "working tree not clean"; exit 1; }
+    [[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/main)" ]] || { echo "main is not up to date with origin (git pull)"; exit 1; }
+    current=$(python3 -I -c 'import tomllib; print(tomllib.load(open("Cargo.toml","rb"))["workspace"]["package"]["version"])')
+    [[ "{{version}}" == "$current" ]] || { echo "Cargo.toml says $current; bump it in a PR first"; exit 1; }
+    git rev-parse -q --verify "refs/tags/v{{version}}" >/dev/null && { echo "v{{version}} already exists"; exit 1; }
+    git tag -a "v{{version}}" -m "Release v{{version}}"
+    git push origin "v{{version}}"
+    echo "Tagged v{{version}}. Follow the release: gh run watch \$(gh run list --workflow Release --limit 1 --json databaseId --jq '.[0].databaseId')"
 
 # --- Agent team -----------------------------------------------------------------------------
 

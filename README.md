@@ -43,6 +43,9 @@ gh auth login              # once per machine
 | `.claude/agents/` | Worker agents with pinned models: scout (Haiku), implementers (Sonnet / Opus), architect, reviewer |
 | `.claude/skills/` | Conductor workflows: `/plan-epic`, `/split-tasks`, `/implement`, `/review` |
 | `.github/workflows/ci.yml`, `.github/actions/setup/` | CI: same gates as `just check`, on every PR and on `main`; machines set up by `bootstrap.sh` |
+| `Dockerfile` | Release image: 31 MB, non-root, health check ([ADR 0005](docs/adr/0005-release-image-and-acceptance.md)) |
+| `crates/acceptance-tests/` | Gherkin acceptance tests run against the real container (`just acceptance`) |
+| `.github/workflows/release.yml` | Tag `vX.Y.Z` → build once → acceptance → GHCR + GitHub Release (`just release X.Y.Z`) |
 | `.github/dependabot.yml` | Weekly grouped dependency update PRs |
 | `scripts/issue-link.sh` | Sub-issues and "blocked by" links between issues |
 | `scripts/cost-report.py`, `tools/model-prices.toml` | `just cost`: agent spend per model, agent and task |
@@ -60,6 +63,7 @@ just check-fast     # format, lint, tests: the quick loop
 just check          # every gate CI runs: + dependencies, coverage, model
 just coverage-html  # browsable coverage report
 just mutants -p domain   # mutation testing: do the tests catch real bugs?
+just acceptance     # build the release image, run Gherkin scenarios against it
 ```
 
 ## The agent team

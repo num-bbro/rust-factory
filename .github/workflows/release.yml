@@ -1,0 +1,75 @@
+# Release: pushing a tag vX.Y.Z builds the image once, proves it with the acceptance tests, and
+# publishes exactly that image to GHCR, plus a GitHub Release with notes from the commits.
+# Cut a release with: just release X.Y.Z (after the version bump is merged to main).
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: write   # create the GitHub Release
+  packages: write   # push the image to ghcr.io
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: build, accept, publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+      - name: Tag must match the workspace version
+        id: version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(python3 -I -c 'import tomllib; print(tomllib.load(open("Cargo.toml","rb"))["workspace"]["package"]["version"])')
+          if [[ "$tag" != "$version" ]]; then
+            echo "::error::tag v$tag does not match Cargo.toml version $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build the release image (once)
+        run: just image "${{ steps.version.outputs.version }}"
+
+      - name: Acceptance tests against that exact image
+        run: just acceptance "localhost/rust-factory:${{ steps.version.outputs.version }}"
+
+      - name: Publish to GHCR (version tag and commit tag)
+        id: publish
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "${{ github.token }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+          for tag in "$VERSION" "sha-${GITHUB_SHA::7}"; do
+            podman tag "localhost/rust-factory:$VERSION" "$IMAGE:$tag"
+            podman push --digestfile digest.txt "$IMAGE:$tag"
+          done
+          echo "digest=$(cat digest.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: GitHub Release with generated notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          DIGEST: ${{ steps.publish.outputs.digest }}
+        run: |
+          {
+            echo "## Container image"
+            echo
+            echo '```'
+            echo "$IMAGE:$VERSION"
+            echo "$IMAGE@$DIGEST"
+            echo '```'
+            echo
+            echo "Built once from \`${GITHUB_SHA::7}\`; acceptance tests passed against this exact image."
+            echo "Deploy by digest to be sure pilot and production run the same bytes."
+          } > notes.md
+          gh release create "v$VERSION" --title "v$VERSION" --notes-file notes.md --generate-notes --verify-tag
