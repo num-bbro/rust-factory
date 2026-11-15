@@ -22,34 +22,83 @@ impl InMemoryScheduleRepository {
 }
 
 impl ScheduleRepository for InMemoryScheduleRepository {
-    fn load(&self) -> Result<Schedule, RepositoryError> {
-        self.schedule
-            .lock()
-            .map(|s| s.clone())
-            .map_err(|e| RepositoryError(e.to_string()))
-    }
-
-    fn save(&self, schedule: &Schedule) -> Result<(), RepositoryError> {
-        let mut guard = self
+    /// Holds the lock for the whole update, so concurrent updates run one after another. The
+    /// change runs on a copy that replaces the stored schedule only on success; a failing change
+    /// leaves the stored schedule as it was, and a panicking one also leaves it intact but
+    /// poisons the lock, so every later update is a `RepositoryError` until restart (ADR 0008).
+    fn update<T, E, F>(&self, change: F) -> Result<T, E>
+    where
+        F: FnOnce(&mut Schedule) -> Result<T, E>,
+        E: From<RepositoryError>,
+    {
+        let mut stored = self
             .schedule
             .lock()
             .map_err(|e| RepositoryError(e.to_string()))?;
-        guard.clone_from(schedule);
-        Ok(())
+        let mut copy = stored.clone();
+        let value = change(&mut copy)?;
+        *stored = copy;
+        Ok(value)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use domain::TimeSlot;
+    use domain::{ReservationId, TimeSlot};
+
+    fn slot(start: u16, end: u16) -> TimeSlot {
+        TimeSlot::new(start, end).unwrap()
+    }
+
+    fn snapshot(repo: &InMemoryScheduleRepository) -> Schedule {
+        repo.update(|s| Ok::<_, RepositoryError>(s.clone()))
+            .unwrap()
+    }
 
     #[test]
-    fn saved_schedule_is_loaded_back_and_shared_between_clones() {
+    fn successful_change_is_stored_and_shared_between_clones() {
         let repo = InMemoryScheduleRepository::new();
-        let mut s = repo.load().unwrap();
-        s.book(TimeSlot::new(60, 120).unwrap()).unwrap();
-        repo.save(&s).unwrap();
-        assert_eq!(repo.clone().load().unwrap(), s);
+        let id = repo
+            .update(|s| {
+                s.book(slot(60, 120))
+                    .map_err(|e| RepositoryError(e.to_string()))
+            })
+            .unwrap();
+        let stored: Vec<_> = snapshot(&repo.clone()).reservations().collect();
+        assert_eq!(stored, vec![(id, slot(60, 120))]);
+    }
+
+    #[test]
+    fn failing_change_stores_nothing_even_if_it_modified_the_schedule() {
+        let repo = InMemoryScheduleRepository::new();
+        let err = repo
+            .update(|s| -> Result<(), RepositoryError> {
+                s.book(slot(60, 120)).unwrap();
+                Err(RepositoryError("rule broken".into()))
+            })
+            .unwrap_err();
+        assert_eq!(err.0, "rule broken");
+        assert_eq!(snapshot(&repo), Schedule::new());
+    }
+
+    #[test]
+    fn poisoned_lock_is_a_repository_error_not_a_panic() {
+        let repo = InMemoryScheduleRepository::new();
+        let poisoner = repo.clone();
+        let panicked = std::thread::spawn(move || {
+            poisoner.update(|_| -> Result<(), RepositoryError> {
+                panic!("change panicked while holding the lock")
+            })
+        })
+        .join();
+        assert!(panicked.is_err());
+        let err = repo
+            .update(|s| {
+                s.cancel(ReservationId::new(1))
+                    .map_err(|e| RepositoryError(e.to_string()))
+            })
+            .unwrap_err();
+        assert!(err.0.contains("poisoned"), "{err}");
     }
 }

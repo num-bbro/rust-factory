@@ -39,11 +39,12 @@ impl<R> Clone for Shared<R> {
 }
 
 impl<R: ScheduleRepository> ScheduleRepository for Shared<R> {
-    fn load(&self) -> Result<Schedule, RepositoryError> {
-        self.0.load()
-    }
-    fn save(&self, schedule: &Schedule) -> Result<(), RepositoryError> {
-        self.0.save(schedule)
+    fn update<T, E, F>(&self, change: F) -> Result<T, E>
+    where
+        F: FnOnce(&mut Schedule) -> Result<T, E>,
+        E: From<RepositoryError>,
+    {
+        self.0.update(change)
     }
 }
 
@@ -129,12 +130,16 @@ mod tests {
     struct MemRepo(Mutex<Schedule>);
 
     impl ScheduleRepository for MemRepo {
-        fn load(&self) -> Result<Schedule, RepositoryError> {
-            Ok(self.0.lock().unwrap().clone())
-        }
-        fn save(&self, s: &Schedule) -> Result<(), RepositoryError> {
-            *self.0.lock().unwrap() = s.clone();
-            Ok(())
+        fn update<T, E, F>(&self, change: F) -> Result<T, E>
+        where
+            F: FnOnce(&mut Schedule) -> Result<T, E>,
+            E: From<RepositoryError>,
+        {
+            let mut stored = self.0.lock().unwrap();
+            let mut copy = stored.clone();
+            let value = change(&mut copy)?;
+            *stored = copy;
+            Ok(value)
         }
     }
 
@@ -152,11 +157,12 @@ mod tests {
     struct BrokenRepo;
 
     impl ScheduleRepository for BrokenRepo {
-        fn load(&self) -> Result<Schedule, RepositoryError> {
-            Err(RepositoryError("disk on fire".into()))
-        }
-        fn save(&self, _: &Schedule) -> Result<(), RepositoryError> {
-            Err(RepositoryError("disk on fire".into()))
+        fn update<T, E, F>(&self, _: F) -> Result<T, E>
+        where
+            F: FnOnce(&mut Schedule) -> Result<T, E>,
+            E: From<RepositoryError>,
+        {
+            Err(RepositoryError("disk on fire".into()).into())
         }
     }
 
