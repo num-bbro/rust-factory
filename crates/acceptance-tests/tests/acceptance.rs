@@ -100,6 +100,27 @@ async fn cancel(api: &mut Api) {
     api.cancel(id).await;
 }
 
+#[when(expr = "I cancel reservation {int}")]
+async fn cancel_by_id(api: &mut Api, id: u64) {
+    api.cancel(id).await;
+}
+
+#[when("I cancel that reservation again")]
+async fn cancel_again(api: &mut Api) {
+    let id = api.reservation_id.expect("a reservation was made earlier");
+    api.cancel(id).await;
+}
+
+#[then("the cancellation is refused as not found")]
+fn cancellation_refused_not_found(api: &mut Api) {
+    assert_eq!(api.status, 404, "body: {}", api.body);
+    assert!(
+        api.body["error"].as_str().is_some(),
+        "an error is returned: {}",
+        api.body
+    );
+}
+
 #[then("the cancellation is accepted")]
 fn cancellation_accepted(api: &mut Api) {
     assert_eq!(api.status, 204, "body: {}", api.body);

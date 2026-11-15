@@ -16,3 +16,13 @@ Feature: Cancel a reservation
     And I cancel that reservation
     When I reserve 20:00 to 21:00
     Then the reservation is accepted
+
+  Scenario: Cancelling an unknown reservation is refused
+    When I cancel reservation 999999
+    Then the cancellation is refused as not found
+
+  Scenario: Cancelling the same reservation twice is refused
+    Given 22:00 to 23:00 is already reserved
+    And I cancel that reservation
+    When I cancel that reservation again
+    Then the cancellation is refused as not found
