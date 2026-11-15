@@ -38,6 +38,10 @@ gh auth login              # once per machine
 | `deny.toml`, `clippy.toml`, `rustfmt.toml`, `.config/nextest.toml` | Quality-gate configuration |
 | `.claude/` | Claude Code hooks: format on edit, quick gate before an agent stops |
 | `scripts/board.sh` | Put an issue/PR on the Project board and set its fields |
+| `.claude/agents/` | Worker agents with pinned models: scout (Haiku), implementers (Sonnet / Opus), architect, reviewer |
+| `.claude/skills/` | Conductor workflows: `/plan-epic`, `/split-tasks`, `/implement`, `/review` |
+| `scripts/issue-link.sh` | Sub-issues and "blocked by" links between issues |
+| `scripts/cost-report.py`, `tools/model-prices.toml` | `just cost`: agent spend per model, agent and task |
 | `docs/togaf/` | One document per TOGAF ADM phase (narrative) |
 | `docs/architecture/model/` | ArchiMate model as text (CSV), built with `just model` |
 | `docs/adr/` | Architecture Decision Records |
@@ -52,6 +56,18 @@ just check-fast     # format, lint, tests: the quick loop
 just check          # every gate CI runs: + dependencies, coverage, model
 just coverage-html  # browsable coverage report
 just mutants -p domain   # mutation testing: do the tests catch real bugs?
+```
+
+## The agent team
+
+Open Claude Code in this folder: the main session is the **conductor** (Fable). Typical flow:
+
+```text
+/plan-epic 12        epic → user stories (you approve the plan first)
+/split-tasks 13      story → tasks, each routed simple (Sonnet) or hard (Opus)
+/implement 14 15     each task → its worker → branch + PR (escalates Sonnet → Opus on 2 failed gates)
+/review 16           reviewer agent checks the PR; you merge
+just cost            what it cost, per model and per task
 ```
 
 ## Architecture model

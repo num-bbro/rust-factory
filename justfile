@@ -61,6 +61,12 @@ mutants-diff base="origin/main":
 run:
     cargo run -p app
 
+# --- Agent team -----------------------------------------------------------------------------
+
+# Agent spend per model, agent and task (estimate at API list price). e.g. just cost --issue 42
+cost *args:
+    python3 -I scripts/cost-report.py {{args}}
+
 # --- Factory setup ----------------------------------------------------------------------------
 
 # Prepare this machine (Arch or Ubuntu/WSL). Safe to re-run. Pass --dry-run to preview.
