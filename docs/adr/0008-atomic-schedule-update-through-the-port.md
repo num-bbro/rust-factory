@@ -69,6 +69,13 @@ where
 - Bad: the trait is no longer object-safe (`dyn ScheduleRepository` is impossible) because
   `update` is generic. Nothing uses it as a trait object; the HTTP adapter and `crates/app` are
   generic over the repository.
+- Bad: if a change panics, the stored schedule stays intact (the change ran on a copy), but the
+  mutex is poisoned: every later `update` returns `RepositoryError` and every request is answered
+  `503` until the process restarts. This cannot happen with today's domain code, which returns
+  errors and does not panic. Option not taken: recovering the lock with `PoisonError::into_inner`
+  would be safe, because the stored data is always consistent; it is not done here, so that a
+  panic stays visible as a failure instead of being silently passed over. A future ADR can change
+  this.
 - Bad: the change closure is synchronous and runs while the store is locked; it must stay short
   and must not call the repository again (the mutex is not re-entrant, so that would deadlock).
   An async database driver would need a new port shape and a new ADR.

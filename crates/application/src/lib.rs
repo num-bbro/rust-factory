@@ -18,6 +18,9 @@ pub trait ScheduleRepository: Send + Sync {
     /// - `change` returns `Err(e)`: nothing is stored (even if `change` modified the schedule
     ///   before failing) and `Err(e)` is returned.
     /// - Storage fails: the [`RepositoryError`] is returned as `E`; `change` may not have run.
+    ///
+    /// `change` must not call the repository again: an implementation may hold a lock for the
+    /// whole call, so re-entry can deadlock.
     fn update<T, E, F>(&self, change: F) -> Result<T, E>
     where
         F: FnOnce(&mut Schedule) -> Result<T, E>,

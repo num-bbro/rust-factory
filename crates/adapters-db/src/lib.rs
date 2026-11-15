@@ -23,8 +23,9 @@ impl InMemoryScheduleRepository {
 
 impl ScheduleRepository for InMemoryScheduleRepository {
     /// Holds the lock for the whole update, so concurrent updates run one after another. The
-    /// change runs on a copy that replaces the stored schedule only on success; a failing (or
-    /// panicking) change leaves the stored schedule as it was.
+    /// change runs on a copy that replaces the stored schedule only on success; a failing change
+    /// leaves the stored schedule as it was, and a panicking one also leaves it intact but
+    /// poisons the lock, so every later update is a `RepositoryError` until restart (ADR 0008).
     fn update<T, E, F>(&self, change: F) -> Result<T, E>
     where
         F: FnOnce(&mut Schedule) -> Result<T, E>,
