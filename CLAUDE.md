@@ -37,10 +37,19 @@ anything that needs a password or secret.
   worker model used.
 - Never force-push to `main`, never commit secrets, never commit build output (`target/`).
 
-## Quality bar (non-negotiable)
-- Code must pass: `cargo fmt --check`, `cargo clippy -- -D warnings`, all tests.
-- Business rules live in a pure domain layer with no IO; adapters depend on the domain, never
-  the reverse.
+## Quality bar (non-negotiable), see ADR 0003
+- `just check` must pass before a PR: format, clippy (warnings are errors), all tests,
+  cargo-deny, coverage ≥ 85%, model check. `just check-fast` (format, lint, tests) runs
+  automatically when you stop (Stop hook); fix what it reports. Edited `.rs` files are formatted
+  automatically (PostToolUse hook).
+- Code layout: `crates/domain` (pure business rules: no IO, no async, no frameworks) →
+  `crates/application` (use cases + ports/traits) → `crates/adapters-*` (implement ports) →
+  `crates/app` (wiring). Dependencies point inward only; `crates/architecture-tests` enforces it.
+  Never relax those tests to make a change pass; if a rule must change, write an ADR first.
+- New dependencies: add the version once in the root `Cargo.toml` `[workspace.dependencies]`,
+  then `dep.workspace = true` in the crate. `domain` may use only `thiserror`.
+- No `unwrap()` outside tests; return errors (`thiserror` in libraries). No `println!` in library
+  code; use `tracing`. No `unsafe`.
 - Every behavior change comes with tests. Every user story has an acceptance test.
 - Prefer simple, readable code over clever code. No dead code, no commented-out code, no TODOs
   without an issue number.
@@ -99,7 +108,7 @@ The factory is being built stage by stage. Only rely on what is marked done.
 - [x] Stage 1 — repo skeleton, conventions, protected `main`
 - [x] Stage 2 — issue templates, labels, Project board (see "Work items" below)
 - [x] Stage 3 — TOGAF docs, ADRs, ArchiMate model pipeline (see "Architecture" above)
-- [ ] Stage 4 — Rust workspace template + local quality gates
+- [x] Stage 4 — Rust workspace template + local quality gates (see "Quality bar")
 - [ ] Stage 5 — agent team (subagents, skills, routing, cost report)
 - [ ] Stage 6 — CI/CD pipelines
 - [ ] Stage 7 — acceptance builds

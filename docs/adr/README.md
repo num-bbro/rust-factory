@@ -14,3 +14,4 @@ that supersedes the old one, and set the old one's status to `Superseded by NNNN
 |---|---|---|
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions as ADRs | Accepted |
 | [0002](0002-archimate-model-as-text.md) | ArchiMate model as text, built into Archi in CI | Accepted |
+| [0003](0003-layered-cargo-workspace.md) | Layered Cargo workspace with enforced dependency direction | Accepted |

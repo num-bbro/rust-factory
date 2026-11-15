@@ -1,0 +1,66 @@
+# Cargo workspace — layered ("hexagonal") architecture. See docs/adr/0003-layered-cargo-workspace.md.
+#
+#   domain        business rules; pure: no IO, no framework, no async
+#   application   use cases; talks to the outside world only through traits it defines (ports)
+#   adapters-*    implement those ports (HTTP, database, ...)
+#   app           the binary: wires adapters into use cases and starts the server
+#
+# Dependencies may only point inward (app → adapters → application → domain).
+# crates/architecture-tests fails the build if they don't.
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+publish = false
+
+[workspace.dependencies]
+# internal crates
+domain = { path = "crates/domain" }
+application = { path = "crates/application" }
+adapters-db = { path = "crates/adapters-db" }
+adapters-http = { path = "crates/adapters-http" }
+
+# external crates (versions only; features are chosen per crate)
+axum = "0.8.9"
+cargo_metadata = "0.23.1"
+http-body-util = "0.1.5"
+proptest = "1.12.0"
+serde = "1.0.229"
+serde_json = "1.0.154"
+thiserror = "2.0.21"
+tokio = "1.54.1"
+tower = "0.5.3"
+tracing = "0.1.44"
+tracing-subscriber = "0.3.23"
+
+# Lints for every crate (each crate opts in with `[lints] workspace = true`).
+# Warnings are errors in CI and in `just check` (RUSTFLAGS/clippy -D warnings).
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+unused_qualifications = "warn"
+
+[workspace.lints.clippy]
+# A strict but practical set: all of `pedantic`, minus the few that mostly add noise.
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+must_use_candidate = "allow"
+# Code-health rules beyond pedantic:
+unwrap_used = "warn"          # handle errors; use expect("why") only where truly impossible
+dbg_macro = "warn"
+todo = "warn"
+print_stdout = "warn"         # use tracing, not println!, outside the binary's startup
+large_futures = "warn"
+cognitive_complexity = "warn"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
