@@ -6,6 +6,7 @@
 # Safe to re-run: finds the project by title, adds only missing fields, and replaces the
 # Status options only if they differ (replacing them would clear existing items' statuses).
 # Needs the gh "project" permission:  gh auth refresh -s project
+# Assumes the owner is a user account (not an organization).
 set -euo pipefail
 
 REPO="${1:?usage: $0 <owner/repo> [project title]}"
@@ -85,5 +86,19 @@ for f in "Complexity" "Model" "Priority" "ADM phase"; do
       --data-type SINGLE_SELECT --single-select-options "${FIELDS[$f]}" >/dev/null
   fi
 done
+
+# --- Kanban view ----------------------------------------------------------------
+# New projects only get a table view. Board columns follow the Status field.
+VIEW="Lifecycle board"
+VIEWS="$(gh api graphql -f owner="$OWNER" -F number="$NUMBER" -f query='
+  query($owner: String!, $number: Int!) {
+    user(login: $owner) { projectV2(number: $number) { views(first: 50) { nodes { name } } } }
+  }' --jq '.data.user.projectV2.views.nodes[].name')"
+if grep -Fxq "$VIEW" <<<"$VIEWS"; then
+  ok "view '$VIEW'"
+else
+  todo "add view '$VIEW'"
+  gh api -X POST "users/$OWNER/projectsV2/$NUMBER/views" -f name="$VIEW" -f layout=board >/dev/null
+fi
 
 echo "Project: $PROJECT_URL"
