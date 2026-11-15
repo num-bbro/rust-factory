@@ -8,7 +8,7 @@
 #   ./bootstrap.sh --dry-run  show what would change, change nothing
 #
 # Layers:
-#   1. OS packages   (pacman on Arch, apt on Ubuntu)  — compilers, podman, gh, mise, python, Xvfb
+#   1. OS packages   (pacman on Arch, apt on Ubuntu)  — compilers, podman, gh, mise, python, Xvfb, xmllint
 #   2. Rust          (rustup + the toolchain pinned in rust-toolchain.toml)
 #   3. Dev tools     (mise installs the versions pinned in mise.toml: just, cargo-* tools)
 #   3b. Archi        (version pinned in tools/archi.env, checksum-verified, into ~/.local/opt)
@@ -69,7 +69,7 @@ fi
 log "Layer 1: OS packages"
 
 if [[ $DISTRO == arch ]]; then
-  PKGS=(base-devel git curl unzip pkgconf openssl podman github-cli mise python xorg-server-xvfb)
+  PKGS=(base-devel git curl unzip pkgconf openssl podman github-cli mise python xorg-server-xvfb libxml2)
   # pacman -T prints only the packages that are NOT installed.
   mapfile -t MISSING < <(pacman -T "${PKGS[@]}" || true)
   if (( ${#MISSING[@]} )); then
@@ -119,7 +119,7 @@ else # ubuntu
   fi
 
   # fonts-thai-tlwg: Thai glyphs for Archi diagrams (WSL images often ship without them)
-  PKGS=(build-essential git curl unzip ca-certificates pkg-config libssl-dev podman gh mise python3 xvfb fonts-thai-tlwg)
+  PKGS=(build-essential git curl unzip ca-certificates pkg-config libssl-dev podman gh mise python3 xvfb libxml2-utils fonts-thai-tlwg)
   MISSING=()
   for p in "${PKGS[@]}"; do
     [[ ( $p == gh || $p == mise ) ]] && have "$p" && continue   # installed some other way: fine
