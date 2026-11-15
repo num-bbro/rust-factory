@@ -1,6 +1,6 @@
 # 0007. Cancel a reservation by deleting it: `DELETE /reservations/{id}`
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-15
 - Issue: #17 (stories #18, #19)
 - Deciders: human approver (plan approved at gate 1 on 2026-11-15), architect agent
