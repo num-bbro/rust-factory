@@ -1,0 +1,4 @@
+# Pilot environment: gets every release first.
+# name     target                 port
+# target:  "local" = this machine (simulated host), or "ssh:user@host" for a real VM.
+pilot      local                  18081

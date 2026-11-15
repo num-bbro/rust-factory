@@ -46,6 +46,7 @@ gh auth login              # once per machine
 | `Dockerfile` | Release image: 31 MB, non-root, health check ([ADR 0005](docs/adr/0005-release-image-and-acceptance.md)) |
 | `crates/acceptance-tests/` | Gherkin acceptance tests run against the real container (`just acceptance`) |
 | `.github/workflows/release.yml` | Tag `vX.Y.Z` → build once → acceptance → GHCR + GitHub Release (`just release X.Y.Z`) |
+| `deploy/` | Hosts per environment, Quadlet unit; `just deploy`, `just promote`, `just deploy-status` ([guide](deploy/README.md)) |
 | `.github/dependabot.yml` | Weekly grouped dependency update PRs |
 | `scripts/issue-link.sh` | Sub-issues and "blocked by" links between issues |
 | `scripts/cost-report.py`, `tools/model-prices.toml` | `just cost`: agent spend per model, agent and task |

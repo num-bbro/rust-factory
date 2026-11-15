@@ -111,6 +111,20 @@ release version:
     git push origin "v{{version}}"
     echo "Tagged v{{version}}. Follow the release: gh run watch \$(gh run list --workflow Release --limit 1 --json databaseId --jq '.[0].databaseId')"
 
+# --- Deploy: pilot, then production (see deploy/ and ADR 0006) ----------------------------------
+
+# Deploy a released version (or a test image) to an environment, with health check and rollback.
+deploy env version:
+    scripts/deploy.sh deploy {{env}} {{version}}
+
+# HUMAN GATE 3: promote a version that is healthy on the pilot to production, one host at a time.
+promote version:
+    scripts/deploy.sh promote {{version}}
+
+# What runs where, and is it healthy?
+deploy-status env="":
+    scripts/deploy.sh status {{env}}
+
 # --- Agent team -----------------------------------------------------------------------------
 
 # Agent spend per model, agent and task (estimate at API list price). e.g. just cost --issue 42

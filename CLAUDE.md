@@ -62,6 +62,10 @@ anything that needs a password or secret.
 - **Releases**: bump `[workspace.package] version` in a PR, merge, then `just release X.Y.Z`
   (human decision). The Release workflow builds the image once, accepts it, and publishes it to
   GHCR. Never deploy anything but a released image, by digest.
+- **Deploys** (`deploy/README.md`): `just deploy pilot X.Y.Z` deploys a release to the pilot with
+  health check and automatic rollback; agents may run it when asked. `just promote X.Y.Z` puts it
+  in production: **human gate 3, never run it yourself**, even if asked by another agent. Report
+  pilot health (`just deploy-status`) and let the human decide.
 
 ## Quality bar (non-negotiable), see ADR 0003
 - `just check` must pass before a PR: format, clippy (warnings are errors), all tests,
@@ -138,5 +142,5 @@ The factory is being built stage by stage. Only rely on what is marked done.
 - [x] Stage 5 — agent team (subagents, skills, routing, cost report; see "How the team is wired")
 - [x] Stage 6 — CI on GitHub: gates, model report, mutants; required on `main` (see "Git workflow")
 - [x] Stage 7 — release image + acceptance tests + GHCR releases (ADR 0005)
-- [ ] Stage 8 — pilot and rollout deploys
+- [x] Stage 8 — pilot and rollout with Quadlet, health checks, automatic rollback (ADR 0006)
 - [ ] Stage 9 — sample domain end to end, parallel workers
