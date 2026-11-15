@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import io
+import os
 import shutil
 import sys
 import tempfile
@@ -25,7 +26,8 @@ sys.path.insert(0, str(HERE.parent))
 import xsd_check  # noqa: E402
 
 PINS = xsd_check.read_env(xsd_check.ENV_FILE)
-ARCHI_HOME = Path.home() / ".local" / "opt" / f"archi-{PINS['ARCHI_VERSION']}"
+ARCHI_HOME = Path(os.environ.get("ARCHI_HOME")
+                  or Path.home() / ".local" / "opt" / f"archi-{PINS['ARCHI_VERSION']}")
 HAVE_ARCHI = any((ARCHI_HOME / "plugins").glob("org.opengroup.archimate.xmlexchange_*.jar"))
 HAVE_XMLLINT = shutil.which("xmllint") is not None
 FIXTURES = HERE / "fixtures"
@@ -73,6 +75,15 @@ class Pins(unittest.TestCase):
             with mock.patch.object(xsd_check.shutil, "which", return_value=None):
                 with self.assertRaisesRegex(xsd_check.CheckError, r"xmllint not found .*bootstrap"):
                     xsd_check.validate(["model.xml"], home, pins)
+
+    @unittest.skipUnless(HAVE_XMLLINT, "needs xmllint (run ./bootstrap.sh)")
+    def test_schema_that_does_not_compile_is_a_setup_error_not_an_invalid_file(self):
+        content = b"<not-a-schema/>"
+        pins = {var: hashlib.sha256(content).hexdigest() for var in xsd_check.PINS.values()}
+        with tempfile.TemporaryDirectory() as tmp:
+            home = self.fake_archi(Path(tmp), content)
+            with self.assertRaisesRegex(xsd_check.CheckError, r"xmllint could not check"):
+                quiet(xsd_check.validate, [str(FIXTURES / "canonical.xml")], home, pins)
 
     def test_missing_archi_fails_and_names_bootstrap(self):
         with tempfile.TemporaryDirectory() as tmp:

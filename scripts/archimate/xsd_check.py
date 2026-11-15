@@ -95,6 +95,9 @@ def validate(files: list[str], archi_home: Path, pins: dict[str, str]) -> int:
     output = (result.stdout + result.stderr).strip()
     if output:
         print(output, file=sys.stderr if result.returncode else sys.stdout)
+    if result.returncode not in (0, 3, 4):              # 3, 4: the file is invalid; else setup
+        raise CheckError(f"xmllint could not check (exit {result.returncode}: schema did not "
+                         "compile or a file cannot be read)")
     if result.returncode:
         print(f"schema: {len(files)} file(s) checked, not valid against the ArchiMate 3.1 "
               "exchange schema", file=sys.stderr)

@@ -8,8 +8,8 @@ canonical form of ADR 0009:
   schema order, elements, relationships, property definitions and views sorted by identifier
   (properties keep their order: a repeated property is an ordered list);
 * `xml:lang="en"` on every name, label, documentation and value; at most one of each per owner;
-* an empty `documentation` is omitted and its text never ends in a newline; empty `properties`
-  are omitted;
+* an empty `documentation` is omitted and its text never ends in whitespace (a newline or
+  spaces after the last line); empty `properties` are omitted;
 * text is escaped, never CDATA; comments, processing instructions and DOCTYPEs are rejected (they
   would not survive a parse-and-serialise round);
 * `xsi:schemaLocation` is always written;
@@ -266,7 +266,7 @@ class _Canonicaliser:
                 self.problem(where, "has no <name>")
         else:
             self.lang_el(out, "name", name)
-        doc = (self.text(found["documentation"], where, "documentation") or "").rstrip("\n")
+        doc = (self.text(found["documentation"], where, "documentation") or "").rstrip()
         if doc:
             self.lang_el(out, "documentation", doc)
         if "properties" in found:
@@ -379,7 +379,7 @@ class _Canonicaliser:
             a = self.attrs(d, where, {"identifier", "type"})
             f = self.children(d, where, ("name", "documentation"))
             name = self.text(f["name"], where, "name")
-            doc = (self.text(f["documentation"], where, "documentation") or "").rstrip("\n")
+            doc = (self.text(f["documentation"], where, "documentation") or "").rstrip()
             if not name:
                 self.problem(where, "has no <name>")
                 continue
@@ -502,10 +502,9 @@ class _Canonicaliser:
             elif self.types[ref] not in layout.ELEMENT_TYPES:
                 self.problem(where, f"'{ref}' is a {self.types[ref]}, which the automatic layout "
                                     "cannot place; set the view property Layout = manual")
-        if len(self.problems) > problems_before:
-            return
-        rels = sorted(self.rels, key=lambda r: r["ID"])
-        add_diagram(out, vid, members, {r: self.types[r] for r in members}, rels)
+        if len(self.problems) > problems_before or not members:
+            return                                       # an empty view is valid: no nodes
+        add_diagram(out, vid, members, {r: self.types[r] for r in members}, self.rels)
 
     def members(self, node: ET.Element, vid: str, where: str, refs: list[str]) -> None:
         """Collect the element ids of a (bare or formatted) automatic view."""

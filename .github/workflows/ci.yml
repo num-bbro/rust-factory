@@ -45,6 +45,8 @@ jobs:
         run: just deny
       - name: Coverage
         run: just coverage
+      - name: Architecture model script tests
+        run: just model-test
       - name: Architecture model and doc references
         run: just model-check
 

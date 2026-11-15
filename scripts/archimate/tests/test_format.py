@@ -104,6 +104,16 @@ class CanonicalRules(unittest.TestCase):
                         "<documentation>one\ntwo\n\n</documentation></element>"))
         self.assertIn('<documentation xml:lang="en">one\ntwo</documentation>', out)
 
+    def test_documentation_loses_trailing_spaces_but_not_inner_ones(self):
+        out = fmt(model('<element identifier="id-a" xsi:type="Goal"><name>A</name>'
+                        "<documentation>one  \n  two  \n  </documentation></element>"))
+        self.assertIn('<documentation xml:lang="en">one  \n  two</documentation>', out)
+
+    def test_carriage_return_in_text_is_kept_as_a_character_reference(self):
+        out = fmt(model('<element identifier="id-a" xsi:type="Goal"><name>a&#13;b</name></element>'))
+        self.assertIn('<name xml:lang="en">a&#13;b</name>', out)
+        self.assertEqual(fmt(out.encode()), out)
+
     def test_cdata_is_written_escaped(self):
         out = fmt(model('<element identifier="id-a" xsi:type="Goal"><name><![CDATA[a<b & c]]>'
                         "</name></element>"))
@@ -215,6 +225,13 @@ class Views(unittest.TestCase):
                              '<node xsi:type="Element" elementRef="id-a"/>'))
         self.assertIn('identifier="id-view-v-n-id-a"', bare)
         self.assertEqual(fmt(bare.encode()), bare)
+
+    def test_view_without_nodes_is_formatted_as_an_empty_view(self):
+        out = fmt(self.view("", "<documentation>todo</documentation>"))
+        self.assertIn('<view identifier="id-view-v" xsi:type="Diagram">\n        <name xml:lang="en">V'
+                      '</name>\n        <documentation xml:lang="en">todo</documentation>\n'
+                      "      </view>", out)
+        self.assertEqual(fmt(out.encode()), out)
 
     def test_manual_view_is_left_as_it_is(self):
         def view_of(data: bytes) -> list[tuple]:
