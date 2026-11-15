@@ -52,7 +52,7 @@
 "id-rel-062","CompositionRelationship","","","id-app-comp-reservation-svc","id-app-comp-application",""
 "id-rel-063","CompositionRelationship","","","id-app-comp-reservation-svc","id-app-comp-http",""
 "id-rel-064","CompositionRelationship","","","id-app-comp-reservation-svc","id-app-comp-db",""
-"id-rel-065","CompositionRelationship","","","id-app-comp-reservation-svc","id-app-intf-reservation-api",""
+"id-rel-065","CompositionRelationship","","","id-app-comp-http","id-app-intf-reservation-api",""
 "id-rel-066","ServingRelationship","","","id-app-comp-domain","id-app-comp-application",""
 "id-rel-067","ServingRelationship","","","id-app-comp-application","id-app-comp-http",""
 "id-rel-068","ServingRelationship","","","id-app-comp-db","id-app-comp-application",""

@@ -35,6 +35,12 @@ out of scope.
 4. **Idempotent delete: `204` also for an unknown or already-cancelled id**: simple for retrying
    clients, but a typo in the id would look like success, which contradicts story #19.
 
+For an id that is not a number at all (e.g. `/reservations/abc`), a separate choice:
+
+- **A. `400 Bad Request` from the framework's typed path extractor**, plain-text body, no custom
+  handling.
+- **B. `404 Not Found` with `{error}`**, consistent with "unknown id → 404".
+
 ## Decision
 Chosen: **option 1**, because it is what the domain already does (`Schedule::cancel`), it frees
 the slot with no change to the overlap rule, it fits the REST resource that `POST /reservations`
@@ -46,10 +52,15 @@ creates, and it gives a clear refusal for ids that do not exist.
 - Unknown id, or an id that was already cancelled: `404 Not Found` with the existing
   `{"error": "..."}` body. Cancelling twice therefore gives `404` the second time.
 - Cancelling removes the reservation from the schedule (`id-app-data-schedule`). No history is
-  kept. Reservation ids are never reused, so an old id can never cancel someone else's newer
-  reservation.
-- Storage failures map to `503`, as for booking. An id that is not a number is rejected by the
-  HTTP adapter before any use case runs (axum's path extraction answers `400`).
+  kept.
+- Storage failures map to `503 Service Unavailable` with `{error}`, reusing the mapping
+  `POST /reservations` already has. *Beyond the plan approved at gate 1; needs the human's
+  sign-off on this ADR.*
+- A non-numeric id: **option A**. A non-numeric id is answered `400 Bad Request` by the
+  framework's typed path extractor, with a plain-text body (not `{error}`); no custom handling.
+  Option B was rejected because a malformed id is a client error distinct from a well-formed id
+  that does not exist, and custom handling adds code for no user value. *Beyond the plan
+  approved at gate 1; needs the human's sign-off on this ADR.*
 
 ## Consequences
 - Good: no domain change; the use case and the HTTP handler are thin; the acceptance scenarios
@@ -62,4 +73,13 @@ creates, and it gives a clear refusal for ids that do not exist.
   treat `404` after its own earlier attempt as "already cancelled".
 - Bad: anyone who knows a reservation id can cancel it; there is no authentication in the
   sample domain yet. Out of scope of #17.
+- Bad: error bodies are not uniform: rule, not-found and storage errors carry `{error}`, while
+  requests the framework rejects (a non-numeric id, malformed JSON) get a plain-text body.
+- Bad: reservation ids are unique only within one running instance. Storage is in memory
+  (`id-app-comp-db`), so ids start again from 1 after a restart, redeploy or rollback, and an old
+  id held by a client may then name a different reservation.
+- Known risk: concurrent requests can lose or duplicate reservations, because the use cases load
+  the schedule, change it and save it without atomicity. Cancel adds a second writer: a
+  concurrent book and cancel can bring a cancelled reservation back or lose a booking. Tracked as
+  bug #26; not fixed by this epic.
 - Follow-up: implementation in the task issues under stories #18 and #19.
