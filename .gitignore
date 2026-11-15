@@ -26,3 +26,6 @@ Thumbs.db
 
 # Python bytecode cache
 __pycache__/
+
+# Agent worktrees (created by Claude Code subagents with isolation: worktree)
+.claude/worktrees/

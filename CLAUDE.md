@@ -13,6 +13,20 @@ documented in TOGAF / ArchiMate. Read this file fully before doing any work here
 | **Simple worker** | `claude-sonnet-5-5` | Clear, well-specified tasks: one module, tests to spec, adapters, docs, small-diff review | Makes design decisions — it asks the conductor instead |
 | **Scout** | `claude-haiku-5-5` | File/code search, log reading, gathering context; returns a short summary | Edits files |
 
+### How the team is wired (Stage 5)
+- Conductor = the main session, pinned to `claude-fable-5-2` in `.claude/settings.json`. Always pin
+  exact model IDs: in testing, the `fable` alias resolved to the older, pricier Fable 5.1.
+- Workers = subagents in `.claude/agents/`, each with its model pinned in its frontmatter:
+  `scout` (Haiku, read-only), `implementer-simple` (Sonnet, own worktree), `implementer-hard`
+  (Opus, own worktree), `architect` (Opus, own worktree), `reviewer` (Sonnet; Opus for hard PRs).
+- Lifecycle skills (slash commands) the conductor runs: `/plan-epic <epic>`,
+  `/split-tasks <story>`, `/implement <task…>`, `/review <pr>`.
+- **Every worker launch description starts with the task's issue number**, e.g.
+  `#42 implement booking cancel`. `just cost` attributes spend by it; untagged work counts as
+  planning.
+- Issue links: `scripts/issue-link.sh` (sub-issues, blocked-by, open blockers). Board fields:
+  `scripts/board.sh`.
+
 ### Routing rule (cost control)
 Every task issue carries `complexity:simple` or `complexity:hard` plus a one-line reason.
 A task is **simple only if all three hold**: clear acceptance criteria, touches one crate,
@@ -109,7 +123,7 @@ The factory is being built stage by stage. Only rely on what is marked done.
 - [x] Stage 2 — issue templates, labels, Project board (see "Work items" below)
 - [x] Stage 3 — TOGAF docs, ADRs, ArchiMate model pipeline (see "Architecture" above)
 - [x] Stage 4 — Rust workspace template + local quality gates (see "Quality bar")
-- [ ] Stage 5 — agent team (subagents, skills, routing, cost report)
+- [x] Stage 5 — agent team (subagents, skills, routing, cost report; see "How the team is wired")
 - [ ] Stage 6 — CI/CD pipelines
 - [ ] Stage 7 — acceptance builds
 - [ ] Stage 8 — pilot and rollout deploys
