@@ -34,7 +34,7 @@ impl TimeSlot {
     /// Two slots overlap when they share at least one minute. Touching slots (one ends when the
     /// other starts) do not overlap.
     pub fn overlaps(self, other: Self) -> bool {
-        self.start < other.end && other.start < self.end
+        self.start <= other.end && other.start < self.end
     }
 }
 
