@@ -25,3 +25,5 @@ change request. Requirements management runs continuously on the GitHub Project 
 
 In this template, the documents describe **the factory itself**. A project created from the
 template replaces their content with its own business case and keeps the structure.
+Each document also has a short **Sample domain** part for the reservation service the factory
+builds as its worked example (epics from #17 on).
