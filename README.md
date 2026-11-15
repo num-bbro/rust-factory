@@ -30,3 +30,7 @@ gh auth login              # once per machine
 | `justfile` | Task runner: `just` lists the recipes |
 | `CLAUDE.md` | Rules every agent follows: roles, model routing, gates, quality bar |
 | `CONTRIBUTING.md` | Branching, commit and PR conventions |
+| `.github/ISSUE_TEMPLATE/` | Forms for epic, user story, requirement, task, bug, change request, architecture decision |
+| `.github/labels.txt` | Label set (`just labels`) |
+| `.github/pull_request_template.md` | PR checklist: issue, ADR / ArchiMate links, tests, worker model |
+| `scripts/setup-project.sh` | Creates the Project board with lifecycle columns (`just project`) |

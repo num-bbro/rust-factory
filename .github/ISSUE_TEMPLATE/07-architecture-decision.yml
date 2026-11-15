@@ -1,0 +1,36 @@
+name: Architecture decision
+description: A significant technical or architectural decision that must be made and recorded as an ADR.
+title: "[ADR] "
+labels: ["type:adr", "needs-human"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The architect agent turns this into an ADR file under `docs/adr/` in a PR.
+        You approve the decision by merging that PR.
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What situation forces a decision? Which stories or requirements are involved?
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Decision needed
+      placeholder: Which database do we use for bookings?
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options already known
+      placeholder: |
+        - PostgreSQL
+        - SQLite
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Decision criteria
+      description: What matters most? Cost, operability, team skills, performance ...

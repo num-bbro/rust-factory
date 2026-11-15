@@ -1,0 +1,2 @@
+# Every issue must use one of the factory forms, so agents always get structured input.
+blank_issues_enabled: false

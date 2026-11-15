@@ -1,0 +1,27 @@
+# Factory label set. Apply with: just labels   (scripts/sync-labels.sh)
+# Format: name | color (hex, no #) | description
+# Lines starting with # are comments.
+
+# --- What kind of work item (one per issue) ---
+type:epic            | 3E1F8C | Business goal spanning several stories (TOGAF phase A)
+type:story           | 5319E7 | User story with acceptance criteria
+type:requirement     | 0E5A8A | Requirement or constraint, often non-functional
+type:task            | 1D76DB | Unit of work for one worker agent; child of a story
+type:bug             | D73A4A | Something does not work as specified
+type:change-request  | E99695 | Change to an approved business or architecture baseline (TOGAF phase H)
+type:adr             | 0075CA | Architecture decision to be made and recorded
+
+# --- Model routing for tasks (cost control, see CLAUDE.md) ---
+complexity:simple    | C2E0C6 | Clear criteria, one crate, no design decision; goes to Sonnet
+complexity:hard      | F9D0C4 | Ambiguous, cross-crate or needs design; goes to Opus
+escalated            | B60205 | Simple task reassigned to the hard worker after two gate failures
+
+# --- Priority (MoSCoW) ---
+priority:must        | B60205 | Required for the release
+priority:should      | D93F0B | Important but not vital
+priority:could       | FBCA04 | Nice to have if time allows
+priority:wont        | CCCCCC | Agreed out of scope for now
+
+# --- Flow signals ---
+blocked              | 000000 | Cannot proceed; the blocker is linked in the issue
+needs-human          | FF7619 | Waiting for a human decision or approval (a factory gate)

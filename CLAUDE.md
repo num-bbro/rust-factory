@@ -46,6 +46,19 @@ anything that needs a password or secret.
   without an issue number.
 - Every significant decision is recorded as an ADR and linked from the PR.
 
+## Work items (GitHub issues + Project board)
+- Every piece of work is an issue created from a form in `.github/ISSUE_TEMPLATE/`:
+  epic → user stories (sub-issues of the epic) → tasks (sub-issues of a story).
+  Requirements, bugs, change requests and architecture decisions have their own forms.
+- Labels come from `.github/labels.txt` (`just labels`). Every issue has exactly one `type:*`
+  label; every task also has one `complexity:*` label. Use `needs-human` when waiting on a gate,
+  `blocked` (with the blocker linked) when stuck.
+- Record order between tasks with GitHub's "blocked by" relationship, not just in prose.
+- Keep the Project board's **Status** current as you work:
+  Backlog → Ready → In progress → In review → Accepted → Piloted → Released.
+  Also fill **Complexity**, **Model**, **Priority** and **ADM phase** for each item.
+- PR bodies follow `.github/pull_request_template.md`.
+
 ## Traceability chain
 Story/requirement issue → ADR → ArchiMate element id → crate/module → test → release.
 Every artifact should link to its neighbors in this chain.
@@ -59,7 +72,7 @@ Every artifact should link to its neighbors in this chain.
 The factory is being built stage by stage. Only rely on what is marked done.
 - [x] Stage 0 — machine bootstrap (`bootstrap.sh`, `mise.toml`, `rust-toolchain.toml`, `just doctor`)
 - [x] Stage 1 — repo skeleton, conventions, protected `main`
-- [ ] Stage 2 — issue templates, labels, Project board
+- [x] Stage 2 — issue templates, labels, Project board (see "Work items" below)
 - [ ] Stage 3 — TOGAF docs, ADRs, ArchiMate model pipeline
 - [ ] Stage 4 — Rust workspace template + local quality gates
 - [ ] Stage 5 — agent team (subagents, skills, routing, cost report)

@@ -1,0 +1,60 @@
+name: Task (for a worker agent)
+description: One unit of work that a single worker can finish in one PR. Usually created by the conductor.
+title: "[Task] "
+labels: ["type:task"]
+body:
+  - type: input
+    id: parent
+    attributes:
+      label: Parent story
+      placeholder: "#34"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What to do
+      description: Precise enough that the worker needs no further questions.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Checkable conditions. Every gate in CLAUDE.md applies on top of these.
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: input
+    id: crates
+    attributes:
+      label: Crates / modules touched
+      placeholder: domain (booking module)
+    validations:
+      required: true
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Complexity (decides the worker model)
+      description: |
+        Simple only if ALL hold: clear criteria, one crate, no new design decision.
+        Also set the matching complexity:simple / complexity:hard label.
+      options:
+        - simple (Sonnet)
+        - hard (Opus)
+    validations:
+      required: true
+  - type: input
+    id: reason
+    attributes:
+      label: Reason for that complexity
+      placeholder: Single module, behavior fully specified by the story's scenarios.
+    validations:
+      required: true
+  - type: textarea
+    id: deps
+    attributes:
+      label: Dependencies
+      description: Tasks that must be merged first. Also record them with GitHub's "blocked by" relationship.
+      placeholder: "Blocked by #40"

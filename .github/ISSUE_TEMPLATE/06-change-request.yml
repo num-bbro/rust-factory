@@ -1,0 +1,39 @@
+name: Change request
+description: A change to approved business behavior or architecture (TOGAF phase H, Architecture Change Management).
+title: "[Change] "
+labels: ["type:change-request", "needs-human"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when the **business** wants something different from what was agreed.
+        The architecture model and ADRs are updated and approved **before** any code changes.
+  - type: textarea
+    id: change
+    attributes:
+      label: Requested change
+      description: What should be different, in business terms?
+    validations:
+      required: true
+  - type: textarea
+    id: driver
+    attributes:
+      label: Driver
+      description: Why now? New regulation, market change, incident, feedback ...
+    validations:
+      required: true
+  - type: textarea
+    id: affected
+    attributes:
+      label: Affected items (if known)
+      description: Epics, stories, requirements, ArchiMate elements, running systems.
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Urgency
+      options:
+        - Immediate (blocks business)
+        - Next release
+        - When convenient
+    validations:
+      required: true
