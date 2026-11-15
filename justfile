@@ -8,6 +8,14 @@ default:
 bootstrap *args:
     ./bootstrap.sh {{args}}
 
+# Make the GitHub repo's labels match .github/labels.txt. Pass --prune to delete others.
+labels *args:
+    scripts/sync-labels.sh {{args}}
+
+# Create or update the GitHub Project board for a repo (default: this one).
+project repo="num-bbro/rust-factory" title="":
+    scripts/setup-project.sh {{repo}} {{title}}
+
 # Show every factory tool's version and flag anything missing.
 doctor:
     #!/usr/bin/env bash

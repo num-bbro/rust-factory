@@ -1,0 +1,60 @@
+name: Epic
+description: A business goal that spans several user stories (TOGAF phase A, Architecture Vision).
+title: "[Epic] "
+labels: ["type:epic"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        An epic says **why** the business wants something and how success is measured.
+        The conductor breaks it into user stories (sub-issues) once you approve it.
+  - type: textarea
+    id: goal
+    attributes:
+      label: Business goal
+      description: What problem does this solve, and for whom?
+      placeholder: Front-desk staff lose bookings because double-bookings are only found at check-in.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Success measure
+      description: An observable outcome or metric that shows the goal is met.
+      placeholder: Zero double-bookings per month; booking takes under 30 seconds.
+    validations:
+      required: true
+  - type: textarea
+    id: stakeholders
+    attributes:
+      label: Stakeholders
+      description: Who cares about this, and who decides? Each becomes an ArchiMate Stakeholder / Business Actor.
+      placeholder: |
+        - Front-desk staff (users)
+        - Hotel manager (decides)
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      value: |
+        **In scope:**
+        -
+
+        **Out of scope:**
+        -
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints and assumptions
+      description: Deadlines, budget, regulations, existing systems that must be kept.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority (MoSCoW)
+      options: [Must, Should, Could, "Won't (this time)"]
+    validations:
+      required: true

@@ -1,0 +1,56 @@
+name: User story
+description: A small, valuable piece of behavior from a user's point of view, with testable acceptance criteria.
+title: "[Story] "
+labels: ["type:story"]
+body:
+  - type: input
+    id: epic
+    attributes:
+      label: Parent epic
+      description: Issue number of the epic this story belongs to.
+      placeholder: "#12"
+    validations:
+      required: true
+  - type: textarea
+    id: story
+    attributes:
+      label: Story
+      value: |
+        **As a** <role>
+        **I want** <capability>
+        **so that** <business benefit>
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria (Gherkin)
+      description: |
+        Each scenario becomes an automated acceptance test, so make them concrete and checkable.
+      render: gherkin
+      value: |
+        Scenario: <short name>
+          Given <starting situation>
+          When <action>
+          Then <observable result>
+    validations:
+      required: true
+  - type: textarea
+    id: rules
+    attributes:
+      label: Business rules
+      description: Rules the domain must enforce, in plain language. These become domain-layer code and property tests.
+      placeholder: A room cannot be booked twice for overlapping dates.
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Related requirements and constraints
+      description: Links to requirement issues (performance, security, ...).
+      placeholder: "#20 response time, #21 audit log"
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority (MoSCoW)
+      options: [Must, Should, Could, "Won't (this time)"]
+    validations:
+      required: true

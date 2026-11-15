@@ -1,0 +1,51 @@
+name: Requirement / constraint
+description: A requirement that cuts across stories, usually non-functional (performance, security, compliance ...).
+title: "[Req] "
+labels: ["type:requirement"]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Functional
+        - Performance
+        - Availability / reliability
+        - Security
+        - Privacy / compliance
+        - Usability / accessibility
+        - Maintainability
+        - Operability / observability
+        - Constraint (technology, regulation, budget)
+    validations:
+      required: true
+  - type: textarea
+    id: statement
+    attributes:
+      label: Requirement statement
+      description: One clear sentence using "must".
+      placeholder: The booking API must respond within 200 ms at the 95th percentile.
+    validations:
+      required: true
+  - type: textarea
+    id: fit
+    attributes:
+      label: Fit criterion (how we verify it)
+      description: The measurement or test that proves it is met. Becomes a test or a CI check.
+      placeholder: Load test with 50 concurrent users for 5 minutes; p95 latency < 200 ms.
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Source and rationale
+      description: Who asked for it, and why. Becomes an ArchiMate Driver / Goal link.
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority (MoSCoW)
+      options: [Must, Should, Could, "Won't (this time)"]
+    validations:
+      required: true
