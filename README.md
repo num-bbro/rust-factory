@@ -7,7 +7,7 @@ ArchiMate.
 
 [![CI](https://github.com/num-bbro/rust-factory/actions/workflows/ci.yml/badge.svg)](https://github.com/num-bbro/rust-factory/actions/workflows/ci.yml)
 
-> Status: under construction, built stage by stage. See "Factory build-out status" in
+> Status: all build-out stages are done; the factory is complete as a template. See "Factory build-out status" in
 > [CLAUDE.md](CLAUDE.md).
 
 ## Quick start (Arch Linux or Ubuntu on WSL)
