@@ -37,6 +37,19 @@ ARCHI_LINES = [
 ]
 
 
+def latin_lines(name: str) -> int:
+    """The wrap of the first version (#73): every character one unit."""
+    lines, used = 0, 0
+    for word in name.split():
+        for i in range(0, len(word), CHARS_PER_LINE):
+            piece = len(word[i:i + CHARS_PER_LINE])
+            if used and used + 1 + piece <= CHARS_PER_LINE:
+                used += 1 + piece
+            else:
+                lines, used = lines + 1, piece
+    return max(lines, 1)
+
+
 class NameLines(unittest.TestCase):
     def test_short_name_is_one_line(self):
         self.assertEqual(name_lines("Customer"), 1)
@@ -56,6 +69,24 @@ class NameLines(unittest.TestCase):
     def test_very_long_word_is_cut_into_line_long_pieces(self):
         self.assertEqual(name_lines("x" * (2 * CHARS_PER_LINE + 6)), 3)
         self.assertEqual(name_lines("ab " + "x" * (2 * CHARS_PER_LINE + 6)), 4)
+
+    def test_east_asian_wide_characters_count_twice(self):
+        cjk = "取消预约" * 8 + "取消"                      # 34 characters, no spaces
+        self.assertEqual(len(cjk), 34)
+        self.assertGreaterEqual(name_lines(cjk), 4)               # Archi draws about 4
+        self.assertEqual(name_lines("予約" * 4), 1)                # 16 units fit a line
+        self.assertEqual(name_lines("予約" * 4 + "a"), 1)          # 17 units: exact fit
+        self.assertEqual(name_lines("予約" * 4 + "取"), 2)         # 18 units: cut before it
+        self.assertEqual(name_lines("ＡＢＣＤＥＦＧＨＩ"), 2)          # full-width letters too
+
+    def test_mixed_latin_and_east_asian_name(self):
+        self.assertEqual(name_lines("Reservation 予約"), 1)        # 11 + 1 + 4 units
+        self.assertEqual(name_lines("Reservation 予約サービス"), 2)  # 11 + 1 + 10 units
+
+    def test_latin_names_count_one_unit_a_character(self):
+        for name, _ in ARCHI_LINES:
+            with self.subTest(name=name):
+                self.assertEqual(name_lines(name), latin_lines(name))
 
     def test_estimate_is_never_below_what_archi_draws(self):
         for name, drawn in ARCHI_LINES:

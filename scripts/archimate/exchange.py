@@ -92,8 +92,9 @@ def add_diagram(view: ET.Element, view_id: str, refs: list[str], types: dict[str
 
     `refs` are the member element ids, `types` and `names` map each to its element type and name
     (a box is as tall as its name needs), `rels` are the model's relationships as {"ID", "Type",
-    "Source", "Target"}; a relationship is drawn when both of its ends are members. Node and connection identifiers derive from the view and element or
-    relationship ids, so the same input always gives the same output.
+    "Source", "Target"}; a relationship is drawn when both of its ends are members. Node and
+    connection identifiers derive from the view and element or relationship ids, so the same
+    input always gives the same output.
     """
     lay = layout.layout(refs, types, names, rels)
     node_id = {ref: f"{view_id}-n-{ref}" for ref in refs}

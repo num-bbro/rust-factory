@@ -23,6 +23,7 @@ format requires (also for nested nodes).
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass, field
 
 LAYERS: list[tuple[str, list[list[str]]]] = [
@@ -128,16 +129,30 @@ class ViewLayout:
     lines: list[Line]
 
 
-def name_lines(name: str) -> int:
-    """Lines a name takes in a W-wide box: greedy word wrap at CHARS_PER_LINE characters.
+def char_units(c: str) -> int:
+    """Width of a character in the wrap: 2 for East Asian wide and full-width ones, else 1."""
+    return 2 if unicodedata.east_asian_width(c) in ("W", "F") else 1
 
-    A word longer than a line is cut into line-long pieces. Characters are counted, not
-    measured, so the estimate depends on no font and is the same on every machine.
+
+def name_lines(name: str) -> int:
+    """Lines a name takes in a W-wide box: greedy word wrap at CHARS_PER_LINE units a line.
+
+    A character is 1 unit (2 if East Asian wide, `char_units`); a word longer than a line is cut
+    into pieces of at most a line. Characters are counted, not measured, so the estimate depends
+    on no font and is the same on every machine.
+    Known limit: a name made mostly of wide Latin capitals (W, M) can be under-estimated by a
+    line; the over-estimate for names with many narrow characters (i, l, punctuation) is accepted.
     """
     lines, used = 0, 0
     for word in name.split():
-        for i in range(0, len(word), CHARS_PER_LINE):
-            piece = len(word[i:i + CHARS_PER_LINE])
+        pieces, piece = [], 0
+        for c in word:
+            if piece + char_units(c) > CHARS_PER_LINE:
+                pieces.append(piece)
+                piece = 0
+            piece += char_units(c)
+        pieces.append(piece)
+        for piece in pieces:
             if used and used + 1 + piece <= CHARS_PER_LINE:
                 used += 1 + piece
             else:
