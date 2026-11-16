@@ -563,38 +563,38 @@ The sample reservation service (`id-app-comp-reservation-svc`) runs as a contain
       </properties>
     </element>
     <element identifier="id-impl-plat-v0-1-0" xsi:type="Plateau">
-      <name xml:lang="en">Release vv0.1.0</name>
+      <name xml:lang="en">Release v0.1.0</name>
       <documentation xml:lang="en">First released image: the reservation service books a slot.</documentation>
       <properties>
         <property propertyDefinitionRef="propid-date">
           <value xml:lang="en">2026-11-15</value>
         </property>
         <property propertyDefinitionRef="propid-tag">
-          <value xml:lang="en">vv0.1.0</value>
+          <value xml:lang="en">v0.1.0</value>
         </property>
       </properties>
     </element>
     <element identifier="id-impl-plat-v0-2-0" xsi:type="Plateau">
-      <name xml:lang="en">Release vv0.2.0</name>
+      <name xml:lang="en">Release v0.2.0</name>
       <documentation xml:lang="en">Customers can cancel a reservation (epic #17).</documentation>
       <properties>
         <property propertyDefinitionRef="propid-date">
           <value xml:lang="en">2026-11-15</value>
         </property>
         <property propertyDefinitionRef="propid-tag">
-          <value xml:lang="en">vv0.2.0</value>
+          <value xml:lang="en">v0.2.0</value>
         </property>
       </properties>
     </element>
     <element identifier="id-impl-plat-v0-2-1" xsi:type="Plateau">
-      <name xml:lang="en">Release vv0.2.1</name>
+      <name xml:lang="en">Release v0.2.1</name>
       <documentation xml:lang="en">Schedule changes are atomic (bug #26).</documentation>
       <properties>
         <property propertyDefinitionRef="propid-date">
           <value xml:lang="en">2026-11-15</value>
         </property>
         <property propertyDefinitionRef="propid-tag">
-          <value xml:lang="en">vv0.2.1</value>
+          <value xml:lang="en">v0.2.1</value>
         </property>
       </properties>
     </element>
