@@ -1,4 +1,5 @@
-"""Tests of the Markdown unwrap/wrap (mdwrap.py) and the ADR page generator (gen_docs.py), ADR 0009."""
+"""Tests of the Markdown unwrap/wrap (mdwrap.py) and the ADR and TOGAF page generator
+(gen_docs.py), ADR 0009."""
 
 from __future__ import annotations
 
@@ -364,7 +365,7 @@ class Check(unittest.TestCase):
         self.assertEqual(self.run_main()[0], 0)
         code, out = self.run_main("--check")
         self.assertEqual(code, 0)
-        self.assertIn("3 generated pages are current", out)
+        self.assertIn("4 generated pages are current", out)
         self.assertNotIn(str(self.root), (self.root / "docs/adr/0001-first.md").read_text())
 
     def test_missing_page_fails(self):
@@ -405,12 +406,296 @@ class Check(unittest.TestCase):
             self.assertEqual(gen_docs.main(["--nope"]), 2)
 
 
+FENCED = "```\\nSee `id-app-comp-a` here.\\n```"
+NARRATIVE = ("## Content\\nSee `id-mot-adr-0001`, `id-view-one`, `id-view-three`, `id-app-comp-a`, "
+             "`id-app-comp-c`, `id-mot-req-r`, `id-rel-001` and `id-app-comp-zz`.\\n" + FENCED)
+
+
+def togaf_model(first_views: tuple[str, ...] = ("id-view-two", "id-view-one"),
+                narrative: str = NARRATIVE, extra: str = "", rels: str = "") -> str:
+    """adr_model plus three views and three documents: the first shows `first_views`, the second
+    the third view, the third none."""
+    def doc(slug: str, title: str, file: str, phase: str, views: tuple[str, ...], text: str) -> str:
+        props = [("file", file), ("phase", phase)] + [("view", v) for v in views]
+        return (f'<element identifier="id-impl-del-{slug}" xsi:type="Deliverable">'
+                f'<name xml:lang="en">{title}</name>'
+                f'<documentation xml:lang="en">{text.replace(chr(92) + "n", chr(10))}'
+                "</documentation><properties>"
+                + "".join(f'<property propertyDefinitionRef="p-{k}"><value xml:lang="en">{v}'
+                          "</value></property>" for k, v in props)
+                + "</properties></element>")
+
+    def view(vid: str, name: str, members: tuple[str, ...], text: str = "") -> str:
+        documentation = f'<documentation xml:lang="en">{text}</documentation>' if text else ""
+        return (f'<view identifier="{vid}" xsi:type="Diagram"><name xml:lang="en">{name}</name>'
+                f"{documentation}"
+                + "".join(f'<node identifier="n-{vid}-{m}" xsi:type="Element" elementRef="{m}"/>'
+                          for m in members) + "</view>")
+
+    elements = (
+        '<element identifier="id-app-comp-c" xsi:type="ApplicationComponent">'
+        '<name xml:lang="en">c | see</name><properties>'
+        '<property propertyDefinitionRef="p-issue"><value xml:lang="en">#7</value></property>'
+        '<property propertyDefinitionRef="p-crate"><value xml:lang="en">crates/c</value></property>'
+        '<property propertyDefinitionRef="p-code"><value xml:lang="en">src/c.rs</value></property>'
+        "</properties></element>"
+        + doc("first", "A. First", "docs/togaf/A-first.md", "A", first_views, narrative)
+        + doc("second", "B. Second", "docs/togaf/B-second.md", "B", ("id-view-three",),
+              "Text with `id-app-comp-b`.")
+        + doc("third", "C. Third", "docs/togaf/C-third.md", "C", (), "Only `id-app-comp-b`.")
+        + extra)
+    views = ("<views><diagrams>"
+             + view("id-view-one", "One", ("id-app-comp-b", "id-app-comp-a"))
+             + view("id-view-two", "Two", ("id-mot-req-r", "id-app-comp-b"),
+                    "Shows `id-app-comp-c`.")
+             + view("id-view-three", "Three", ("id-app-comp-c", "id-app-comp-a"))
+             + "</diagrams></views>")
+    defs = "".join(f'<propertyDefinition identifier="p-{k}" type="string"><name xml:lang="en">'
+                   f"{k.capitalize()}</name></propertyDefinition>"
+                   for k in ("phase", "view", "crate", "code"))
+    return (adr_model(extra=elements)
+            .replace("</relationships>", rels + "</relationships>")
+            .replace("</propertyDefinitions>", defs + "</propertyDefinitions>")
+            .replace("</model>", views + "</model>"))
+
+
+def togaf(xml: str | None = None) -> tuple[dict[str, str], list[str]]:
+    return rendered(xml or togaf_model())
+
+
+def section(page: str, view: str) -> str:
+    """One view section of a page, up to the next section."""
+    start = page.index(f'## <a id="{view}"></a>')
+    end = page.find("\n## ", start + 1)
+    return page[start:end if end > 0 else None]
+
+
+class TogafPages(unittest.TestCase):
+    def test_the_valid_model_has_no_problems_and_every_document_a_page(self):
+        pages, problems = togaf()
+        self.assertEqual(problems, [])
+        self.assertTrue({"docs/togaf/A-first.md", "docs/togaf/B-second.md", "docs/togaf/C-third.md",
+                         "docs/togaf/README.md"} <= set(pages))
+        for rel in ("docs/togaf/A-first.md", "docs/togaf/README.md"):
+            first = pages[rel].split("\n")[0]
+            self.assertTrue(first.startswith("<!-- Generated from docs/architecture/model.xml ("),
+                            rel)
+            self.assertTrue(first.endswith("see docs/togaf/template.md. -->"), rel)
+
+    def test_page_is_title_narrative_then_view_sections_in_view_order(self):
+        page = togaf()[0]["docs/togaf/A-first.md"]
+        self.assertEqual(page.split("\n")[1:4], ["# A. First", "", "## Content"])
+        self.assertLess(page.index("```"), page.index('## <a id="id-view-two"></a>Two'))
+        self.assertLess(page.index('## <a id="id-view-two"></a>Two'),
+                        page.index('## <a id="id-view-one"></a>One'))
+        other = togaf(togaf_model(first_views=("id-view-one", "id-view-two")))[0]
+        self.assertLess(other["docs/togaf/A-first.md"].index('<a id="id-view-one">'),
+                        other["docs/togaf/A-first.md"].index('<a id="id-view-two">'))
+        self.assertNotIn("## <a id=", togaf()[0]["docs/togaf/C-third.md"])
+
+    def test_view_section_has_documentation_image_and_catalog(self):
+        two = section(togaf()[0]["docs/togaf/A-first.md"], "id-view-two").split("\n")
+        self.assertEqual(two[:6], [
+            '## <a id="id-view-two"></a>Two', "",
+            "Shows [`id-app-comp-c`](B-second.md#id-app-comp-c).", "",
+            "![Two](../architecture/views/id-view-two.png)", ""])
+        one = section(togaf()[0]["docs/togaf/A-first.md"], "id-view-one").split("\n")
+        self.assertEqual(one[2], "![One](../architecture/views/id-view-one.png)")
+
+    def test_catalog_columns_rows_sorted_and_first_row_anchored(self):
+        page = togaf()[0]["docs/togaf/A-first.md"]
+        two = section(page, "id-view-two").split("\n")
+        self.assertEqual(two[6:10], [
+            "| ID | Name | Type | Decisions | Issues | Crate / code | Other documents |",
+            "|---|---|---|---|---|---|---|",
+            '| <a id="id-app-comp-b"></a>`id-app-comp-b` | b | ApplicationComponent | '
+            "[ADR 0001](../adr/0001-first.md) |  |  |  |",
+            '| <a id="id-mot-req-r"></a>`id-mot-req-r` | r | Requirement | '
+            "[ADR 0001](../adr/0001-first.md) |  |  |  |"])
+        one = section(page, "id-view-one").split("\n")
+        self.assertEqual(one[4:], [
+            "| ID | Name | Type | Decisions | Issues | Crate / code | Other documents |",
+            "|---|---|---|---|---|---|---|",
+            '| <a id="id-app-comp-a"></a>`id-app-comp-a` | a | ApplicationComponent | '
+            "[ADR 0001](../adr/0001-first.md) |  |  | [B. Second](B-second.md#id-app-comp-a) |",
+            "| `id-app-comp-b` | b | ApplicationComponent | [ADR 0001](../adr/0001-first.md) |  |"
+            "  |  |", ""])
+        three = section(togaf()[0]["docs/togaf/B-second.md"], "id-view-three")
+        self.assertIn('| <a id="id-app-comp-c"></a>`id-app-comp-c` | c \\| see | '
+                      "ApplicationComponent |  | #7 | `crates/c`, `src/c.rs` |  |", three)
+
+    def test_release_column_only_when_the_model_has_plateaus(self):
+        self.assertNotIn("Release", togaf()[0]["docs/togaf/A-first.md"])
+        plateau = ('<element identifier="id-impl-plat-v1-0-0" xsi:type="Plateau">'
+                   '<name xml:lang="en">v1.0.0</name></element>'
+                   '<element identifier="id-impl-plat-v0-9-0" xsi:type="Plateau">'
+                   '<name xml:lang="en">v0.9.0</name></element>')
+        rels = ('<relationship identifier="id-rel-901" xsi:type="Aggregation" '
+                'source="id-impl-plat-v1-0-0" target="id-app-comp-a"/>'
+                '<relationship identifier="id-rel-902" xsi:type="Association" '
+                'source="id-impl-plat-v0-9-0" target="id-app-comp-a"/>')
+        pages, problems = togaf(togaf_model(extra=plateau, rels=rels))
+        self.assertEqual(problems, [])
+        one = section(pages["docs/togaf/A-first.md"], "id-view-one").split("\n")
+        self.assertEqual(one[4], "| ID | Name | Type | Decisions | Issues | Crate / code | Release "
+                                 "| Other documents |")
+        self.assertTrue(one[6].endswith("|  |  | v0.9.0, v1.0.0 | "
+                                        "[B. Second](B-second.md#id-app-comp-a) |"), one[6])
+        self.assertTrue(one[7].endswith("|  |  |  |  |"), one[7])
+
+    def test_identifiers_link_to_each_kind_of_target(self):
+        page = togaf()[0]["docs/togaf/A-first.md"]
+        self.assertIn("See [`id-mot-adr-0001`](../adr/0001-first.md), "
+                      "[`id-view-one`](#id-view-one), "
+                      "[`id-view-three`](B-second.md#id-view-three), "
+                      "[`id-app-comp-a`](#id-app-comp-a), "
+                      "[`id-app-comp-c`](B-second.md#id-app-comp-c), "
+                      "[`id-mot-req-r`](#id-mot-req-r), "
+                      "`id-rel-001` and `id-app-comp-zz`.", mdwrap.unwrap(page))
+        self.assertIn("```\nSee `id-app-comp-a` here.\n```", page)          # code is kept
+        self.assertIn("Only [`id-app-comp-b`](A-first.md#id-app-comp-b).",
+                      togaf()[0]["docs/togaf/C-third.md"])
+        # When no document's view draws the element, it has no target and stays code.
+        alone = togaf(togaf_model(first_views=()))[0]["docs/togaf/C-third.md"]
+        self.assertIn("Only `id-app-comp-b`.", alone)
+
+    def test_index_lists_phase_document_and_views(self):
+        index = togaf()[0]["docs/togaf/README.md"]
+        self.assertEqual(index.split("\n")[1], "# TOGAF architecture documents")
+        self.assertIn("| ADM phase | Document | Views |\n|---|---|---|\n"
+                      "| A | [A. First](A-first.md) | [Two](A-first.md#id-view-two), "
+                      "[One](A-first.md#id-view-one) |\n"
+                      "| B | [B. Second](B-second.md) | [Three](B-second.md#id-view-three) |\n"
+                      "| C | [C. Third](C-third.md) | — |\n", index)
+
+    def test_repeated_view_properties_keep_their_order(self):
+        model = exchange.read(togaf_model(first_views=("id-view-two", "id-view-three",
+                                                       "id-view-one")).encode())
+        self.assertEqual(gen_docs.documents(model)[0][0].views,
+                         ["id-view-two", "id-view-three", "id-view-one"])
+
+    def test_is_deterministic(self):
+        self.assertEqual(togaf(), togaf())
+
+
+class TogafProblems(unittest.TestCase):
+    def problems(self, old: str, new: str) -> str:
+        xml = togaf_model()
+        self.assertIn(old, xml)
+        return "\n".join(togaf(xml.replace(old, new, 1))[1])
+
+    def test_wrong_identifier_or_type(self):
+        self.assertIn("document element 'id-impl-del-Third': identifier must be id-impl-del-<slug>",
+                      self.problems('"id-impl-del-third"', '"id-impl-del-Third"'))
+        self.assertIn("'id-impl-deliverable': identifier must be id-impl-del-<slug>",
+                      self.problems('"id-impl-del-third"', '"id-impl-deliverable"'))
+        self.assertIn("'id-impl-del-third': must be a Deliverable, is a WorkPackage",
+                      self.problems('"id-impl-del-third" xsi:type="Deliverable"',
+                                    '"id-impl-del-third" xsi:type="WorkPackage"'))
+
+    def test_missing_or_repeated_property(self):
+        phase = '<property propertyDefinitionRef="p-phase"><value xml:lang="en">C</value></property>'
+        self.assertIn("'id-impl-del-third': property Phase is missing", self.problems(phase, ""))
+        self.assertIn("'id-impl-del-third': property Phase is given more than once",
+                      self.problems(phase, phase + phase))
+
+    def test_wrong_file_form(self):
+        for bad in ("docs/togaf/README.md", "docs/togaf/template.md", "docs/C-third.md",
+                    "docs/togaf/C third.md", "docs/togaf/C-third.txt"):
+            with self.subTest(file=bad):
+                self.assertIn("File must be docs/togaf/<name>.md (letters, digits and hyphens; "
+                              f"not README.md or template.md), is '{bad}'",
+                              self.problems(">docs/togaf/C-third.md<", f">{bad}<"))
+        self.assertIn("File = 'docs/togaf/A-first.md' is given to more than one",
+                      self.problems(">docs/togaf/C-third.md<", ">docs/togaf/A-first.md<"))
+
+    def test_unknown_or_repeated_view(self):
+        self.assertIn("'id-impl-del-second': View = 'id-view-nope' names no view of the model",
+                      self.problems('<value xml:lang="en">id-view-three</value>',
+                                    '<value xml:lang="en">id-view-nope</value>'))
+        self.assertIn("'id-impl-del-first': View = 'id-view-two' is given more than once",
+                      "\n".join(togaf(togaf_model(first_views=("id-view-two",) * 2))[1]))
+
+    def test_text_rules_as_for_adrs(self):
+        self.assertIn("'id-impl-del-third': a paragraph or list item is spread over several lines",
+                      self.problems("Only `id-app-comp-b`.", "Only\nthis."))
+        self.assertIn("'id-impl-del-third': has no documentation (the document's narrative)",
+                      self.problems('<documentation xml:lang="en">Only `id-app-comp-b`.'
+                                    "</documentation>", ""))
+
+
+class TogafCheck(unittest.TestCase):
+    run_main = Check.run_main
+    tearDown = Check.tearDown
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        (self.root / "docs" / "architecture").mkdir(parents=True)
+        (self.root / gen_docs.MODEL).write_text(togaf_model(), encoding="utf-8")
+        views = self.root / gen_docs.VIEWS_DIR
+        views.mkdir(parents=True)
+        for vid in ("id-view-one", "id-view-two", "id-view-three"):
+            (views / f"{vid}.png").write_bytes(b"png")
+
+    def test_write_then_check_passes(self):
+        self.assertEqual(self.run_main()[0], 0)
+        code, out = self.run_main("--check")
+        self.assertEqual(code, 0, out)
+        self.assertIn("7 generated pages are current", out)
+
+    def test_hand_edited_togaf_page_fails(self):
+        self.run_main()
+        page = self.root / "docs/togaf/B-second.md"
+        page.write_text(page.read_text().replace("Text with", "Text,"), encoding="utf-8")
+        code, out = self.run_main("--check")
+        self.assertEqual(code, 1)
+        self.assertIn("docs/togaf/B-second.md is stale or was edited by hand", out)
+
+    def test_orphan_togaf_page_fails_but_the_template_is_allowed(self):
+        self.run_main()
+        (self.root / "docs/togaf/template.md").write_text("guide\n", encoding="utf-8")
+        (self.root / "docs/togaf/Z-gone.md").write_text("old\n", encoding="utf-8")
+        code, out = self.run_main("--check")
+        self.assertEqual(code, 1)
+        self.assertIn("docs/togaf/Z-gone.md is an orphan: no element in docs/architecture/model.xml "
+                      "has File = docs/togaf/Z-gone.md", out)
+        self.assertNotIn("template.md is", out)
+
+    def test_missing_togaf_page_fails(self):
+        self.run_main()
+        (self.root / "docs/togaf/C-third.md").unlink()
+        code, out = self.run_main("--check")
+        self.assertEqual(code, 1)
+        self.assertIn("docs/togaf/C-third.md is missing", out)
+
+    def test_view_without_committed_image_fails_unless_images_are_skipped(self):
+        self.run_main()
+        (self.root / gen_docs.VIEWS_DIR / "id-view-three.png").unlink()
+        code, out = self.run_main("--check")
+        self.assertEqual(code, 1)
+        self.assertIn("document element 'id-impl-del-second': View = 'id-view-three' has no image "
+                      "docs/architecture/views/id-view-three.png; run `just model`", out)
+        self.assertEqual(self.run_main("--check", "--no-images")[0], 0)
+
+    def test_model_problem_fails_and_writes_nothing(self):
+        (self.root / gen_docs.MODEL).write_text(togaf_model(narrative="two\\nlines"),
+                                                encoding="utf-8")
+        code, out = self.run_main()
+        self.assertEqual(code, 1)
+        self.assertIn("option A", out)
+        self.assertFalse((self.root / "docs/togaf").exists())
+
+
 class RealModel(unittest.TestCase):
     def test_the_repository_pages_are_current(self):
         root = HERE.parents[2]
         pages, problems = gen_docs.render(exchange.read((root / gen_docs.MODEL).read_bytes()))
         self.assertEqual(problems, [])
         self.assertEqual(gen_docs.compare(pages, root), [])
+        docs = gen_docs.documents(exchange.read((root / gen_docs.MODEL).read_bytes()))[0]
+        self.assertEqual(len(docs), 10)
+        self.assertEqual(gen_docs.missing_images(docs, root), [])
 
 
 if __name__ == "__main__":

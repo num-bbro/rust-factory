@@ -184,11 +184,14 @@ def format_lock(entries: dict[str, Entry]) -> str:
 
 # --- check, update, dims ------------------------------------------------------------------------
 
-def check(hashes: dict[str, str], lock: str | None, images: dict[str, bytes]) -> list[str]:
+def check(hashes: dict[str, str], lock: str | None, images: dict[str, bytes],
+          unreadable: dict[str, str] | None = None) -> list[str]:
     """Problems between the model's input hashes, the lock text and the committed files.
 
-    `images` maps each file name in the views folder other than the lock to its bytes.
+    `images` maps each file name in the views folder other than the lock to its bytes;
+    `unreadable` maps each file there that could not be read to the reason.
     """
+    unreadable = unreadable or {}
     if lock is None:
         return [f"{VIEWS / LOCK} is missing; {FIX}"]
     try:
@@ -203,7 +206,9 @@ def check(hashes: dict[str, str], lock: str | None, images: dict[str, bytes]) ->
             problems.append(f"view '{vid}' has no entry in {LOCK}")
         elif entry.inputs != inputs:
             problems.append(f"view '{vid}' changed since its image was rendered")
-        if name not in images:
+        if name in unreadable:
+            problems.append(f"view '{vid}': {VIEWS / name} cannot be read ({unreadable[name]})")
+        elif name not in images:
             problems.append(f"view '{vid}': {VIEWS / name} is missing")
         elif entry is not None:
             try:
@@ -219,13 +224,15 @@ def check(hashes: dict[str, str], lock: str | None, images: dict[str, bytes]) ->
                                 f", {LOCK} says {entry.width}x{entry.height}")
     problems += [f"{LOCK} lists '{vid}', which is not a view of the model"
                  for vid in sorted(entries) if vid not in hashes]
-    strays = [name for name in sorted(images) if name not in {f"{vid}.png" for vid in hashes}]
+    strays = [name for name in sorted({*images, *unreadable})
+              if name not in {f"{vid}.png" for vid in hashes}]
     problems += [f"{VIEWS / name} is the image of '{name[:-4]}', which is no longer a view"
                  for name in strays if name.endswith(".png") and name[:-4] in entries]
     if not problems and lock != format_lock(entries):
         problems.append(f"{VIEWS / LOCK} is not in its generated form (header, order, spacing)")
     return [f"{p}; {FIX}" for p in problems] + [
-        f"{VIEWS / name} {STRAY}" for name in strays
+        f"{VIEWS / name} cannot be read ({unreadable[name]}): {STRAY}" if name in unreadable
+        else f"{VIEWS / name} {STRAY}" for name in strays
         if not (name.endswith(".png") and name[:-4] in entries)]
 
 
@@ -310,9 +317,12 @@ def read_lock(views: Path) -> str | None:
                          f"{FIX}") from None
 
 
-def read_images(views: Path) -> tuple[dict[str, bytes], list[str]]:
-    """(bytes of each file in the views folder other than the lock, problems reading them)."""
-    images, problems = {}, []
+def read_images(views: Path) -> tuple[dict[str, bytes], dict[str, str], list[str]]:
+    """(bytes of each file in the views folder other than the lock, the reason each file that
+    cannot be read cannot, the folders there)."""
+    images: dict[str, bytes] = {}
+    unreadable: dict[str, str] = {}
+    problems = []
     for p in sorted(views.iterdir()) if views.is_dir() else []:
         if p.name == LOCK:
             continue
@@ -322,8 +332,8 @@ def read_images(views: Path) -> tuple[dict[str, bytes], list[str]]:
         try:
             images[p.name] = p.read_bytes()
         except OSError as err:
-            problems.append(f"{VIEWS / p.name} cannot be read ({err}): {STRAY}")
-    return images, problems
+            unreadable[p.name] = str(err)
+    return images, unreadable, problems
 
 
 def main(argv: list[str]) -> int:
@@ -347,8 +357,8 @@ def main(argv: list[str]) -> int:
         except ViewsError as err:
             print(f"  - {err}", file=sys.stderr)
             return 1
-        images, problems = read_images(views)
-        problems = check(hashes, lock, images) + problems
+        images, unreadable, problems = read_images(views)
+        problems = check(hashes, lock, images, unreadable) + problems
         for problem in problems:
             print(f"  - {problem}", file=sys.stderr)
         if not problems:

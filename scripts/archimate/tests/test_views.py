@@ -84,6 +84,20 @@ class RenderingInputs(unittest.TestCase):
         # A view without view references has no "views" key, so its hash is as before.
         self.assertEqual(before["id-view-main"], BASE["id-view-main"])
 
+    def test_only_the_views_referred_to_are_hashed(self):
+        # A third view that nothing refers to: renaming it changes its own hash only, also in
+        # the manual view that refers to another view.
+        third = VIEW_REF.replace(
+            "    </diagrams>",
+            '      <view identifier="id-view-third" xsi:type="Diagram">\n'
+            '        <name xml:lang="en">Third</name>\n      </view>\n    </diagrams>', 1)
+        before = hashes(text=third)
+        self.assertEqual(sorted(before), ["id-view-hand", "id-view-main", "id-view-third"])
+        after = hashes("<name xml:lang=\"en\">Third</name>", "<name xml:lang=\"en\">Other</name>",
+                       text=third)
+        self.assertEqual({vid for vid in before if after[vid] != before[vid]}, {"id-view-third"})
+        self.assertEqual(before["id-view-hand"], hashes(text=VIEW_REF)["id-view-hand"])
+
     def test_changes_with_the_view_itself(self):
         self.assertChanges('x="464" y="62"', 'x="465" y="62"', {"id-view-main"})
         self.assertChanges("<name>Hand-arranged</name>", "<name>By hand</name>", {"id-view-hand"})
@@ -211,6 +225,16 @@ class Check(unittest.TestCase):
         del images["id-view-main.png"]
         self.assertOneProblem(views.check(BASE, lock, images), "view 'id-view-main'",
                               "id-view-main.png is missing")
+
+    def test_unreadable_png_is_named_as_unreadable_not_missing(self):
+        lock, images = committed()
+        del images["id-view-main.png"]
+        unreadable = {"id-view-main.png": "Permission denied", "id-view-gone.png": "I/O error"}
+        problems = views.check(BASE, lock, images, unreadable)
+        self.assertEqual(problems, [
+            "view 'id-view-main': docs/architecture/views/id-view-main.png cannot be read "
+            f"(Permission denied); {FIX}",
+            "docs/architecture/views/id-view-gone.png cannot be read (I/O error): " + views.STRAY])
 
     def test_stray_png(self):
         lock, images = committed()
@@ -409,6 +433,14 @@ class CommandLine(unittest.TestCase):
                 lock.chmod(0o644)
                 self.assertEqual(code, 1)
                 self.assertIn("views.lock cannot be read", err)
+                image = root / "docs/architecture/views/id-view-main.png"
+                image.chmod(0)
+                code, err = self.run_main("--check", tmp)
+                image.chmod(0o644)
+                self.assertEqual(code, 1)
+                self.assertIn("id-view-main.png cannot be read", err)
+                self.assertNotIn("is missing", err)
+                self.assertNotIn("was not written", err)
             (root / "docs/architecture/views/sub").mkdir()
             code, err = self.run_main("--check", tmp)
             self.assertEqual(code, 1)
