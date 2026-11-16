@@ -13,6 +13,9 @@ Conventions (the ones ArchiMate practitioners draw by hand):
   connected to, so most lines become short and vertical.
 * **Routing**: lines run at right angles through the empty channels between rows and the
   gutters between columns, never through boxes; parallel lines are spread apart.
+* **Box size**: every element box is W wide and at least H tall; a box grows in height so its
+  whole name shows (`box_height`), a row is as tall as its tallest box (boxes stay top-aligned),
+  and nesting parents and bands grow with it.
 
 Pure functions, standard library only. Coordinates are absolute, as the Open Exchange
 format requires (also for nested nodes).
@@ -59,6 +62,15 @@ BAND_PAD, BAND_LABEL = 20, 22  # layer band: padding / label strip
 BAND_GAP, MARGIN = 40, 20
 MAX_ROW_W = 1500               # wrap a row into a second line beyond this width
 LINE_STEP = 8                  # spacing between parallel lines
+# Name wrapping, calibrated against Archi's rendering (Archi version in tools/archi.env) of every
+# element name in the model in a W-wide box: Archi centres the name at the top and wraps it at
+# word breaks (and after a hyphen) by pixel width: a line holds 9 ("MMMM MMMM") to 38 ("iii…")
+# characters, usually 16 to 20; lines are 17 pixels apart and three fill an H-tall box.
+# CHARS_PER_LINE is the largest value for which the estimate is never smaller than what Archi
+# draws (counting the three lines any box shows), and the only one that also keeps every name of
+# up to three Archi lines at height H (tests/test_layout.py, ARCHI_LINES).
+CHARS_PER_LINE = 17
+LINE_H, TEXT_PAD = 17, 4       # height of a line of the name / room above and below it
 
 
 @dataclass
@@ -116,8 +128,32 @@ class ViewLayout:
     lines: list[Line]
 
 
-def layout(refs: list[str], types: dict[str, str], rels: list[dict[str, str]]) -> ViewLayout:
-    """Lay out one view. `types` maps element id -> type; `rels` are the model's relationships."""
+def name_lines(name: str) -> int:
+    """Lines a name takes in a W-wide box: greedy word wrap at CHARS_PER_LINE characters.
+
+    A word longer than a line is cut into line-long pieces. Characters are counted, not
+    measured, so the estimate depends on no font and is the same on every machine.
+    """
+    lines, used = 0, 0
+    for word in name.split():
+        for i in range(0, len(word), CHARS_PER_LINE):
+            piece = len(word[i:i + CHARS_PER_LINE])
+            if used and used + 1 + piece <= CHARS_PER_LINE:
+                used += 1 + piece
+            else:
+                lines, used = lines + 1, piece
+    return max(lines, 1)
+
+
+def box_height(name: str) -> int:
+    """Height of an element box: H, or taller when the wrapped name needs it."""
+    return max(H, TEXT_PAD + LINE_H * name_lines(name))
+
+
+def layout(refs: list[str], types: dict[str, str], names: dict[str, str],
+           rels: list[dict[str, str]]) -> ViewLayout:
+    """Lay out one view. `types` and `names` map element id -> type and name; `rels` are the
+    model's relationships."""
     on_view = set(refs)
     rels = [r for r in rels if r["Source"] in on_view and r["Target"] in on_view]
     rtype = {r["ID"]: r["Type"].removesuffix("Relationship") for r in rels}
@@ -132,7 +168,7 @@ def layout(refs: list[str], types: dict[str, str], rels: list[dict[str, str]]) -
                 and s != t):
             parent[t] = s
             nested.add(r["ID"])
-    boxes = {ref: Box(ref) for ref in refs}
+    boxes = {ref: Box(ref, h=box_height(names[ref])) for ref in refs}
     for ref in refs:                                     # keep member order among siblings
         if ref in parent:
             boxes[parent[ref]].children.append(boxes[ref])
@@ -140,7 +176,7 @@ def layout(refs: list[str], types: dict[str, str], rels: list[dict[str, str]]) -
         kids = boxes[p].children
         boxes[p].children = chain_order(kids, rels, rtype)
         boxes[p].w = len(kids) * W + (len(kids) - 1) * GAP_X / 2 + 2 * PAR_PAD
-        boxes[p].h = PAR_TITLE + H + PAR_PAD
+        boxes[p].h = PAR_TITLE + max(k.h for k in kids) + PAR_PAD
 
     # --- 2. rows: (layer, aspect), top-level boxes only ------------------------------------
     keyed: dict[tuple[int, int], list[Box]] = {}
