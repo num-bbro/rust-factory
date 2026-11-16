@@ -896,13 +896,15 @@ class ViewText(unittest.TestCase):
         xml = togaf_model().replace("Shows `id-app-comp-c`.",
                                     "Who does what `x\n`id-bus-proc-review` b in the lifecycle.")
         problems = "\n".join(togaf(xml)[1])
-        self.assertIn("view 'id-view-two': documentation", problems)
+        self.assertIn("view 'id-view-two': a paragraph or list item is spread over several "
+                      "lines", problems)
 
     def test_a_views_documentation_over_two_lines_is_refused_only_when_a_document_shows_it(self):
         spread = "Shows\n`id-app-comp-c`."
         problems = togaf(togaf_model().replace("Shows `id-app-comp-c`.", spread))[1]
         self.assertEqual(len(problems), 1, problems)
-        self.assertIn("view 'id-view-two': a paragraph or list item is spread over several lines",
+        self.assertIn("view 'id-view-two': a paragraph or list item is spread over several "
+                      "lines",
                       problems[0])
         hidden = togaf_model(first_views=("id-view-one",)).replace("Shows `id-app-comp-c`.",
                                                                    spread)
