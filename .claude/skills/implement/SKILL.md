@@ -26,6 +26,9 @@ worktree) each. A single ready task is simply a wave of one.
    `gh pr list --state open --json number,title,body`, then for each PR's `Closes #N` task read
    its "Crates / modules touched" field. Held reason: "touches the same crate as #N, whose PR #P
    is still open; run it after that PR is merged".
+   `docs/architecture/model.xml`, the generated pages (`docs/adr/`, `docs/togaf/`) and
+   `docs/architecture/views/` are **one shared area**: two tasks that change the model never run
+   in the same wave, and a model task is held while a PR that changes the model is open.
    A task whose "Crates / modules touched" field is empty or too vague to compare (e.g.
    "several") counts as overlapping everything: it runs alone, as a wave of one, when nothing else
    is running or open. Say so in the report so the human can fix the task issue.

@@ -41,6 +41,14 @@ Why: the history becomes readable, and release notes and version bumps can be ge
   and the model of the agent that wrote it.
 - All checks must pass before merge. A human approves the merge into `main`.
 
+## Architecture documentation
+The architecture lives in one ArchiMate model, `docs/architecture/model.xml`. The ADRs and the TOGAF
+documents are elements of it, and their pages (`docs/adr/`, `docs/togaf/`) and the view images
+(`docs/architecture/views/`) are generated: never edit them by hand. Run `just model-fmt`,
+`just model-docs`, `just model-check` and `just model`. How to add an ADR: `docs/adr/template.md`;
+a TOGAF document or a release: `docs/togaf/template.md`. The site (`docs/index.md`, published by
+`.github/workflows/pages.yml`) shows the result.
+
 ## Versioning
 Semantic Versioning (`MAJOR.MINOR.PATCH`), with release tags `vX.Y.Z` on `main`.
 

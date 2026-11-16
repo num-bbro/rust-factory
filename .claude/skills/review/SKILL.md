@@ -13,7 +13,10 @@ You are the **conductor**. Prepare PR **#$ARGUMENTS** for the human's merge deci
    (`Closes #N`) and its complexity label.
 2. Launch the **reviewer** agent with description `#<task> review PR $ARGUMENTS`.
    Use the reviewer's default model (Sonnet) for `complexity:simple` tasks and docs-only PRs;
-   pass **model opus** for `complexity:hard` tasks, escalated tasks and architecture PRs.
+   pass **model opus** for `complexity:hard` tasks, escalated tasks and architecture PRs. For a PR
+   that changes the model, tell it that the source is `docs/architecture/model.xml`, that the
+   pages and images are generated (never hand-edited), to run `just model-check` and to open the
+   changed images.
 3. When it reports:
    - verdict `changes` with must-fix items → relaunch the **original worker type** for the task
      with description `#<task> fix review on PR $ARGUMENTS`, telling it to push fixes to the same
