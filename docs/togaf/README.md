@@ -7,6 +7,8 @@ here. The documents hold the *narrative*: purpose, decisions, open questions. Th
 [`../architecture/model.xml`](../architecture/model.xml). Documents refer to model elements by ID
 (e.g. `id-bus-proc-review`) instead of repeating them.
 
+Architecture site: <https://num-bbro.github.io/rust-factory/>
+
 Each document is a `Deliverable` element of that model, and these pages are generated from it by
 `just model-docs`, never edited by hand ([template.md](template.md) says how to add or change one).
 A page shows the views its document names, each with its diagram and a catalog of the elements

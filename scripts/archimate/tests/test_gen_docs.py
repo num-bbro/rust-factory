@@ -822,6 +822,91 @@ class TogafCheck(unittest.TestCase):
         self.assertFalse((self.root / "docs/togaf").exists())
 
 
+def with_site(xml: str, *urls: str) -> str:
+    """`xml` with a `Site` property on the model root for each of `urls`."""
+    props = "".join(f'<property propertyDefinitionRef="p-site"><value xml:lang="en">{u}</value>'
+                    "</property>" for u in urls)
+    defs = ('<propertyDefinition identifier="p-site" type="string"><name xml:lang="en">Site'
+            "</name></propertyDefinition>")
+    return (xml.replace('<name xml:lang="en">t</name><elements>',
+                        f'<name xml:lang="en">t</name><properties>{props}</properties><elements>', 1)
+            .replace("</propertyDefinitions>", defs + "</propertyDefinitions>"))
+
+
+SITE = "https://example.github.io/proj/"
+REPORT = f"{SITE}report/id-model-t/views/"
+
+
+class SiteLinks(unittest.TestCase):
+    def test_without_the_property_no_site_link_is_generated(self):
+        pages, problems = togaf()
+        self.assertEqual(problems, [])
+        for page in pages.values():
+            self.assertNotIn("Clickable version", page)
+            self.assertNotIn("Architecture site", page)
+
+    def test_each_view_section_links_its_report_page_under_the_image(self):
+        pages, problems = togaf(with_site(togaf_model(), SITE))
+        self.assertEqual(problems, [])
+        text = section(pages["docs/togaf/A-first.md"], "id-view-one")
+        self.assertIn(f"![One](../architecture/views/id-view-one.png)\n\n"
+                      f"Clickable version: [report]({REPORT}id-view-one.html)\n\n| ID |", text)
+        self.assertIn(f"({REPORT}id-view-two.html)", pages["docs/togaf/A-first.md"])
+        self.assertIn(f"({REPORT}id-view-three.html)", pages["docs/togaf/B-second.md"])
+
+    def test_the_indexes_link_the_site_home_and_the_adr_pages_do_not(self):
+        pages, _ = togaf(with_site(togaf_model(), SITE))
+        self.assertIn(f"\nArchitecture site: <{SITE}>\n", pages["docs/togaf/README.md"])
+        self.assertIn(f"\nArchitecture site: <{SITE}>\n", pages["docs/adr/README.md"])
+        self.assertNotIn(SITE, pages["docs/adr/0001-first.md"])
+
+    def test_bad_values_are_named(self):
+        for bad in ("http://example.github.io/proj/", "https://example.github.io/proj",
+                    "example.github.io/", "https:///", "https://a.io/ b/", ""):
+            _, problems = togaf(with_site(togaf_model(), bad))
+            self.assertEqual(len(problems), 1, bad)
+            self.assertIn(f"property Site = '{bad}' must be an https:// URL that ends in '/'",
+                          problems[0])
+
+    def test_a_site_given_twice_is_named(self):
+        _, problems = togaf(with_site(togaf_model(), SITE, SITE))
+        self.assertEqual(problems, ["model 'id-model-t': property Site is given more than once"])
+
+    def test_a_site_property_on_another_element_is_ignored(self):
+        xml = with_site(togaf_model(), SITE).replace(
+            '<element identifier="id-app-comp-a" xsi:type="ApplicationComponent"><name xml:lang='
+            '"en">a</name>', '<element identifier="id-app-comp-a" xsi:type="ApplicationComponent">'
+            '<name xml:lang="en">a</name><properties><property propertyDefinitionRef="p-site">'
+            '<value xml:lang="en">nonsense</value></property></properties>', 1)
+        self.assertNotEqual(xml, with_site(togaf_model(), SITE))
+        self.assertEqual(gen_docs.site_of(exchange.read(xml.encode())), SITE)
+        self.assertEqual(gen_docs.site_problems(exchange.read(xml.encode())), [])
+        self.assertEqual(gen_docs.site_of(exchange.read(togaf_model().encode())), "")
+
+
+class SiteCheck(unittest.TestCase):
+    run_main = Check.run_main
+    tearDown = Check.tearDown
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        (self.root / "docs" / "architecture").mkdir(parents=True)
+
+    def test_check_fails_on_a_bad_value_and_on_a_page_without_the_links(self):
+        self.root.joinpath(gen_docs.MODEL).write_text(with_site(adr_model(), SITE), encoding="utf-8")
+        self.assertEqual(self.run_main("--no-images")[0], 0)
+        self.root.joinpath(gen_docs.MODEL).write_text(adr_model(), encoding="utf-8")
+        code, out = self.run_main("--check", "--no-images")
+        self.assertEqual(code, 1)
+        self.assertIn("docs/adr/README.md is stale", out)
+        bad = with_site(adr_model(), "http://example.com/")
+        self.root.joinpath(gen_docs.MODEL).write_text(bad, encoding="utf-8")
+        code, out = self.run_main("--check", "--no-images")
+        self.assertEqual(code, 1)
+        self.assertIn("must be an https:// URL that ends in '/'", out)
+
+
 class RealModel(unittest.TestCase):
     def test_the_repository_pages_are_current(self):
         root = HERE.parents[2]
