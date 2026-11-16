@@ -93,7 +93,7 @@ def main(argv: list[str]) -> int:
             print(f"  - {problem}", file=sys.stderr)
         failed = failed or bool(problems)
         if not problems:
-            print(ok)
+            print(ok, flush=True)
     return 1 if failed else 0
 
 

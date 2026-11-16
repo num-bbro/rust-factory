@@ -27,11 +27,11 @@ ARCHI="$ARCHI_DIR/Archi"
 
 # Run every check and report all of them, then fail if any failed.
 status=0
-python3 -I "$SCRIPTS/model_fmt.py" --check "$MODEL" 2>&1 | sed "s|$ROOT/||" || status=1
-python3 -I "$SCRIPTS/xsd_check.py" "$MODEL" 2>&1 | sed "s|$ROOT/||" || status=1
+python3 -I "$SCRIPTS/model_fmt.py" --check "$MODEL" 2>&1 | sed "s|$ROOT/||g" || status=1
+python3 -I "$SCRIPTS/xsd_check.py" "$MODEL" 2>&1 | sed "s|$ROOT/||g" || status=1
 python3 -I "$SCRIPTS/check_relationships.py" "$MODEL" "$ARCHI_DIR" || status=1
-python3 -I "$SCRIPTS/check_model.py" "$MODEL" "$ROOT/docs" 2>&1 | sed "s|$ROOT/||" || status=1
-(( status == 0 )) || { echo "model check failed: $MODEL" >&2; exit 1; }
+python3 -I "$SCRIPTS/check_model.py" "$MODEL" "$ROOT/docs" 2>&1 | sed "s|$ROOT/||g" || status=1
+(( status == 0 )) || { echo "model check failed: docs/architecture/model.xml" >&2; exit 1; }
 [[ "${1:-}" == "--check" ]] && exit 0
 
 [[ -x "$ARCHI" ]] || { echo "Archi $ARCHI_VERSION not found at $ARCHI — run ./bootstrap.sh" >&2; exit 1; }
