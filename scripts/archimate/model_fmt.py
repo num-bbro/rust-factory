@@ -24,8 +24,7 @@ DEFAULT = ROOT / "docs" / "architecture" / "model.xml"
 
 def format_file(path: Path, check: bool) -> int:
     if not path.is_file():
-        hint = " (the exchange model is created by step 2 of #41; pass a file)" if path == DEFAULT else ""
-        print(f"{path}: no such file{hint}", file=sys.stderr)
+        print(f"{path}: no such file", file=sys.stderr)
         return 2
     data = path.read_bytes()
     try:

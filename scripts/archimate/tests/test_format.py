@@ -79,7 +79,7 @@ class WholeFile(unittest.TestCase):
 
     def test_unused_property_definition_is_dropped_with_a_note(self):
         notes = exchange.canonical(BARE)[1]
-        self.assertEqual(notes, ["dropped unused property definition 'Never Used' (propid-3)"])
+        self.assertIn("dropped unused property definition 'Never Used' (propid-3)", notes)
         self.assertNotIn("Never Used", CANONICAL)
 
 
@@ -161,6 +161,14 @@ class CanonicalRules(unittest.TestCase):
         self.assertIn('identifier="r1" xsi:type="Access" source="id-a" target="id-b" '
                       'accessType="Access"/>', out)
         self.assertIn('accessType="Read"', out)
+
+    def test_missing_access_type_is_named_in_a_note(self):
+        rels = ('<relationships><relationship identifier="r1" xsi:type="Access" source="id-a" '
+                'target="id-b"/><relationship identifier="r2" xsi:type="Access" source="id-a" '
+                'target="id-b" accessType="Read"/></relationships>')
+        notes = exchange.canonical(model(A + B, rels))[1]
+        self.assertEqual(notes, ["relationship 'r1' states no accessType; wrote the default "
+                                 'accessType="Access" (choose Read, Write, ReadWrite or Access)'])
 
     def test_attributes_are_written_in_one_order(self):
         out = fmt(model('<element xsi:type="Goal" identifier="id-a"><name>A</name></element>'))
@@ -296,7 +304,7 @@ class CommandLine(unittest.TestCase):
             with mock.patch.object(model_fmt, "DEFAULT", Path(tmp) / "model.xml"):
                 code, err = self.run_main("--check")
         self.assertEqual(code, 2)
-        self.assertIn("no such file (the exchange model is created by step 2 of #41", err)
+        self.assertIn("model.xml: no such file", err)
 
 
 if __name__ == "__main__":

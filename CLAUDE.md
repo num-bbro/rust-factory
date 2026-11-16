@@ -105,23 +105,21 @@ anything that needs a password or secret.
 Story/requirement issue → ADR → ArchiMate element id → crate/module → test → release.
 Every artifact should link to its neighbors in this chain.
 
-## Architecture (TOGAF + ArchiMate), see ADR 0002
+## Architecture (TOGAF + ArchiMate), see ADR 0009
 - **Narrative** lives in `docs/togaf/` (one document per ADM phase). **Structure** lives in the
-  ArchiMate text model `docs/architecture/model/`. Documents refer to elements by ID in backticks,
-  e.g. `` `id-bus-proc-review` ``, and never duplicate the model.
-- Edit the model only through its CSV files (Archi's CSV format):
-  `elements.csv` (ID, Type, Name, Documentation), `relations.csv` (ID, Type, …, Source, Target),
-  `properties.csv` (ID, Key, Value), `views.csv` (ID, Name, Viewpoint, space-separated Elements).
-  Never edit generated files under `build/`.
+  ArchiMate exchange model `docs/architecture/model.xml`. Documents refer to elements by ID in
+  backticks, e.g. `` `id-bus-proc-review` ``, and never duplicate the model.
+- Edit the model only in `docs/architecture/model.xml` (Open Group exchange format). In a view,
+  list members only, as bare `<node xsi:type="Element" elementRef="id-…"/>`; then run
+  `just model-fmt`, which sorts, lays out and normalises the file. Never edit files under `build/`.
 - ID convention: `id-<layer>-<kind>-<slug>`, with layer one of `mot`, `str`, `bus`, `app`, `tech`,
   `impl`, e.g. `id-app-comp-booking-api`. Relationships: `id-rel-NNN`. Views: `id-view-<slug>`.
-  IDs never change once merged; rename the Name instead.
-- Types use ArchiMate 3.2 names (`BusinessProcess`, `ApplicationComponent`, `Node`, …).
-  Relationship types end in `Relationship` (`ServingRelationship`). Only use relationships that
-  ArchiMate allows between the two types: `just model-check` checks every relationship against the
-  rules of the pinned Archi (`relationships.xml`) and fails with the allowed types for the pair.
-- Run `just model-check` after every model or doc change (fast), and `just model` to build the
-  `.archimate` and HTML report the human reviews.
+  The model itself: `id-model-<slug>`. IDs never change once merged; rename the Name instead.
+- Types use ArchiMate 3.2 names (`BusinessProcess`, `ApplicationComponent`, `Serving`, …); an
+  `Access` states its `accessType`. Only use relationships that ArchiMate allows between the two
+  types: `just model-check` checks each against the pinned Archi's rules and names the allowed ones.
+- Run `just model-check` after every model or doc change (fast: canonical form, schema, rules, IDs,
+  references), and `just model` to build the `.archimate` and HTML report the human reviews.
 - Views are laid out automatically: you only choose *which* elements a view shows. Keep views
   focused (about 25 elements at most) and split a crowded view rather than fighting the layout.
   Model "is part of" with Composition/Aggregation inside the same layer: those are drawn by

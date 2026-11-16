@@ -51,9 +51,9 @@ gh auth login              # once per machine
 | `scripts/issue-link.sh` | Sub-issues and "blocked by" links between issues |
 | `scripts/cost-report.py`, `tools/model-prices.toml` | `just cost`: agent spend per model, agent and task |
 | `docs/togaf/` | One document per TOGAF ADM phase (narrative) |
-| `docs/architecture/model/` | ArchiMate model as text (CSV), built with `just model` |
+| `docs/architecture/model.xml` | ArchiMate model (Open Group exchange format), built with `just model` |
 | `docs/adr/` | Architecture Decision Records |
-| `scripts/archimate/` | Model builder: CSV → Open Exchange XML → Archi model + HTML report |
+| `scripts/archimate/` | Model formatter, checks and builder: exchange XML → Archi model + HTML report |
 | `tools/archi.env` | Pinned Archi version and checksum |
 
 ## Working on code
@@ -82,9 +82,11 @@ just cost            what it cost, per model and per task
 ## Architecture model
 
 ```bash
+just model-fmt      # sort, lay out the views and normalise docs/architecture/model.xml
 just model-check    # fast: validate the model and the element IDs mentioned in docs
 just model          # build build/architecture/model.archimate and report/index.html
 just model-report   # build, then open the HTML report in the browser
 ```
-Open `build/architecture/model.archimate` in Archi to review. To change the model, edit the CSV
-files, not the generated `.archimate`. See [ADR 0002](docs/adr/0002-archimate-model-as-text.md).
+Open `build/architecture/model.archimate` in Archi to review. To change the model, edit
+`docs/architecture/model.xml` and run `just model-fmt`, never the generated `.archimate`. See
+[ADR 0009](docs/adr/0009-archimate-exchange-model-as-source.md).

@@ -8,7 +8,7 @@ that supersedes the old one, and set the old one's status to `Superseded by NNNN
 - File name: `NNNN-short-title.md`, numbered in order.
 - Status: `Proposed` (in an open PR) → `Accepted` (PR merged) → `Superseded by NNNN` / `Deprecated`.
 - Every ADR links its issue and the ArchiMate element IDs it affects. Elements link back with an
-  `ADR` property in `docs/architecture/model/properties.csv`.
+  `ADR` property in `docs/architecture/model.xml`.
 
 | # | Decision | Status |
 |---|---|---|

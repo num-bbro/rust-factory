@@ -2,8 +2,8 @@
 
 The tests that run xmllint against the real ArchiMate schema need xmllint and the pinned Archi
 install; without them they are skipped and say so. That cannot hide a missing tool in a gate:
-`just check` also runs `just model-check`, which validates the generated model with the same
-script and fails ("run ./bootstrap.sh") when xmllint or Archi is missing. The pin and
+`just check` also runs `just model-check`, which validates docs/architecture/model.xml with the
+same script and fails ("run ./bootstrap.sh") when xmllint or Archi is missing. The pin and
 missing-tool tests below use a fake Archi plugin and need neither.
 """
 

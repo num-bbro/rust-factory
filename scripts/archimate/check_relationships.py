@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-"""Check that every relationship in relations.csv is allowed by ArchiMate 3.2.
+"""Check that every relationship of the exchange model is allowed by ArchiMate 3.2.
 
 The rules are read from the pinned Archi install (relationships.xml), never copied into the repo.
 
-  python3 -I check_relationships.py <model-dir> <archi-home>
+  python3 -I check_relationships.py <model.xml> <archi-home>
 
 Prints every problem with the relationship ID, then a count; exits 1 if there is any problem.
 """
-import csv
 import glob
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+# Sibling module. Added explicitly because `python3 -I` (isolated mode) leaves the script's
+# own folder off sys.path.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import exchange  # noqa: E402
 
 
 def fail(message):
@@ -43,38 +47,48 @@ def load_rules(archi_home):
     return rules, set(keys.values())
 
 
-def read_csv(path):
-    with open(path, newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
-
-
-def main():
-    model_dir, archi_home = Path(sys.argv[1]), sys.argv[2]
-    rules, known_types = load_rules(archi_home)
-    types = {row["ID"]: row["Type"] for row in read_csv(model_dir / "elements.csv")}
-    relations = read_csv(model_dir / "relations.csv")
+def check(model, rules, known_types):
+    """Every problem of the model's relationships, one message each."""
     problems = []
-    for rel in relations:
-        rid, rtype, src, dst = (rel[k] or "" for k in ("ID", "Type", "Source", "Target"))
-        missing = [(end, rel[end] or "") for end in ("Source", "Target") if (rel[end] or "") not in types]
+    for rel in model.relationships:
+        rid, rtype, src, dst = (rel[k] for k in ("ID", "Type", "Source", "Target"))
+        # The exchange format writes types without the "Relationship" suffix of Archi's rules.
+        full = f"{rtype}Relationship"
+        missing = [(end, rel[end]) for end in ("Source", "Target") if rel[end] not in model.elements]
         for end, ident in missing:
             problems.append(f"{rid}: {end} '{ident}' is not an element ID")
-        if rtype not in known_types:
+        if full not in known_types:
             problems.append(f"{rid}: unknown relationship type '{rtype}'")
-        if missing or rtype not in known_types:
+        if missing or full not in known_types:
             continue
-        allowed = rules.get((types[src], types[dst]), set())
-        if rtype not in allowed:
-            names = ", ".join(sorted(allowed)) or "none"
+        allowed = rules.get((model.elements[src], model.elements[dst]), set())
+        if full not in allowed:
+            names = ", ".join(sorted(a.removesuffix("Relationship") for a in allowed)) or "none"
             problems.append(
-                f"{rid}: {rtype} is not allowed from {types[src]} ('{src}') to {types[dst]} ('{dst}');"
-                f" allowed: {names}"
+                f"{rid}: {rtype} is not allowed from {model.elements[src]} ('{src}') to "
+                f"{model.elements[dst]} ('{dst}'); allowed: {names}"
             )
+    return problems
+
+
+def main(argv):
+    if len(argv) != 2:
+        print(__doc__, file=sys.stderr)
+        sys.exit(2)
+    model_file, archi_home = Path(argv[0]), argv[1]
+    try:
+        model = exchange.read(model_file.read_bytes())
+    except (OSError, exchange.FormatError) as err:
+        fail(f"{model_file}: {err}")
+    rules, known_types = load_rules(archi_home)
+    problems = check(model, rules, known_types)
     for problem in problems:
         print(f"  - {problem}", file=sys.stderr)
+    count = len(model.relationships)
     if problems:
-        fail(f"relationships: {len(problems)} problem(s) in {len(relations)} checked")
-    print(f"relationships: {len(relations)} checked, all allowed by ArchiMate 3.2")
+        fail(f"relationships: {len(problems)} problem(s) in {count} checked")
+    print(f"relationships: {count} checked, all allowed by ArchiMate 3.2")
 
 
-main()
+if __name__ == "__main__":
+    main(sys.argv[1:])

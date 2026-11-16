@@ -18,8 +18,8 @@ number, and possibly the branch of an escalated attempt. Follow `CLAUDE.md` exac
 2. **Design before code** when the task needs a decision: choose the simplest design that fits
    the layering. If the decision is significant (new crate, new dependency, data model, external
    interface, cross-cutting concern), write an ADR from `docs/adr/template.md` with Status
-   `Proposed` in the same branch, and update the ArchiMate model CSVs if structure changes
-   (`just model-check`). The human approves it by merging the PR.
+   `Proposed` in the same branch, and update the ArchiMate model `docs/architecture/model.xml`
+   if structure changes (`just model-fmt`, `just model-check`). The human approves it by merging the PR.
 3. **Implement** test-first; keep domain rules pure; respect the architecture tests. Never weaken a
    gate (tests, lints, deny, coverage, architecture rules) to make it pass.
 4. **Quality gate**: `just check` must be green. Also run `just mutants-diff` for changes to
