@@ -626,3 +626,24 @@ refine the decision:
   `[text](target)`, because `jekyll-relative-links` does not convert a link whose text is over two
   lines; the link may make the line longer than 100 characters, as a long URL already could.
 - **Not compared:** the site is a build artifact and is never compared, as decided above.
+
+## Amendment 2026-11-16: as built in step 8 (final sweep)
+Step 8 (#58) closed the change request. As with the amendments above, these points refine the
+decision:
+- **Manual views are checked:** for a view with the property `Layout = manual`, which the formatter
+  does not rebuild, `check_model.py` (run by `just model-check`) fails unless the view draws exactly
+  the relationships of the model whose two ends are both drawn in it, none missing and none extra,
+  and every node lies inside its parent node. The messages name the view and the relationship or
+  node.
+- **No relative links to Markdown files:** `gen_docs.py --check` fails when the text of an ADR or a
+  document links to a `.md` file by a relative path, which is broken inside Archi's report; the text
+  names the target and its element id in backticks instead (ADR 0009 (`id-mot-adr-0009`)), and the
+  generator makes the id a link on the page. ADR 0002 and ADR 0007 were changed accordingly.
+  `mdwrap.wrap` also keeps a link whole when its text holds a closing bracket inside a code span.
+- **One shared area for `/implement`:** `docs/architecture/model.xml`, the generated pages and
+  `docs/architecture/views/` are one area: two tasks that change the model never run in the same
+  wave, and a model task is held while a pull request that changes the model is open.
+- **New-project guide:** `docs/new-project.md` (hand-written, published on the site) lists the
+  one-time steps and gives the prompt that starts a project from this template.
+
+With this step, change request #41 is complete.
