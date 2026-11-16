@@ -16,7 +16,7 @@ canonical form of ADR 0009:
 * property definitions are named `propid-<slug of their name>`; unused ones are dropped (and
   reported as a note);
 * an `Access` relationship always states `accessType` (a missing one becomes the schema default,
-  `Access`; Archi would read it as `Write`);
+  `Access`, with a note naming the relationship; Archi would read it as `Write`);
 * every view is laid out again from its member elements (bands, nesting, coordinates, node and
   connection identifiers, connections) by layout.py, unless it has the property
   `Layout = manual`: such a view is copied as it is, only property-definition references are
@@ -27,7 +27,8 @@ viewpoints, foreign-namespace extensions, unknown attributes, hand-made nodes in
 view) is rejected with a message naming where it is: content is never dropped silently.
 
 `read(data)` returns what the model checks need from a canonical file (`Model`): element types,
-relationships, view members, `View` property values and the ends of every diagram connection.
+relationships, view members and viewpoints, property values and the ends of every diagram
+connection.
 
 Pure functions, standard library only.
 """
@@ -183,6 +184,7 @@ class Model:
     elements: dict[str, str] = field(default_factory=dict)        # id -> element type
     relationships: list[dict[str, str]] = field(default_factory=list)  # ID, Type, Source, Target
     views: dict[str, list[str]] = field(default_factory=dict)     # id -> member element ids
+    viewpoints: dict[str, str] = field(default_factory=dict)      # view id -> viewpoint, if any
     properties: list[tuple[str, str, str]] = field(default_factory=list)  # owner id, name, value
     connections: list[Connection] = field(default_factory=list)
 
@@ -221,6 +223,8 @@ def read(data: bytes) -> Model:
         props(v)
         nodes = {_ident(n): n.get("elementRef", "") for n in v.iter(f"{q}node")}
         m.views[vid] = [ref for ref in nodes.values() if ref]
+        if v.get("viewpoint") is not None:
+            m.viewpoints[vid] = v.get("viewpoint", "")
         for c in v.iter(f"{q}connection"):
             m.connections.append(Connection(vid, _ident(c), c.get("relationshipRef", ""),
                                             nodes.get(c.get("source", ""), ""),
@@ -425,8 +429,10 @@ class _Canonicaliser:
             for key in ("identifier", XSI_TYPE, "source", "target"):
                 if not a.get(key):
                     self.problem(where, f"has no {_PREFIX[_split(key)[0]]}{_split(key)[1]}")
-            if a.get(XSI_TYPE) == "Access":
-                a.setdefault("accessType", "Access")     # the schema's default, stated explicitly
+            if a.get(XSI_TYPE) == "Access" and "accessType" not in a:
+                a["accessType"] = "Access"               # the schema's default, stated explicitly
+                self.notes.append(f"{where} states no accessType; wrote the default "
+                                  'accessType="Access" (choose Read, Write, ReadWrite or Access)')
             o = ET.SubElement(out, "relationship", a)
             self.named(o, self.children(r, where, ("name", "documentation", "properties")), where,
                        required=False)

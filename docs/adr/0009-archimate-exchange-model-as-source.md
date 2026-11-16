@@ -386,15 +386,19 @@ Archi-specific construct; the differences found are rules of our canonical form 
 checks, listed above.
 
 ## Amendment 2026-11-16: as built in steps 1 and 2
-Steps 1 (#44) and 2 (#46) built the tooling and the cutover. Where the code is stricter or more
-precise than the decision above, the code is the rule:
+Steps 1 (#44) and 2 (#46) built the tooling and the cutover. This amendment records the points
+below, where the tooling as built refines the decision above; each is part of the decision from
+now on. Anything not listed here is still decided by the text above, not by the code:
 - **XML comments, processing instructions and a DOCTYPE are rejected** with a message naming
   them, not dropped. CDATA is accepted on input and written escaped.
 - **Unused property definitions are dropped** by the formatter, with a note on stderr ("every
   definition is used" holds for the written file).
-- **A missing `accessType` is written as `Access`** by the formatter (the schema's default). The
-  rule that every `Access` states its type stays; the cutover states it on all seven existing
-  ones, and the human chooses the types in the cutover PR.
+- **A missing `accessType` is written as `Access`** by the formatter (the schema's default), and
+  the formatter prints a note on stderr naming the relationship, so the author sees it and can
+  choose `Read`, `Write`, `ReadWrite` or `Access`. The committed file therefore always states the
+  type; `model-check` cannot tell a chosen `Access` from a defaulted one, so the note is the only
+  warning. The cutover states the type on all seven existing ones, and the human chooses them in
+  the cutover PR.
 - **Rejected for now**: `metadata`, `organizations`, `viewpoints`, `viewpointRef`, elements and
   attributes in foreign namespaces, and texts in a language other than `en`. A future normaliser
   for Archi exports must strip `organizations`, `metadata` and `<style>` (spike item 5) before
@@ -412,11 +416,16 @@ precise than the decision above, the code is the rule:
   the checks share.
 - **The checks of `just model-check`**, in order: canonical form (`model_fmt.py --check`), schema
   (`xsd_check.py`), relationship rules (`check_relationships.py`), then `check_model.py`: the ID
-  convention (`id-<layer>-<kind>-<slug>`, `id-rel-NNN`, `id-view-<slug>`, and `id-model-<slug>`
-  for the model; before the cutover nothing checked it), every view member is an element, every
-  diagram connection joins nodes of its relationship's ends, every `View` property names a view,
-  and every `` `id-…` `` in `docs/**/*.md` exists. `build.sh` runs all of them before Archi,
+  convention (before the cutover nothing checked it), every view member is an element, every
+  diagram connection joins nodes of its relationship's ends (a plain line without a relationship,
+  possible only in a `Layout = manual` view, is skipped), every `View` property names a view,
+  every view's `viewpoint` is one of the `ViewpointsEnum` values of the pinned
+  `archimate3_View.xsd` (the schema's viewpoint type is a union with `xs:string`, so it accepts
+  any text; `build_exchange.py` had checked this against its own list), and every `` `id-…` `` in
+  `docs/**/*.md` exists. `build.sh` runs all of them before Archi,
   also in `just model`. The checks for generated pages and the image lock come with steps 3–5.
+- **New rule: the model's own identifier is `id-model-<slug>`** (today `id-model-factory`),
+  next to `id-<layer>-<kind>-<slug>`, `id-rel-NNN` and `id-view-<slug>`; `CLAUDE.md` lists it.
 - **Relationship types** are written without the `Relationship` suffix in the exchange format
   (`Serving`); `check_relationships.py` adds it to look up Archi's rules.
 - The model's `Source` property now names `docs/architecture/model.xml`.

@@ -6,8 +6,8 @@
 #                                         exchange schema from the pinned Archi, does not start it)
 #
 # The checks: canonical form (model_fmt.py --check), the official ArchiMate 3.1 schema (xmllint),
-# relationship rules, ID convention, views and their connections, `View` properties, document
-# references. Archi starts only on a file that passed them, and runs under a timeout of
+# relationship rules, ID convention, views and their connections, `View` properties, viewpoints,
+# document references. Archi starts only on a file that passed them, and runs under a timeout of
 # ARCHI_TIMEOUT seconds (default 300): its importer hangs instead of exiting when its own schema
 # check fails.
 #
@@ -29,8 +29,8 @@ ARCHI="$ARCHI_DIR/Archi"
 status=0
 python3 -I "$SCRIPTS/model_fmt.py" --check "$MODEL" 2>&1 | sed "s|$ROOT/||g" || status=1
 python3 -I "$SCRIPTS/xsd_check.py" "$MODEL" 2>&1 | sed "s|$ROOT/||g" || status=1
-python3 -I "$SCRIPTS/check_relationships.py" "$MODEL" "$ARCHI_DIR" || status=1
-python3 -I "$SCRIPTS/check_model.py" "$MODEL" "$ROOT/docs" 2>&1 | sed "s|$ROOT/||g" || status=1
+python3 -I "$SCRIPTS/check_relationships.py" "$MODEL" "$ARCHI_DIR" 2>&1 | sed "s|$ROOT/||g" || status=1
+python3 -I "$SCRIPTS/check_model.py" "$MODEL" "$ROOT/docs" "$ARCHI_DIR" 2>&1 | sed "s|$ROOT/||g" || status=1
 (( status == 0 )) || { echo "model check failed: docs/architecture/model.xml" >&2; exit 1; }
 [[ "${1:-}" == "--check" ]] && exit 0
 

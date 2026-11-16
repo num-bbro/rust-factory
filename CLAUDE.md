@@ -114,7 +114,7 @@ Every artifact should link to its neighbors in this chain.
   `just model-fmt`, which sorts, lays out and normalises the file. Never edit files under `build/`.
 - ID convention: `id-<layer>-<kind>-<slug>`, with layer one of `mot`, `str`, `bus`, `app`, `tech`,
   `impl`, e.g. `id-app-comp-booking-api`. Relationships: `id-rel-NNN`. Views: `id-view-<slug>`.
-  IDs never change once merged; rename the Name instead.
+  The model itself: `id-model-<slug>`. IDs never change once merged; rename the Name instead.
 - Types use ArchiMate 3.2 names (`BusinessProcess`, `ApplicationComponent`, `Serving`, …); an
   `Access` states its `accessType`. Only use relationships that ArchiMate allows between the two
   types: `just model-check` checks each against the pinned Archi's rules and names the allowed ones.

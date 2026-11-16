@@ -72,12 +72,15 @@ def check(model, rules, known_types):
 
 
 def main(argv):
+    if len(argv) != 2:
+        print(__doc__, file=sys.stderr)
+        sys.exit(2)
     model_file, archi_home = Path(argv[0]), argv[1]
-    rules, known_types = load_rules(archi_home)
     try:
         model = exchange.read(model_file.read_bytes())
     except (OSError, exchange.FormatError) as err:
         fail(f"{model_file}: {err}")
+    rules, known_types = load_rules(archi_home)
     problems = check(model, rules, known_types)
     for problem in problems:
         print(f"  - {problem}", file=sys.stderr)

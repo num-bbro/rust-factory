@@ -13,12 +13,14 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import check_model  # noqa: E402
 import check_relationships  # noqa: E402
 import exchange  # noqa: E402
+import xsd_check  # noqa: E402
 
 CANONICAL = (HERE / "fixtures" / "canonical.xml").read_bytes()
 MODEL = exchange.read(CANONICAL)
@@ -104,6 +106,11 @@ class ModelRules(unittest.TestCase):
         self.assertIn("relationship 'rel-1'", problems)
         self.assertIn("view 'view-x'", problems)
 
+    def test_model_identifier_must_follow_the_convention(self):
+        model = edited('identifier="id-model-fixture"', 'identifier="id-fixture"')
+        self.assertEqual(check_model.id_convention(model), [
+            "model 'id-fixture' does not follow the ID convention id-model-<slug>"])
+
     def test_view_member_must_be_an_element(self):
         model = edited('elementRef="id-app-comp-api" x="200"', 'elementRef="id-app-comp-gone" x="200"')
         self.assertEqual(check_model.views(model)[0],
@@ -120,12 +127,49 @@ class ModelRules(unittest.TestCase):
         self.assertEqual(check_model.views(model), [
             "view 'id-view-hand': connection 'hand-c1' refers to unknown relationship 'id-rel-099'"])
 
+    def test_plain_line_in_a_manual_view_is_not_a_connection_problem(self):
+        model = edited('xsi:type="Relationship" relationshipRef="id-rel-005"', 'xsi:type="Line"')
+        line = next(c for c in model.connections if c.identifier == "hand-c1")
+        self.assertEqual(line.relationship, "")
+        self.assertEqual(check_model.views(model), [])
+
     def test_view_property_must_name_a_view(self):
-        model = edited("<value xml:lang=\"en\">crates/web</value>", "<value xml:lang=\"en\">x</value>")
+        model = exchange.read(CANONICAL)
         model.properties += [("id-app-comp-web", "View", "id-view-main"),
                              ("id-app-comp-web", "View", "id-view-gone")]
         self.assertEqual(check_model.views(model), [
             "'id-app-comp-web': property View = 'id-view-gone' names no view of the model"])
+
+
+class Viewpoints(unittest.TestCase):
+    KNOWN = {"Layered", "Motivation"}
+
+    def test_known_viewpoint_and_no_viewpoint_pass(self):
+        model = edited('identifier="id-view-main" xsi:type="Diagram"',
+                       'identifier="id-view-main" xsi:type="Diagram" viewpoint="Layered"')
+        self.assertEqual(model.viewpoints, {"id-view-main": "Layered"})
+        self.assertEqual(check_model.viewpoints(model, self.KNOWN), [])
+
+    def test_unknown_viewpoint_fails_and_lists_the_known_ones(self):
+        model = edited('identifier="id-view-main" xsi:type="Diagram"',
+                       'identifier="id-view-main" xsi:type="Diagram" viewpoint="Motivational"')
+        self.assertEqual(check_model.viewpoints(model, self.KNOWN), [
+            "view 'id-view-main': viewpoint 'Motivational' is not an ArchiMate viewpoint; one of: "
+            "Layered, Motivation"])
+
+
+PINS = xsd_check.read_env(xsd_check.ENV_FILE)
+ARCHI_HOME = xsd_check.archi_home(PINS)
+
+
+@unittest.skipUnless(any((ARCHI_HOME / "plugins").glob("org.opengroup.archimate.xmlexchange_*.jar")),
+                     "needs the pinned Archi (run ./bootstrap.sh); just model-check fails without it")
+class ViewpointsFromTheSchema(unittest.TestCase):
+    def test_names_come_from_the_pinned_schema(self):
+        known = xsd_check.viewpoints(ARCHI_HOME, PINS)
+        self.assertIn("Motivation", known)
+        self.assertIn("Business Process Cooperation", known)
+        self.assertNotIn("Motivational", known)
 
 
 class DocumentReferences(unittest.TestCase):
@@ -150,19 +194,59 @@ class CommandLine(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             (Path(tmp) / "model.xml").write_bytes(CANONICAL)
             (Path(tmp) / "doc.md").write_text(text, encoding="utf-8")
-            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-                code = check_model.main([str(Path(tmp) / "model.xml"), tmp])
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), \
+                    mock.patch.object(xsd_check, "viewpoints", return_value={"Layered"}):
+                code = check_model.main([str(Path(tmp) / "model.xml"), tmp, "archi"])
         return code, out.getvalue(), err.getvalue()
 
     def test_all_checks_pass_with_one_line_each(self):
         code, out, _ = self.run_main("`id-app-comp-web`")
         self.assertEqual(code, 0)
-        self.assertEqual(len(out.splitlines()), 3)
+        self.assertEqual(len(out.splitlines()), 4)
 
     def test_a_problem_fails_and_is_listed(self):
         code, _, err = self.run_main("`id-app-comp-gone`")
         self.assertEqual(code, 1)
         self.assertIn("id-app-comp-gone", err)
+
+
+    def test_viewpoints_that_cannot_be_read_are_a_setup_error(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), mock.patch.object(
+                xsd_check, "viewpoints", side_effect=xsd_check.CheckError("run ./bootstrap.sh")):
+            code = check_model.main(["model.xml", "docs", "archi"])
+        self.assertEqual(code, 2)
+        self.assertIn("viewpoints: run ./bootstrap.sh", err.getvalue())
+
+    def test_wrong_arguments_print_usage(self):
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(check_model.main(["model.xml"]), 2)
+
+
+class RelationshipsCommandLine(unittest.TestCase):
+    def run_main(self, argv: list[str]) -> tuple[int, str]:
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as stop:
+            check_relationships.main(argv)
+        return stop.exception.code, err.getvalue()
+
+    def test_unreadable_model_fails_naming_the_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, err = self.run_main([str(Path(tmp) / "missing.xml"), tmp])
+        self.assertEqual(code, 1)
+        self.assertIn("missing.xml", err)
+
+    def test_not_well_formed_model_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "model.xml").write_text("<model", encoding="utf-8")
+            code, err = self.run_main([str(Path(tmp) / "model.xml"), tmp])
+        self.assertEqual(code, 1)
+        self.assertIn("not well-formed XML", err)
+
+    def test_wrong_arguments_print_usage(self):
+        code, err = self.run_main(["model.xml"])
+        self.assertEqual(code, 2)
+        self.assertIn("check_relationships.py <model.xml> <archi-home>", err)
 
 
 if __name__ == "__main__":

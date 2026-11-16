@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Check the exchange model's own rules, beyond the schema and the relationship rules (ADR 0009).
 
-  python3 -I check_model.py <model.xml> <docs-dir>
+  python3 -I check_model.py <model.xml> <docs-dir> <archi-home>
 
 * identifiers follow the convention `id-<layer>-<kind>-<slug>`, `id-rel-NNN`, `id-view-<slug>`
   (the model itself: `id-model-<slug>`);
 * every view member is an element, and every diagram connection joins nodes of its
   relationship's two ends (neither the schema nor Archi checks this);
+* every view's viewpoint is an ArchiMate viewpoint: one of the ViewpointsEnum values of the
+  pinned Archi's archimate3_View.xsd (the schema itself accepts any string there);
 * every `View` property names an existing view;
 * every `id-…` written in backticks in a Markdown file under <docs-dir> exists in the model, so
   the narrative and the model cannot silently drift apart.
@@ -24,6 +26,7 @@ from pathlib import Path
 # own folder off sys.path.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import exchange  # noqa: E402
+import xsd_check  # noqa: E402
 
 SLUG = r"[a-z0-9]+(?:-[a-z0-9]+)*"
 ELEMENT_ID = re.compile(rf"id-(?:mot|str|bus|app|tech|impl)-[a-z0-9]+-{SLUG}")
@@ -49,6 +52,8 @@ def views(model: exchange.Model) -> list[str]:
                 for vid, refs in model.views.items() for ref in refs if ref not in model.elements]
     rels = {r["ID"]: r for r in model.relationships}
     for c in model.connections:
+        if not c.relationship:
+            continue                                     # a plain line in a manual view
         rel = rels.get(c.relationship)
         if rel is None:
             problems.append(f"view '{c.view}': connection '{c.identifier}' refers to unknown "
@@ -63,6 +68,12 @@ def views(model: exchange.Model) -> list[str]:
     return problems
 
 
+def viewpoints(model: exchange.Model, known: set[str]) -> list[str]:
+    return [f"view '{vid}': viewpoint '{vp}' is not an ArchiMate viewpoint; one of: "
+            + ", ".join(sorted(known))
+            for vid, vp in model.viewpoints.items() if vp not in known]
+
+
 def doc_refs(model: exchange.Model, docs: Path) -> list[str]:
     known = model.identifiers()
     problems = []
@@ -74,10 +85,15 @@ def doc_refs(model: exchange.Model, docs: Path) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2:
+    if len(argv) != 3:
         print(__doc__, file=sys.stderr)
         return 2
-    model_file, docs = Path(argv[0]), Path(argv[1])
+    model_file, docs, archi = Path(argv[0]), Path(argv[1]), Path(argv[2])
+    try:
+        known = xsd_check.viewpoints(archi, xsd_check.read_env(xsd_check.ENV_FILE))
+    except xsd_check.CheckError as err:
+        print(f"viewpoints: {err}", file=sys.stderr)
+        return 2
     try:
         model = exchange.read(model_file.read_bytes())
     except (OSError, exchange.FormatError) as err:
@@ -86,6 +102,7 @@ def main(argv: list[str]) -> int:
     checks = [("IDs: all follow the convention", id_convention(model)),
               ("views: all members are elements, connections match their relationships, "
                "View properties name views", views(model)),
+              ("viewpoints: all are ArchiMate viewpoints", viewpoints(model, known)),
               ("docs: all element references resolve", doc_refs(model, docs))]
     failed = False
     for ok, problems in checks:

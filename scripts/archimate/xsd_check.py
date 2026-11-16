@@ -21,6 +21,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 
@@ -79,6 +80,26 @@ def extract_schemas(archi_home: Path, pins: dict[str, str], dest: Path) -> Path:
     return dest
 
 
+def viewpoints(archi_home: Path, pins: dict[str, str]) -> set[str]:
+    """The names of the ArchiMate viewpoints (ViewpointsEnum of the pinned archimate3_View.xsd).
+
+    The schema itself accepts any string as a viewpoint, so the model check compares against this.
+    """
+    xs = "{http://www.w3.org/2001/XMLSchema}"
+    with tempfile.TemporaryDirectory(prefix="archimate-xsd-") as tmp:
+        root = ET.parse(extract_schemas(archi_home, pins, Path(tmp)) / "archimate3_View.xsd").getroot()
+    for simple in root.iter(f"{xs}simpleType"):
+        if simple.get("name") == "ViewpointsEnum":
+            return {e.get("value", "") for e in simple.iter(f"{xs}enumeration")}
+    raise CheckError("archimate3_View.xsd has no ViewpointsEnum; is the pinned Archi complete?")
+
+
+def archi_home(pins: dict[str, str]) -> Path:
+    """The pinned Archi install: ARCHI_HOME, or where bootstrap.sh puts it."""
+    return Path(os.environ.get("ARCHI_HOME")
+                or Path.home() / ".local" / "opt" / f"archi-{pins.get('ARCHI_VERSION', '')}")
+
+
 def validate(files: list[str], archi_home: Path, pins: dict[str, str]) -> int:
     xmllint = shutil.which("xmllint")
     with tempfile.TemporaryDirectory(prefix="archimate-xsd-") as tmp:
@@ -111,10 +132,8 @@ def main(argv: list[str]) -> int:
         print(__doc__, file=sys.stderr)
         return 2
     pins = read_env(ENV_FILE)
-    home = os.environ.get("ARCHI_HOME") or str(
-        Path.home() / ".local" / "opt" / f"archi-{pins.get('ARCHI_VERSION', '')}")
     try:
-        return validate(argv, Path(home), pins)
+        return validate(argv, archi_home(pins), pins)
     except CheckError as err:
         print(f"schema: {err}", file=sys.stderr)
         return 2
