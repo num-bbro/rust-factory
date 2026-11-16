@@ -52,6 +52,7 @@ gh auth login              # once per machine
 | `scripts/cost-report.py`, `tools/model-prices.toml` | `just cost`: agent spend per model, agent and task |
 | `docs/togaf/` | One document per TOGAF ADM phase (narrative) |
 | `docs/architecture/model.xml` | ArchiMate model (Open Group exchange format), built with `just model` |
+| `docs/architecture/views/` | Archi's image of every view and `views.lock`, written by `just model` (never edit them) |
 | `docs/adr/` | Architecture Decision Records, generated from the model (`just model-docs`); [template.md](docs/adr/template.md) says how to add one |
 | `scripts/archimate/` | Model formatter, checks and builder: exchange XML → Archi model + HTML report |
 | `tools/archi.env` | Pinned Archi version and checksum |
@@ -83,11 +84,15 @@ just cost            what it cost, per model and per task
 
 ```bash
 just model-fmt      # sort, lay out the views and normalise docs/architecture/model.xml
-just model-check    # fast: validate the model, the element IDs mentioned in docs, the ADR pages
+just model-check    # fast: validate the model, the element IDs mentioned in docs, the ADR pages,
+                    # the view images against views.lock
 just model-docs     # write the ADR pages docs/adr/*.md from the model (never edit them)
-just model          # build build/architecture/model.archimate and report/index.html
+just model          # build build/architecture/model.archimate and report/index.html (Archi,
+                    # under Xvfb); update docs/architecture/views/ for the views that changed
+just model-dims     # compare the last build's image sizes with views.lock (CI runs it)
 just model-report   # build, then open the HTML report in the browser
 ```
 Open `build/architecture/model.archimate` in Archi to review. To change the model, edit
-`docs/architecture/model.xml` and run `just model-fmt`, never the generated `.archimate`. See
+`docs/architecture/model.xml` and run `just model-fmt`, never the generated `.archimate`. When
+`just model-check` reports a view image, run `just model` and commit `docs/architecture/views/`. See
 [ADR 0009](docs/adr/0009-archimate-exchange-model-as-source.md).

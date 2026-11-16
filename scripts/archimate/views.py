@@ -215,7 +215,7 @@ def update(hashes: dict[str, str], views: Path, rendered: Path) -> list[str]:
 
     A view keeps its committed image when its lock entry is current (same input hash, and the
     file has the locked sha256 and size); otherwise the freshly rendered PNG replaces it. Images
-    and entries of views no longer in the model are removed.
+    and entries of views no longer in the model, and any other file in the folder, are removed.
     """
     views.mkdir(parents=True, exist_ok=True)
     lock_file = views / LOCK
