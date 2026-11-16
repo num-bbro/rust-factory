@@ -8,6 +8,13 @@
 - ArchiMate elements: `id-app-intf-reservation-api`, `id-app-svc-book`, `id-app-svc-cancel`,
   `id-mot-goal-healthy`
 
+## <a id="id-view-adr-0010"></a>Elements this decision applies to
+
+![ADR 0010: what the decision applies to](../architecture/views/id-view-adr-0010.png)
+
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-adr-0010.html)
+
 ## Context and problem
 The reservations HTTP API
 ([`id-app-intf-reservation-api`](../togaf/A-architecture-vision.md#id-app-intf-reservation-api)) is

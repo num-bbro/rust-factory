@@ -8,6 +8,13 @@
 - ArchiMate elements: `id-mot-req-togaf`, `id-tech-sw-archi`
 - Superseded by: ADR 0009
 
+## <a id="id-view-adr-0002"></a>Elements this decision applies to
+
+![ADR 0002: what the decision applies to](../architecture/views/id-view-adr-0002.png)
+
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-adr-0002.html)
+
 ## Context and problem
 The architecture must be documented in ArchiMate (requirement
 [`id-mot-req-togaf`](../togaf/00-preliminary.md#id-mot-req-togaf)). Agents write the changes and the

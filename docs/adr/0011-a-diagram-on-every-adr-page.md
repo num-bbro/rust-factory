@@ -1,11 +1,18 @@
 <!-- Generated from docs/architecture/model.xml (id-mot-adr-0011) by `just model-docs`. Do not edit: change the model, see docs/adr/template.md. -->
 # 0011. A diagram on every ADR page
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-17
 - Issue: #69 (task #70)
 - Deciders: human approver (approach chosen on 2026-11-17), architect agent
 - ArchiMate elements: `id-mot-goal-traceable`, `id-mot-req-togaf`, `id-tech-sw-archi`
+
+## <a id="id-view-adr-0011"></a>Elements this decision applies to
+
+![ADR 0011: what the decision applies to](../architecture/views/id-view-adr-0011.png)
+
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-adr-0011.html)
 
 ## Context and problem
 Since ADR 0009 ([`id-mot-adr-0009`](0009-archimate-exchange-model-as-source.md)) each TOGAF document

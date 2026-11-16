@@ -9,6 +9,13 @@
 - ArchiMate elements: `id-mot-req-togaf`, `id-tech-sw-archi`
 - Supersedes: ADR 0002
 
+## <a id="id-view-adr-0009"></a>Elements this decision applies to
+
+![ADR 0009: what the decision applies to](../architecture/views/id-view-adr-0009.png)
+
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-adr-0009.html)
+
 ## Context and problem
 Today the architecture documentation has three hand-edited sources: the model in
 `docs/architecture/model/*.csv` (Archi's CSV layout plus a `views.csv` this repo invented, see ADR

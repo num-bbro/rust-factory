@@ -63,6 +63,7 @@ One line per paragraph …</documentation>
     <property propertyDefinitionRef="propid-issue"><value xml:lang="en">#NN</value></property>
     <property propertyDefinitionRef="propid-deciders"><value xml:lang="en">human approver, architect agent</value></property>
     <property propertyDefinitionRef="propid-file"><value xml:lang="en">docs/adr/0010-short-title.md</value></property>
+    <property propertyDefinitionRef="propid-view"><value xml:lang="en">id-view-adr-0010</value></property>
   </properties>
 </element>
 
@@ -71,13 +72,19 @@ One line per paragraph …</documentation>
 <relationship identifier="id-rel-116" xsi:type="Association" source="id-mot-adr-0010" target="id-mot-adr-0008" isDirected="true">
   <name xml:lang="en">supersedes</name>
 </relationship>
+
+<view identifier="id-view-adr-0010" xsi:type="Diagram">
+  <name xml:lang="en">ADR 0010: what the decision applies to</name>
+  <node xsi:type="Element" elementRef="id-mot-adr-0010"/>
+  <node xsi:type="Element" elementRef="id-app-comp-application"/>
+  <node xsi:type="Element" elementRef="id-mot-req-togaf"/>
+</view>
 ```
 
-The page's "ArchiMate elements" line lists the sources of the Realization and Influence
-relationships; "Supersedes" / "Superseded by" come from the Association. Status goes `Proposed`
-(open PR) → `Accepted` (PR merged) → `Superseded by NNNN` / `Deprecated`. The decision of an
-accepted ADR is never rewritten: corrections and as-built notes are appended as a dated
-`## Amendment YYYY-MM-DD` section, and a changed decision needs a new ADR that supersedes it.
+Every ADR also has a **view** (ADR 0011) in the same PR, named by the `View` property: no
+viewpoint, bare `<node xsi:type="Element" elementRef="…"/>` members, namely the ADR plus the
+sources of its Realization and Influence relationships (no Plateaus, no ADRs). `just model-check`
+fails when they differ; the formatter lays it out.
 
 ## 3. Format, generate, check
 ```sh

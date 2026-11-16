@@ -9,6 +9,13 @@
   `id-bus-proc-cancel`, `id-mot-out-rebook`, `id-mot-req-cancel`, `id-mot-req-cancel-refused`
 - Released in: v0.2.0
 
+## <a id="id-view-adr-0007"></a>Elements this decision applies to
+
+![ADR 0007: what the decision applies to](../architecture/views/id-view-adr-0007.png)
+
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-adr-0007.html)
+
 ## Context and problem
 Customers who can no longer come have no way to free their slot
 ([`id-mot-drv-blocked-slots`](../togaf/A-architecture-vision.md#id-mot-drv-blocked-slots)). Epic #17

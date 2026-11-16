@@ -1041,7 +1041,59 @@ class RealModel(unittest.TestCase):
         self.assertEqual(gen_docs.compare(pages, root), [])
         docs = gen_docs.documents(exchange.read((root / gen_docs.MODEL).read_bytes()))[0]
         self.assertEqual(len(docs), 10)
-        self.assertEqual(gen_docs.missing_images(docs, root), [])
+        found = gen_docs.adrs(exchange.read((root / gen_docs.MODEL).read_bytes()))[0]
+        self.assertEqual(len(found), 11)
+        self.assertTrue(all(a.props.get("View") == f"id-view-adr-{a.number}" for a in found))
+        self.assertEqual(gen_docs.missing_images(docs, found, root), [])
+
+
+def with_adr_view(xml: str, site: str = "") -> str:
+    """`adr_model` with a view of ADR 0001 named by its `View` property."""
+    xml = xml.replace(
+        '<property propertyDefinitionRef="p-status"><value xml:lang="en">Superseded by 0002',
+        '<property propertyDefinitionRef="p-view"><value xml:lang="en">id-view-adr-0001</value>'
+        '</property><property propertyDefinitionRef="p-status"><value xml:lang="en">Superseded '
+        "by 0002", 1)
+    xml = xml.replace("<propertyDefinitions>",
+                      '<propertyDefinitions><propertyDefinition identifier="p-view" type="string">'
+                      '<name xml:lang="en">View</name></propertyDefinition>', 1)
+    views = ('<views><diagrams><view identifier="id-view-adr-0001" xsi:type="Diagram">'
+             '<name xml:lang="en">ADR 0001: what the decision applies to</name>'
+             '<node xsi:type="Element" elementRef="id-mot-adr-0001"/></view></diagrams></views>')
+    xml = xml.replace("</model>", views + "</model>", 1)
+    return with_site(xml, site) if site else xml
+
+
+class AdrViewSections(unittest.TestCase):
+    def test_an_adr_with_a_view_shows_heading_and_picture_after_the_header_list(self):
+        pages, problems = rendered(with_adr_view(adr_model()))
+        self.assertEqual(problems, [])
+        page = pages["docs/adr/0001-first.md"]
+        self.assertIn(
+            "- Superseded by: ADR 0002\n\n"
+            '## <a id="id-view-adr-0001"></a>Elements this decision applies to\n\n'
+            "![ADR 0001: what the decision applies to]"
+            "(../architecture/views/id-view-adr-0001.png)\n\n## Context\n", page)
+        self.assertNotIn("Clickable version", page)
+        self.assertNotIn("| ID |", page)
+
+    def test_with_a_site_the_picture_is_followed_by_the_clickable_version(self):
+        page = rendered(with_adr_view(adr_model(), SITE))[0]["docs/adr/0001-first.md"]
+        self.assertIn("id-view-adr-0001.png)\n\nClickable version:\n"
+                      f"[report]({REPORT}id-view-adr-0001.html)\n\n## Context", page)
+
+    def test_an_adr_without_a_view_has_no_such_section(self):
+        page = rendered()[0]["docs/adr/0002-second.md"]
+        self.assertNotIn("Elements this decision applies to", page)
+
+    def test_a_shown_view_without_an_image_is_reported(self):
+        model = exchange.read(with_adr_view(adr_model()).encode())
+        found = gen_docs.adrs(model)[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            problems = gen_docs.missing_images([], found, Path(tmp))
+        self.assertEqual(len(problems), 1)
+        self.assertIn("ADR element 'id-mot-adr-0001': View = 'id-view-adr-0001' has no image",
+                      problems[0])
 
 
 PLATEAUS = "".join(

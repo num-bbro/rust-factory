@@ -8,6 +8,13 @@
 - ArchiMate elements: `id-app-comp-reservation-svc`, `id-mot-goal-healthy`, `id-tech-sw-rust`
 - Released in: v0.1.0
 
+## <a id="id-view-adr-0003"></a>Elements this decision applies to
+
+![ADR 0003: what the decision applies to](../architecture/views/id-view-adr-0003.png)
+
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-adr-0003.html)
+
 ## Context and problem
 The product owner's experience: in long-lived projects, business logic mixed with database and HTTP
 code made every change ripple everywhere, weak tests made people afraid to change code, and nobody

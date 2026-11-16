@@ -8,6 +8,13 @@
 - ArchiMate elements: `id-app-comp-conductor`, `id-app-comp-hard`, `id-app-comp-scout`,
   `id-app-comp-simple`, `id-mot-goal-cost`, `id-mot-req-routing`
 
+## <a id="id-view-adr-0004"></a>Elements this decision applies to
+
+![ADR 0004: what the decision applies to](../architecture/views/id-view-adr-0004.png)
+
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-adr-0004.html)
+
 ## Context and problem
 The product owner wants a conductor that plans and designs, and hands each task to its own worker,
 while keeping development cost under control: expensive models only where their reasoning pays off.

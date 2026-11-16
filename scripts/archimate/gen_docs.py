@@ -93,6 +93,7 @@ HEADER_PROPS = ("Status", "Date", "Issue", "Deciders")
 DOC_PROPS = ("File", "Phase")
 DOC_TEXT_PROPS = ("Viewpoints", "Artifacts")
 LINKS = ("Realization", "Influence")
+ADR_VIEW_HEADING = "Elements this decision applies to"
 SUPERSEDES = "supersedes"
 CODE_ID = re.compile(r"id-[a-z0-9-]+")
 SITE_PROP = "Site"
@@ -281,8 +282,11 @@ def page(adr: Adr, model: exchange.Model, released_in: dict[str, list[str]],
                for r in sorted(supersedes, key=lambda r: r["Source"]) if r["Target"] == adr.ident]
     here = Document(adr.ident, adr.title, adr.props["File"], "", [], adr.text)
     body = togaf.link_ids(adr.text, here, skip=adr.ident)
-    text = "\n".join([generated_note(adr.ident), f"# {adr.number}. {adr.title}", "", *header, "",
-                      body])
+    view = adr.props.get("View", "")
+    shown = view_section(model, view, adr.props["File"], togaf.site, ADR_VIEW_HEADING) \
+        if view in model.views else []
+    text = "\n".join([generated_note(adr.ident), f"# {adr.number}. {adr.title}", "", *header,
+                      *(shown or [""]), body])
     return mdwrap.wrap(text) + "\n"
 
 
@@ -430,6 +434,20 @@ def href(from_file: str, to_file: str, anchor: str = "", site: str = "") -> str:
     return posixpath.relpath(to_file, posixpath.dirname(from_file)) + fragment
 
 
+def view_section(model: exchange.Model, view: str, file: str, site: str, heading: str,
+                 intro: list[str] | None = None) -> list[str]:
+    """The lines that show `view` on page `file`: an anchored heading, the `intro` lines, the
+    picture and, when the model has a `site`, the link to its page in the report. Document pages
+    and ADR pages both show their views with it."""
+    name = _text(model.names.get(view, view))
+    lines = ["", f'## <a id="{view}"></a>{heading}', "", *(intro or []),
+             f"![{name}]({href(file, f'{VIEWS_DIR}/{view}.png')})", ""]
+    if site:
+        report = f"{REPORT_DIR}/{model.identifier}/views/{view}.html"
+        lines += [f"Clickable version: [report]({href(file, report, site=site)})", ""]
+    return lines
+
+
 def _cell(text: str) -> str:
     return text.replace("|", "\\|")
 
@@ -572,16 +590,10 @@ class Togaf:
                  self.link_ids(doc.text, doc)]
         anchored: set[str] = set()
         for view in doc.views:
-            name = _text(self.model.names.get(view, view))
-            lines += ["", f'## <a id="{view}"></a>{name}', ""]
             text = self.model.documentation.get(view, "")
-            if text:
-                lines += [self.link_ids(text, doc), ""]
-            lines += [f"![{name}]({href(doc.file, f'{VIEWS_DIR}/{view}.png')})", ""]
-            if self.site:
-                report = f"{REPORT_DIR}/{self.model.identifier}/views/{view}.html"
-                lines += [f"Clickable version: [report]({href(doc.file, report, site=self.site)})",
-                          ""]
+            intro = [self.link_ids(text, doc), ""] if text else []
+            lines += view_section(self.model, view, doc.file, self.site,
+                                  _text(self.model.names.get(view, view)), intro)
             lines += self.catalog(view, doc, anchored)
         return mdwrap.wrap("\n".join(lines)) + "\n"
 
@@ -600,11 +612,12 @@ class Togaf:
                                       TOGAF_OUTRO])) + "\n"
 
 
-def missing_images(docs: list[Document], root: Path) -> list[str]:
-    """Each view a document shows whose image is not committed."""
-    return [f"document element '{d.ident}': View = '{v}' has no image {VIEWS_DIR}/{v}.png; run "
-            f"`just model` and commit `{VIEWS_DIR}/`"
-            for d in docs for v in d.views if not (root / VIEWS_DIR / f"{v}.png").is_file()]
+def missing_images(docs: list[Document], found: list[Adr], root: Path) -> list[str]:
+    """Each view a page shows (of a document or an ADR) whose image is not committed."""
+    shown = [(f"document element '{d.ident}'", v) for d in docs for v in d.views]
+    shown += [(f"ADR element '{a.ident}'", a.props["View"]) for a in found if a.props.get("View")]
+    return [f"{who}: View = '{v}' has no image {VIEWS_DIR}/{v}.png; run `just model` and commit "
+            f"`{VIEWS_DIR}/`" for who, v in shown if not (root / VIEWS_DIR / f"{v}.png").is_file()]
 
 
 # --- all pages ----------------------------------------------------------------------------------
@@ -667,7 +680,7 @@ def main(argv: list[str]) -> int:
                 print(f"wrote {rel}")
     problems += compare(pages, root)
     if images:
-        problems += missing_images(documents(model)[0], root)
+        problems += missing_images(documents(model)[0], adrs(model)[0], root)
     for problem in problems:
         print(f"  - {problem}", file=sys.stderr)
     if problems:

@@ -641,6 +641,9 @@ Chosen: **ADRs in the repo**, because they are versioned with the code, reviewed
         <property propertyDefinitionRef="propid-file">
           <value xml:lang="en">docs/adr/0001-record-architecture-decisions.md</value>
         </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-adr-0001</value>
+        </property>
       </properties>
     </element>
     <element identifier="id-mot-adr-0002" xsi:type="Constraint">
@@ -709,6 +712,9 @@ Issue: #41 (change request) / task #42. This ADR is superseded by ADR 0009 (`id-
         <property propertyDefinitionRef="propid-file">
           <value xml:lang="en">docs/adr/0002-archimate-model-as-text.md</value>
         </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-adr-0002</value>
+        </property>
       </properties>
     </element>
     <element identifier="id-mot-adr-0003" xsi:type="Constraint">
@@ -766,6 +772,9 @@ Mutation testing (`just mutants`, `just mutants-diff`) is available on demand; C
         <property propertyDefinitionRef="propid-file">
           <value xml:lang="en">docs/adr/0003-layered-cargo-workspace.md</value>
         </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-adr-0003</value>
+        </property>
       </properties>
     </element>
     <element identifier="id-mot-adr-0004" xsi:type="Constraint">
@@ -814,6 +823,9 @@ The product owner wants a conductor that plans and designs, and hands each task 
         <property propertyDefinitionRef="propid-file">
           <value xml:lang="en">docs/adr/0004-agent-team-and-cost-routing.md</value>
         </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-adr-0004</value>
+        </property>
       </properties>
     </element>
     <element identifier="id-mot-adr-0005" xsi:type="Constraint">
@@ -852,6 +864,9 @@ Unit and HTTP tests prove the code; they do not prove the thing we deploy: the b
         </property>
         <property propertyDefinitionRef="propid-file">
           <value xml:lang="en">docs/adr/0005-release-image-and-acceptance.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-adr-0005</value>
         </property>
       </properties>
     </element>
@@ -896,6 +911,9 @@ A released image (ADR 0005) must reach users safely: first one pilot host, then 
         </property>
         <property propertyDefinitionRef="propid-file">
           <value xml:lang="en">docs/adr/0006-pilot-and-rollout-with-quadlet.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-adr-0006</value>
         </property>
       </properties>
     </element>
@@ -959,6 +977,9 @@ Chosen: **option 1**, because it is what the domain already does (`Schedule::can
         </property>
         <property propertyDefinitionRef="propid-file">
           <value xml:lang="en">docs/adr/0007-cancel-reservation-by-delete.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-adr-0007</value>
         </property>
       </properties>
     </element>
@@ -1024,6 +1045,9 @@ where
         </property>
         <property propertyDefinitionRef="propid-file">
           <value xml:lang="en">docs/adr/0008-atomic-schedule-update-through-the-port.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-adr-0008</value>
         </property>
       </properties>
     </element>
@@ -1305,6 +1329,9 @@ With this step, change request #41 is complete.</documentation>
         <property propertyDefinitionRef="propid-file">
           <value xml:lang="en">docs/adr/0009-archimate-exchange-model-as-source.md</value>
         </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-adr-0009</value>
+        </property>
       </properties>
     </element>
     <element identifier="id-mot-adr-0010" xsi:type="Constraint">
@@ -1376,6 +1403,9 @@ Spike of task #61 (2026-11-16): Schemathesis 4.33.4, the latest stable release, 
         <property propertyDefinitionRef="propid-file">
           <value xml:lang="en">docs/adr/0010-openapi-specification-spec-first.md</value>
         </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-adr-0010</value>
+        </property>
       </properties>
     </element>
     <element identifier="id-mot-adr-0011" xsi:type="Constraint">
@@ -1418,7 +1448,7 @@ Chosen: **option 1**, the human's choice of 2026-11-17, because it reuses what t
 Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mot-adr-0007`), 8 members in three bands (Motivation, Business, Application), rendered at 678 × 877 pixels; the ADR box shows its whole title in four lines. Since task #73 the automatic layout makes a box grow in height to fit its whole name; spreading the ends of the lines that meet on one edge of a box (here the four Realization arrows at the bottom of the ADR box) is recorded as follow-up #75.</documentation>
       <properties>
         <property propertyDefinitionRef="propid-status">
-          <value xml:lang="en">Proposed</value>
+          <value xml:lang="en">Accepted</value>
         </property>
         <property propertyDefinitionRef="propid-date">
           <value xml:lang="en">2026-11-17</value>
@@ -1431,6 +1461,9 @@ Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mo
         </property>
         <property propertyDefinitionRef="propid-file">
           <value xml:lang="en">docs/adr/0011-a-diagram-on-every-adr-page.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-adr-0011</value>
         </property>
       </properties>
     </element>
@@ -1744,6 +1777,184 @@ Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mo
   </propertyDefinitions>
   <views>
     <diagrams>
+      <view identifier="id-view-adr-0001" xsi:type="Diagram">
+        <name xml:lang="en">ADR 0001: what the decision applies to</name>
+        <node identifier="id-view-adr-0001-band-0" xsi:type="Container" x="20" y="20" w="200" h="250">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-adr-0001-n-id-mot-goal-traceable" xsi:type="Element" elementRef="id-mot-goal-traceable" x="40" y="62" w="160" h="55"/>
+          <node identifier="id-view-adr-0001-n-id-mot-adr-0001" xsi:type="Element" elementRef="id-mot-adr-0001" x="40" y="187" w="160" h="63"/>
+        </node>
+        <node identifier="id-view-adr-0001-band-1" xsi:type="Container" x="20" y="310" w="200" h="117">
+          <label xml:lang="en">Business</label>
+          <node identifier="id-view-adr-0001-n-id-bus-obj-adr" xsi:type="Element" elementRef="id-bus-obj-adr" x="40" y="352" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-adr-0001-c-id-rel-081" xsi:type="Relationship" relationshipRef="id-rel-081" source="id-view-adr-0001-n-id-bus-obj-adr" target="id-view-adr-0001-n-id-mot-adr-0001"/>
+        <connection identifier="id-view-adr-0001-c-id-rel-082" xsi:type="Relationship" relationshipRef="id-rel-082" source="id-view-adr-0001-n-id-mot-goal-traceable" target="id-view-adr-0001-n-id-mot-adr-0001"/>
+      </view>
+      <view identifier="id-view-adr-0002" xsi:type="Diagram">
+        <name xml:lang="en">ADR 0002: what the decision applies to</name>
+        <node identifier="id-view-adr-0002-band-0" xsi:type="Container" x="20" y="20" w="420" h="142">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-adr-0002-n-id-mot-adr-0002" xsi:type="Element" elementRef="id-mot-adr-0002" x="40" y="62" w="160" h="80"/>
+          <node identifier="id-view-adr-0002-n-id-mot-req-togaf" xsi:type="Element" elementRef="id-mot-req-togaf" x="260" y="62" w="160" h="63"/>
+        </node>
+        <node identifier="id-view-adr-0002-band-1" xsi:type="Container" x="20" y="202" w="420" h="117">
+          <label xml:lang="en">Technology</label>
+          <node identifier="id-view-adr-0002-n-id-tech-sw-archi" xsi:type="Element" elementRef="id-tech-sw-archi" x="95" y="244" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-adr-0002-c-id-rel-047" xsi:type="Relationship" relationshipRef="id-rel-047" source="id-view-adr-0002-n-id-tech-sw-archi" target="id-view-adr-0002-n-id-mot-req-togaf">
+          <bendpoint x="175" y="193"/>
+          <bendpoint x="340" y="193"/>
+        </connection>
+        <connection identifier="id-view-adr-0002-c-id-rel-083" xsi:type="Relationship" relationshipRef="id-rel-083" source="id-view-adr-0002-n-id-mot-req-togaf" target="id-view-adr-0002-n-id-mot-adr-0002"/>
+        <connection identifier="id-view-adr-0002-c-id-rel-084" xsi:type="Relationship" relationshipRef="id-rel-084" source="id-view-adr-0002-n-id-tech-sw-archi" target="id-view-adr-0002-n-id-mot-adr-0002">
+          <bendpoint x="189" y="201"/>
+          <bendpoint x="120" y="201"/>
+        </connection>
+      </view>
+      <view identifier="id-view-adr-0003" xsi:type="Diagram">
+        <name xml:lang="en">ADR 0003: what the decision applies to</name>
+        <node identifier="id-view-adr-0003-band-0" xsi:type="Container" x="20" y="20" w="200" h="292">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-adr-0003-n-id-mot-goal-healthy" xsi:type="Element" elementRef="id-mot-goal-healthy" x="40" y="62" w="160" h="63"/>
+          <node identifier="id-view-adr-0003-n-id-mot-adr-0003" xsi:type="Element" elementRef="id-mot-adr-0003" x="40" y="195" w="160" h="97"/>
+        </node>
+        <node identifier="id-view-adr-0003-band-1" xsi:type="Container" x="20" y="352" w="200" h="117">
+          <label xml:lang="en">Application</label>
+          <node identifier="id-view-adr-0003-n-id-app-comp-reservation-svc" xsi:type="Element" elementRef="id-app-comp-reservation-svc" x="40" y="394" w="160" h="55"/>
+        </node>
+        <node identifier="id-view-adr-0003-band-2" xsi:type="Container" x="20" y="509" w="200" h="117">
+          <label xml:lang="en">Technology</label>
+          <node identifier="id-view-adr-0003-n-id-tech-sw-rust" xsi:type="Element" elementRef="id-tech-sw-rust" x="40" y="551" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-adr-0003-c-id-rel-085" xsi:type="Relationship" relationshipRef="id-rel-085" source="id-view-adr-0003-n-id-app-comp-reservation-svc" target="id-view-adr-0003-n-id-mot-adr-0003"/>
+        <connection identifier="id-view-adr-0003-c-id-rel-086" xsi:type="Relationship" relationshipRef="id-rel-086" source="id-view-adr-0003-n-id-mot-goal-healthy" target="id-view-adr-0003-n-id-mot-adr-0003"/>
+        <connection identifier="id-view-adr-0003-c-id-rel-087" xsi:type="Relationship" relationshipRef="id-rel-087" source="id-view-adr-0003-n-id-tech-sw-rust" target="id-view-adr-0003-n-id-mot-adr-0003">
+          <bendpoint x="120" y="500"/>
+          <bendpoint x="211" y="500"/>
+          <bendpoint x="211" y="343"/>
+          <bendpoint x="134" y="343"/>
+        </connection>
+      </view>
+      <view identifier="id-view-adr-0004" xsi:type="Diagram">
+        <name xml:lang="en">ADR 0004: what the decision applies to</name>
+        <node identifier="id-view-adr-0004-band-0" xsi:type="Container" x="20" y="20" w="860" h="267">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-adr-0004-n-id-mot-goal-cost" xsi:type="Element" elementRef="id-mot-goal-cost" x="165" y="62" w="160" h="55"/>
+          <node identifier="id-view-adr-0004-n-id-mot-req-routing" xsi:type="Element" elementRef="id-mot-req-routing" x="55" y="187" w="160" h="63"/>
+          <node identifier="id-view-adr-0004-n-id-mot-adr-0004" xsi:type="Element" elementRef="id-mot-adr-0004" x="275" y="187" w="160" h="80"/>
+        </node>
+        <node identifier="id-view-adr-0004-band-1" xsi:type="Container" x="20" y="327" w="860" h="117">
+          <label xml:lang="en">Application</label>
+          <node identifier="id-view-adr-0004-n-id-app-comp-conductor" xsi:type="Element" elementRef="id-app-comp-conductor" x="40" y="369" w="160" h="55"/>
+          <node identifier="id-view-adr-0004-n-id-app-comp-hard" xsi:type="Element" elementRef="id-app-comp-hard" x="260" y="369" w="160" h="55"/>
+          <node identifier="id-view-adr-0004-n-id-app-comp-simple" xsi:type="Element" elementRef="id-app-comp-simple" x="480" y="369" w="160" h="55"/>
+          <node identifier="id-view-adr-0004-n-id-app-comp-scout" xsi:type="Element" elementRef="id-app-comp-scout" x="700" y="369" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-adr-0004-c-id-rel-005" xsi:type="Relationship" relationshipRef="id-rel-005" source="id-view-adr-0004-n-id-mot-req-routing" target="id-view-adr-0004-n-id-mot-goal-cost">
+          <bendpoint x="135" y="152"/>
+          <bendpoint x="245" y="152"/>
+        </connection>
+        <connection identifier="id-view-adr-0004-c-id-rel-033" xsi:type="Relationship" relationshipRef="id-rel-033" source="id-view-adr-0004-n-id-app-comp-scout" target="id-view-adr-0004-n-id-app-comp-conductor">
+          <bendpoint x="780" y="318"/>
+          <bendpoint x="120" y="318"/>
+        </connection>
+        <connection identifier="id-view-adr-0004-c-id-rel-038" xsi:type="Relationship" relationshipRef="id-rel-038" source="id-view-adr-0004-n-id-app-comp-conductor" target="id-view-adr-0004-n-id-mot-req-routing"/>
+        <connection identifier="id-view-adr-0004-c-id-rel-088" xsi:type="Relationship" relationshipRef="id-rel-088" source="id-view-adr-0004-n-id-app-comp-conductor" target="id-view-adr-0004-n-id-mot-adr-0004">
+          <bendpoint x="106" y="326"/>
+          <bendpoint x="355" y="326"/>
+        </connection>
+        <connection identifier="id-view-adr-0004-c-id-rel-089" xsi:type="Relationship" relationshipRef="id-rel-089" source="id-view-adr-0004-n-id-app-comp-hard" target="id-view-adr-0004-n-id-mot-adr-0004">
+          <bendpoint x="340" y="310"/>
+          <bendpoint x="369" y="310"/>
+        </connection>
+        <connection identifier="id-view-adr-0004-c-id-rel-090" xsi:type="Relationship" relationshipRef="id-rel-090" source="id-view-adr-0004-n-id-app-comp-scout" target="id-view-adr-0004-n-id-mot-adr-0004">
+          <bendpoint x="794" y="334"/>
+          <bendpoint x="341" y="334"/>
+        </connection>
+        <connection identifier="id-view-adr-0004-c-id-rel-091" xsi:type="Relationship" relationshipRef="id-rel-091" source="id-view-adr-0004-n-id-app-comp-simple" target="id-view-adr-0004-n-id-mot-adr-0004">
+          <bendpoint x="560" y="302"/>
+          <bendpoint x="383" y="302"/>
+        </connection>
+        <connection identifier="id-view-adr-0004-c-id-rel-092" xsi:type="Relationship" relationshipRef="id-rel-092" source="id-view-adr-0004-n-id-mot-goal-cost" target="id-view-adr-0004-n-id-mot-adr-0004">
+          <bendpoint x="259" y="160"/>
+          <bendpoint x="355" y="160"/>
+        </connection>
+        <connection identifier="id-view-adr-0004-c-id-rel-093" xsi:type="Relationship" relationshipRef="id-rel-093" source="id-view-adr-0004-n-id-mot-req-routing" target="id-view-adr-0004-n-id-mot-adr-0004"/>
+      </view>
+      <view identifier="id-view-adr-0005" xsi:type="Diagram">
+        <name xml:lang="en">ADR 0005: what the decision applies to</name>
+        <node identifier="id-view-adr-0005-band-0" xsi:type="Container" x="20" y="20" w="200" h="159">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-adr-0005-n-id-mot-adr-0005" xsi:type="Element" elementRef="id-mot-adr-0005" x="40" y="62" w="160" h="97"/>
+        </node>
+        <node identifier="id-view-adr-0005-band-1" xsi:type="Container" x="20" y="219" w="200" h="117">
+          <label xml:lang="en">Business</label>
+          <node identifier="id-view-adr-0005-n-id-bus-proc-accept" xsi:type="Element" elementRef="id-bus-proc-accept" x="40" y="261" w="160" h="55"/>
+        </node>
+        <node identifier="id-view-adr-0005-band-2" xsi:type="Container" x="20" y="376" w="200" h="242">
+          <label xml:lang="en">Technology</label>
+          <node identifier="id-view-adr-0005-n-id-tech-sw-podman" xsi:type="Element" elementRef="id-tech-sw-podman" x="40" y="418" w="160" h="55"/>
+          <node identifier="id-view-adr-0005-n-id-tech-svc-ghcr" xsi:type="Element" elementRef="id-tech-svc-ghcr" x="40" y="543" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-adr-0005-c-id-rel-094" xsi:type="Relationship" relationshipRef="id-rel-094" source="id-view-adr-0005-n-id-bus-proc-accept" target="id-view-adr-0005-n-id-mot-adr-0005"/>
+        <connection identifier="id-view-adr-0005-c-id-rel-095" xsi:type="Relationship" relationshipRef="id-rel-095" source="id-view-adr-0005-n-id-tech-svc-ghcr" target="id-view-adr-0005-n-id-mot-adr-0005">
+          <bendpoint x="120" y="508"/>
+          <bendpoint x="211" y="508"/>
+          <bendpoint x="211" y="210"/>
+          <bendpoint x="134" y="210"/>
+        </connection>
+        <connection identifier="id-view-adr-0005-c-id-rel-096" xsi:type="Relationship" relationshipRef="id-rel-096" source="id-view-adr-0005-n-id-tech-sw-podman" target="id-view-adr-0005-n-id-mot-adr-0005">
+          <bendpoint x="120" y="367"/>
+          <bendpoint x="29" y="367"/>
+          <bendpoint x="29" y="218"/>
+          <bendpoint x="106" y="218"/>
+        </connection>
+      </view>
+      <view identifier="id-view-adr-0006" xsi:type="Diagram">
+        <name xml:lang="en">ADR 0006: what the decision applies to</name>
+        <node identifier="id-view-adr-0006-band-0" xsi:type="Container" x="20" y="20" w="450" h="176">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-adr-0006-n-id-mot-adr-0006" xsi:type="Element" elementRef="id-mot-adr-0006" x="115" y="62" w="160" h="114"/>
+        </node>
+        <node identifier="id-view-adr-0006-band-1" xsi:type="Container" x="20" y="236" w="450" h="117">
+          <label xml:lang="en">Business</label>
+          <node identifier="id-view-adr-0006-n-id-bus-proc-deploy" xsi:type="Element" elementRef="id-bus-proc-deploy" x="60" y="278" w="160" h="55"/>
+        </node>
+        <node identifier="id-view-adr-0006-band-2" xsi:type="Container" x="20" y="393" w="450" h="162">
+          <label xml:lang="en">Technology</label>
+          <node identifier="id-view-adr-0006-n-id-tech-node-pilot" xsi:type="Element" elementRef="id-tech-node-pilot" x="40" y="435" w="190" h="100">
+            <node identifier="id-view-adr-0006-n-id-tech-sw-podman" xsi:type="Element" elementRef="id-tech-sw-podman" x="55" y="465" w="160" h="55"/>
+          </node>
+          <node identifier="id-view-adr-0006-n-id-tech-node-prod" xsi:type="Element" elementRef="id-tech-node-prod" x="290" y="435" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-adr-0006-c-id-rel-046" xsi:type="Relationship" relationshipRef="id-rel-046" source="id-view-adr-0006-n-id-tech-node-pilot" target="id-view-adr-0006-n-id-bus-proc-deploy">
+          <bendpoint x="135" y="384"/>
+          <bendpoint x="140" y="384"/>
+        </connection>
+        <connection identifier="id-view-adr-0006-c-id-rel-097" xsi:type="Relationship" relationshipRef="id-rel-097" source="id-view-adr-0006-n-id-bus-proc-deploy" target="id-view-adr-0006-n-id-mot-adr-0006">
+          <bendpoint x="140" y="227"/>
+          <bendpoint x="195" y="227"/>
+        </connection>
+        <connection identifier="id-view-adr-0006-c-id-rel-098" xsi:type="Relationship" relationshipRef="id-rel-098" source="id-view-adr-0006-n-id-tech-node-pilot" target="id-view-adr-0006-n-id-mot-adr-0006">
+          <bendpoint x="149" y="392"/>
+          <bendpoint x="231" y="392"/>
+          <bendpoint x="231" y="235"/>
+          <bendpoint x="209" y="235"/>
+        </connection>
+        <connection identifier="id-view-adr-0006-c-id-rel-099" xsi:type="Relationship" relationshipRef="id-rel-099" source="id-view-adr-0006-n-id-tech-node-prod" target="id-view-adr-0006-n-id-mot-adr-0006">
+          <bendpoint x="370" y="376"/>
+          <bendpoint x="275" y="376"/>
+          <bendpoint x="275" y="219"/>
+          <bendpoint x="181" y="219"/>
+        </connection>
+        <connection identifier="id-view-adr-0006-c-id-rel-100" xsi:type="Relationship" relationshipRef="id-rel-100" source="id-view-adr-0006-n-id-tech-sw-podman" target="id-view-adr-0006-n-id-mot-adr-0006">
+          <bendpoint x="135" y="400"/>
+          <bendpoint x="239" y="400"/>
+          <bendpoint x="239" y="243"/>
+          <bendpoint x="223" y="243"/>
+        </connection>
+      </view>
       <view identifier="id-view-adr-0007" xsi:type="Diagram">
         <name xml:lang="en">ADR 0007: what the decision applies to</name>
         <node identifier="id-view-adr-0007-band-0" xsi:type="Container" x="20" y="20" w="658" h="309">
@@ -1819,6 +2030,128 @@ Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mo
         <connection identifier="id-view-adr-0007-c-id-rel-107" xsi:type="Relationship" relationshipRef="id-rel-107" source="id-view-adr-0007-n-id-mot-req-cancel-refused" target="id-view-adr-0007-n-id-mot-adr-0007">
           <bendpoint x="578" y="152"/>
           <bendpoint x="152" y="152"/>
+        </connection>
+      </view>
+      <view identifier="id-view-adr-0008" xsi:type="Diagram">
+        <name xml:lang="en">ADR 0008: what the decision applies to</name>
+        <node identifier="id-view-adr-0008-band-0" xsi:type="Container" x="20" y="20" w="420" h="176">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-adr-0008-n-id-mot-adr-0008" xsi:type="Element" elementRef="id-mot-adr-0008" x="113" y="62" w="160" h="114"/>
+        </node>
+        <node identifier="id-view-adr-0008-band-1" xsi:type="Container" x="20" y="236" w="420" h="250">
+          <label xml:lang="en">Application</label>
+          <node identifier="id-view-adr-0008-n-id-app-comp-application" xsi:type="Element" elementRef="id-app-comp-application" x="40" y="278" w="160" h="55"/>
+          <node identifier="id-view-adr-0008-n-id-app-comp-db" xsi:type="Element" elementRef="id-app-comp-db" x="260" y="278" w="160" h="63"/>
+          <node identifier="id-view-adr-0008-n-id-app-data-schedule" xsi:type="Element" elementRef="id-app-data-schedule" x="40" y="411" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-adr-0008-c-id-rel-068" xsi:type="Relationship" relationshipRef="id-rel-068" source="id-view-adr-0008-n-id-app-comp-db" target="id-view-adr-0008-n-id-app-comp-application"/>
+        <connection identifier="id-view-adr-0008-c-id-rel-078" xsi:type="Relationship" relationshipRef="id-rel-078" source="id-view-adr-0008-n-id-app-comp-db" target="id-view-adr-0008-n-id-app-data-schedule">
+          <bendpoint x="340" y="376"/>
+          <bendpoint x="120" y="376"/>
+        </connection>
+        <connection identifier="id-view-adr-0008-c-id-rel-108" xsi:type="Relationship" relationshipRef="id-rel-108" source="id-view-adr-0008-n-id-app-comp-application" target="id-view-adr-0008-n-id-mot-adr-0008">
+          <bendpoint x="120" y="227"/>
+          <bendpoint x="193" y="227"/>
+        </connection>
+        <connection identifier="id-view-adr-0008-c-id-rel-109" xsi:type="Relationship" relationshipRef="id-rel-109" source="id-view-adr-0008-n-id-app-comp-db" target="id-view-adr-0008-n-id-mot-adr-0008">
+          <bendpoint x="340" y="235"/>
+          <bendpoint x="207" y="235"/>
+        </connection>
+        <connection identifier="id-view-adr-0008-c-id-rel-110" xsi:type="Relationship" relationshipRef="id-rel-110" source="id-view-adr-0008-n-id-app-data-schedule" target="id-view-adr-0008-n-id-mot-adr-0008">
+          <bendpoint x="134" y="384"/>
+          <bendpoint x="213" y="384"/>
+          <bendpoint x="213" y="219"/>
+          <bendpoint x="179" y="219"/>
+        </connection>
+      </view>
+      <view identifier="id-view-adr-0009" xsi:type="Diagram">
+        <name xml:lang="en">ADR 0009: what the decision applies to</name>
+        <node identifier="id-view-adr-0009-band-0" xsi:type="Container" x="20" y="20" w="420" h="193">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-adr-0009-n-id-mot-adr-0009" xsi:type="Element" elementRef="id-mot-adr-0009" x="40" y="62" w="160" h="131"/>
+          <node identifier="id-view-adr-0009-n-id-mot-req-togaf" xsi:type="Element" elementRef="id-mot-req-togaf" x="260" y="62" w="160" h="63"/>
+        </node>
+        <node identifier="id-view-adr-0009-band-1" xsi:type="Container" x="20" y="253" w="420" h="117">
+          <label xml:lang="en">Technology</label>
+          <node identifier="id-view-adr-0009-n-id-tech-sw-archi" xsi:type="Element" elementRef="id-tech-sw-archi" x="95" y="295" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-adr-0009-c-id-rel-047" xsi:type="Relationship" relationshipRef="id-rel-047" source="id-view-adr-0009-n-id-tech-sw-archi" target="id-view-adr-0009-n-id-mot-req-togaf">
+          <bendpoint x="175" y="244"/>
+          <bendpoint x="340" y="244"/>
+        </connection>
+        <connection identifier="id-view-adr-0009-c-id-rel-111" xsi:type="Relationship" relationshipRef="id-rel-111" source="id-view-adr-0009-n-id-mot-req-togaf" target="id-view-adr-0009-n-id-mot-adr-0009"/>
+        <connection identifier="id-view-adr-0009-c-id-rel-112" xsi:type="Relationship" relationshipRef="id-rel-112" source="id-view-adr-0009-n-id-tech-sw-archi" target="id-view-adr-0009-n-id-mot-adr-0009">
+          <bendpoint x="189" y="252"/>
+          <bendpoint x="120" y="252"/>
+        </connection>
+      </view>
+      <view identifier="id-view-adr-0010" xsi:type="Diagram">
+        <name xml:lang="en">ADR 0010: what the decision applies to</name>
+        <node identifier="id-view-adr-0010-band-0" xsi:type="Container" x="20" y="20" w="420" h="309">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-adr-0010-n-id-mot-goal-healthy" xsi:type="Element" elementRef="id-mot-goal-healthy" x="105" y="62" w="160" h="63"/>
+          <node identifier="id-view-adr-0010-n-id-mot-adr-0010" xsi:type="Element" elementRef="id-mot-adr-0010" x="105" y="195" w="160" h="114"/>
+        </node>
+        <node identifier="id-view-adr-0010-band-1" xsi:type="Container" x="20" y="369" w="420" h="242">
+          <label xml:lang="en">Application</label>
+          <node identifier="id-view-adr-0010-n-id-app-intf-reservation-api" xsi:type="Element" elementRef="id-app-intf-reservation-api" x="111" y="411" w="160" h="55"/>
+          <node identifier="id-view-adr-0010-n-id-app-svc-book" xsi:type="Element" elementRef="id-app-svc-book" x="40" y="536" w="160" h="55"/>
+          <node identifier="id-view-adr-0010-n-id-app-svc-cancel" xsi:type="Element" elementRef="id-app-svc-cancel" x="260" y="536" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-adr-0010-c-id-rel-071" xsi:type="Relationship" relationshipRef="id-rel-071" source="id-view-adr-0010-n-id-app-intf-reservation-api" target="id-view-adr-0010-n-id-app-svc-book">
+          <bendpoint x="191" y="501"/>
+          <bendpoint x="120" y="501"/>
+        </connection>
+        <connection identifier="id-view-adr-0010-c-id-rel-072" xsi:type="Relationship" relationshipRef="id-rel-072" source="id-view-adr-0010-n-id-app-intf-reservation-api" target="id-view-adr-0010-n-id-app-svc-cancel">
+          <bendpoint x="205" y="509"/>
+          <bendpoint x="340" y="509"/>
+        </connection>
+        <connection identifier="id-view-adr-0010-c-id-rel-144" xsi:type="Relationship" relationshipRef="id-rel-144" source="id-view-adr-0010-n-id-app-intf-reservation-api" target="id-view-adr-0010-n-id-mot-adr-0010">
+          <bendpoint x="191" y="360"/>
+          <bendpoint x="185" y="360"/>
+        </connection>
+        <connection identifier="id-view-adr-0010-c-id-rel-145" xsi:type="Relationship" relationshipRef="id-rel-145" source="id-view-adr-0010-n-id-app-svc-book" target="id-view-adr-0010-n-id-mot-adr-0010">
+          <bendpoint x="134" y="493"/>
+          <bendpoint x="98" y="493"/>
+          <bendpoint x="98" y="368"/>
+          <bendpoint x="199" y="368"/>
+        </connection>
+        <connection identifier="id-view-adr-0010-c-id-rel-146" xsi:type="Relationship" relationshipRef="id-rel-146" source="id-view-adr-0010-n-id-app-svc-cancel" target="id-view-adr-0010-n-id-mot-adr-0010">
+          <bendpoint x="354" y="517"/>
+          <bendpoint x="282" y="517"/>
+          <bendpoint x="282" y="352"/>
+          <bendpoint x="171" y="352"/>
+        </connection>
+        <connection identifier="id-view-adr-0010-c-id-rel-147" xsi:type="Relationship" relationshipRef="id-rel-147" source="id-view-adr-0010-n-id-mot-goal-healthy" target="id-view-adr-0010-n-id-mot-adr-0010"/>
+      </view>
+      <view identifier="id-view-adr-0011" xsi:type="Diagram">
+        <name xml:lang="en">ADR 0011: what the decision applies to</name>
+        <node identifier="id-view-adr-0011-band-0" xsi:type="Container" x="20" y="20" w="420" h="250">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-adr-0011-n-id-mot-goal-traceable" xsi:type="Element" elementRef="id-mot-goal-traceable" x="150" y="62" w="160" h="55"/>
+          <node identifier="id-view-adr-0011-n-id-mot-adr-0011" xsi:type="Element" elementRef="id-mot-adr-0011" x="40" y="187" w="160" h="63"/>
+          <node identifier="id-view-adr-0011-n-id-mot-req-togaf" xsi:type="Element" elementRef="id-mot-req-togaf" x="260" y="187" w="160" h="63"/>
+        </node>
+        <node identifier="id-view-adr-0011-band-1" xsi:type="Container" x="20" y="310" w="420" h="117">
+          <label xml:lang="en">Technology</label>
+          <node identifier="id-view-adr-0011-n-id-tech-sw-archi" xsi:type="Element" elementRef="id-tech-sw-archi" x="95" y="352" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-adr-0011-c-id-rel-004" xsi:type="Relationship" relationshipRef="id-rel-004" source="id-view-adr-0011-n-id-mot-req-togaf" target="id-view-adr-0011-n-id-mot-goal-traceable">
+          <bendpoint x="340" y="152"/>
+          <bendpoint x="230" y="152"/>
+        </connection>
+        <connection identifier="id-view-adr-0011-c-id-rel-047" xsi:type="Relationship" relationshipRef="id-rel-047" source="id-view-adr-0011-n-id-tech-sw-archi" target="id-view-adr-0011-n-id-mot-req-togaf">
+          <bendpoint x="175" y="301"/>
+          <bendpoint x="340" y="301"/>
+        </connection>
+        <connection identifier="id-view-adr-0011-c-id-rel-148" xsi:type="Relationship" relationshipRef="id-rel-148" source="id-view-adr-0011-n-id-mot-goal-traceable" target="id-view-adr-0011-n-id-mot-adr-0011">
+          <bendpoint x="244" y="160"/>
+          <bendpoint x="120" y="160"/>
+        </connection>
+        <connection identifier="id-view-adr-0011-c-id-rel-149" xsi:type="Relationship" relationshipRef="id-rel-149" source="id-view-adr-0011-n-id-mot-req-togaf" target="id-view-adr-0011-n-id-mot-adr-0011"/>
+        <connection identifier="id-view-adr-0011-c-id-rel-150" xsi:type="Relationship" relationshipRef="id-rel-150" source="id-view-adr-0011-n-id-tech-sw-archi" target="id-view-adr-0011-n-id-mot-adr-0011">
+          <bendpoint x="189" y="309"/>
+          <bendpoint x="120" y="309"/>
         </connection>
       </view>
       <view identifier="id-view-layered" xsi:type="Diagram" viewpoint="Layered">
