@@ -81,18 +81,10 @@ One line per paragraph …</documentation>
 </view>
 ```
 
-Every ADR also has a **view** of what it applies to (ADR 0011), added in the same PR: a `view`
-inside `<views><diagrams>` named "ADR NNNN: what the decision applies to", no viewpoint, whose
-members are the ADR plus exactly the sources of its Realization and Influence relationships (no
-Plateaus, no other ADRs), written as bare `<node xsi:type="Element" elementRef="…"/>` lines; the
-formatter lays it out. The ADR names it with the `View` property. `just model-check` fails when an
-ADR has no view or its members differ from the links. The page shows it under the header list.
-
-The page's "ArchiMate elements" line lists the sources of the Realization and Influence
-relationships; "Supersedes" / "Superseded by" come from the Association. Status goes `Proposed`
-(open PR) → `Accepted` (PR merged) → `Superseded by NNNN` / `Deprecated`. The decision of an
-accepted ADR is never rewritten: corrections and as-built notes are appended as a dated
-`## Amendment YYYY-MM-DD` section, and a changed decision needs a new ADR that supersedes it.
+Every ADR also has a **view** (ADR 0011) in the same PR, named by the `View` property: no
+viewpoint, bare `<node xsi:type="Element" elementRef="…"/>` members, namely the ADR plus the
+sources of its Realization and Influence relationships (no Plateaus, no ADRs). `just model-check`
+fails when they differ; the formatter lays it out.
 
 ## 3. Format, generate, check
 ```sh
