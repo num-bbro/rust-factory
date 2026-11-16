@@ -97,7 +97,8 @@ acceptance image=(image_name + ":dev"):
       || { echo "  did not shut down cleanly (exit code $code)"; podman logs "$name"; exit 1; }
 
 # Check that a running service answers as docs/api/openapi.yaml says (ADR 0010). Fixed seed and
-# deterministic generation: the same requests on every run.
+# deterministic generation: the same requests on every run. The tool currently ignores the seed in
+# deterministic mode; the flag is kept as ADR 0010 fixes it.
 api-check base_url:
     st --config-file docs/api/schemathesis.toml run docs/api/openapi.yaml --url {{base_url}} \
       --seed 1 --generation-deterministic --no-color

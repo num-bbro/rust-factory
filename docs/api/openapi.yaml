@@ -6,15 +6,18 @@ paths:
   /health:
     get:
       operationId: health
+      summary: Check that the service is up
       responses:
         "200":
           description: The service is up.
           content:
             text/plain:
               schema: { type: string, const: ok }
+              example: ok
   /reservations:
     post:
       operationId: book
+      summary: Book a slot
       requestBody:
         required: true
         content:
@@ -25,6 +28,13 @@ paths:
               properties:
                 start: { type: integer, minimum: 0, maximum: 65535 }
                 end: { type: integer, minimum: 0, maximum: 65535 }
+            examples:
+              valid-slot:
+                summary: A valid slot
+                value: { start: 10, end: 20 }
+              overlapping-slot:
+                summary: A slot that overlaps the valid one (answered 409)
+                value: { start: 15, end: 25 }
       responses:
         "201":
           description: Booked.
@@ -35,6 +45,7 @@ paths:
                 required: [id]
                 properties:
                   id: { type: integer, minimum: 0 }
+              example: { id: 1 }
         "400": { $ref: "#/components/responses/Rejection" }
         "409": { $ref: "#/components/responses/Problem" }
         "415": { $ref: "#/components/responses/Rejection" }
@@ -49,11 +60,13 @@ paths:
   /reservations/{id}:
     delete:
       operationId: cancel
+      summary: Cancel a reservation
       parameters:
         - name: id
           in: path
           required: true
           schema: { type: integer, minimum: 0 }
+          example: 1
       responses:
         "204": { description: Cancelled. }
         "400": { $ref: "#/components/responses/Rejection" }
@@ -66,6 +79,7 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Problem" }
+          example: { error: slot overlaps existing reservation 1 }
     Rejection:
       description: Rejected by the framework before the handler runs (plain text, ADR 0007).
       content:
