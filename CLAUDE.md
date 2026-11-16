@@ -54,8 +54,9 @@ anything that needs a password or secret.
   worker model used.
 - Never force-push to `main`, never commit secrets, never commit build output (`target/`).
 - **CI** (`.github/workflows/ci.yml`) runs on every PR: `gates` (= `just check`), `architecture
-  model` (report attached to the run) and `mutants (changed code)`. All three are required by the
-  `main` ruleset, and the branch must be up to date with `main`. A red check means fix the code, never
+  model` (report attached to the run), `acceptance` and `mutants (changed code)`. All four are
+  required by the `main` ruleset, and the branch must be up to date with `main`. `pages.yml`
+  publishes the architecture site (it is not a required check). A red check means fix the code, never
   the workflow or the gate settings. If CI fails, read the log (`gh run view <id> --log-failed`)
   and reproduce locally with the matching `just` recipe.
 - Dependabot opens grouped weekly update PRs (crates, actions); treat them as simple tasks.

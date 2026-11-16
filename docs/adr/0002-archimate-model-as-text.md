@@ -9,9 +9,10 @@
 - Superseded by: ADR 0009
 
 ## Context and problem
-The architecture must be documented in ArchiMate (requirement `id-mot-req-togaf`). Agents write the
-changes and the product owner reviews them in Archi. Archi's native `.archimate` file is a large XML
-document with layout coordinates, which is hard for agents to edit and hard to review as a diff.
+The architecture must be documented in ArchiMate (requirement
+[`id-mot-req-togaf`](../togaf/00-preliminary.md#id-mot-req-togaf)). Agents write the changes and the
+product owner reviews them in Archi. Archi's native `.archimate` file is a large XML document with
+layout coordinates, which is hard for agents to edit and hard to review as a diff.
 
 ## Decision drivers
 - Agents can edit the model reliably, with small diffs reviewable in a PR.
@@ -84,13 +85,14 @@ is not checked.
   assigned to role, component realizing the actor) adds three elements and three relationships for
   no new information and crowds the views.
 - Also considered: *Realization* from the agent component to the business process it carries out
-  (allowed by the rules, e.g. the workers realizing `id-bus-proc-implement`). Not chosen here
-  because bug #27 is about the agent-to-role links and those IDs must keep their ends; it can be
-  added later as additional relationships, not as a replacement.
+  (allowed by the rules, e.g. the workers realizing
+  [`id-bus-proc-implement`](../togaf/B-business-architecture.md#id-bus-proc-implement)). Not chosen
+  here because bug #27 is about the agent-to-role links and those IDs must keep their ends; it can
+  be added later as additional relationships, not as a replacement.
 
 ## Note 2026-11-16: superseded by ADR 0009
-Issue: #41 (change request) / task #42. This ADR is superseded by
-[ADR 0009](0009-archimate-exchange-model-as-source.md): the Open Group exchange XML becomes the
-single edited source of the architecture, the ADRs and TOGAF documents move into the model, and the
-CSV files are removed. The text above stays as it was accepted; it describes the setup until the
-cutover (step 2 of #41).
+Issue: #41 (change request) / task #42. This ADR is superseded by ADR 0009
+([`id-mot-adr-0009`](0009-archimate-exchange-model-as-source.md)): the Open Group exchange XML
+becomes the single edited source of the architecture, the ADRs and TOGAF documents move into the
+model, and the CSV files are removed. The text above stays as it was accepted; it describes the
+setup until the cutover (step 2 of #41).

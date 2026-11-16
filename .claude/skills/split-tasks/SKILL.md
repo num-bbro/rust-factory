@@ -17,7 +17,11 @@ PR. Do not write code.
    story. Each task: one clear outcome, checkable "Done when" items, the crates it touches.
    Tasks that edit the same files or crate get a "blocked by" link even when there is no logical
    order between them, because `/implement` runs unblocked tasks in parallel. Tasks in different
-   crates with no dependency get no link, so they can run together.
+   crates with no dependency get no link, so they can run together. The model
+   (`docs/architecture/model.xml`), the generated pages (`docs/adr/`, `docs/togaf/`) and
+   `docs/architecture/views/` are one shared area: tasks that change the model get a "blocked by"
+   link between them, and a task that changes the model lists those paths in "Crates / modules
+   touched".
 3. **Route each task** with the rule from `CLAUDE.md`:
    - `complexity:simple` (→ Sonnet) only if **all three** hold: clear acceptance criteria, touches
      **one crate**, needs **no new design decision**;

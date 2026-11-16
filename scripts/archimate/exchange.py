@@ -177,6 +177,20 @@ class Connection:
 
 
 @dataclass
+class Node:
+    """A diagram node: its rectangle (absolute) and the node that contains it ("" at top level)."""
+
+    view: str
+    identifier: str
+    element: str
+    x: int
+    y: int
+    w: int
+    h: int
+    parent: str
+
+
+@dataclass
 class Model:
     """What the model checks and the page generator need from an exchange file."""
 
@@ -189,6 +203,7 @@ class Model:
     viewpoints: dict[str, str] = field(default_factory=dict)      # view id -> viewpoint, if any
     properties: list[tuple[str, str, str]] = field(default_factory=list)  # owner id, name, value
     connections: list[Connection] = field(default_factory=list)
+    nodes: list[Node] = field(default_factory=list)
 
     def identifiers(self) -> set[str]:
         """The model's own, element, relationship and view identifiers."""
@@ -196,8 +211,20 @@ class Model:
         return {self.identifier} | set(self.elements) | rels | set(self.views)
 
 
+def _read_nodes(m: Model, view: str, holder: ET.Element, parent: str, q: str) -> None:
+    for n in holder.iterfind(f"{q}node"):
+        try:
+            box = [int(n.get(a) or 0) for a in ("x", "y", "w", "h")]
+        except ValueError:
+            raise FormatError([f"view '{view}': node '{_ident(n)}' has a bound that is not a whole "
+                               "number (x, y, w and h are integers)"]) from None
+        m.nodes.append(Node(view, _ident(n), n.get("elementRef", ""), *box, parent))
+        _read_nodes(m, view, n, _ident(n), q)
+
+
 def read(data: bytes) -> Model:
-    """Read an exchange file. Raises FormatError when it is not well-formed XML."""
+    """Read an exchange file. Raises FormatError when it is not well-formed XML or a node has a
+    bound that is not an integer."""
     try:
         root = ET.fromstring(data)
     except ET.ParseError as err:
@@ -232,6 +259,7 @@ def read(data: bytes) -> Model:
         viewpoint = v.get("viewpoint")
         if viewpoint is not None:
             m.viewpoints[vid] = viewpoint
+        _read_nodes(m, vid, v, "", q)
         for c in v.iter(f"{q}connection"):
             m.connections.append(Connection(vid, _ident(c), c.get("relationshipRef", ""),
                                             nodes.get(c.get("source", ""), ""),

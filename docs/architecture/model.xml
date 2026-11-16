@@ -690,7 +690,7 @@ Issue: #27 (bug) / task #39. This supersedes the "Bad" bullet above that says re
 - Also considered: *Realization* from the agent component to the business process it carries out (allowed by the rules, e.g. the workers realizing `id-bus-proc-implement`). Not chosen here because bug #27 is about the agent-to-role links and those IDs must keep their ends; it can be added later as additional relationships, not as a replacement.
 
 ## Note 2026-11-16: superseded by ADR 0009
-Issue: #41 (change request) / task #42. This ADR is superseded by [ADR 0009](0009-archimate-exchange-model-as-source.md): the Open Group exchange XML becomes the single edited source of the architecture, the ADRs and TOGAF documents move into the model, and the CSV files are removed. The text above stays as it was accepted; it describes the setup until the cutover (step 2 of #41).</documentation>
+Issue: #41 (change request) / task #42. This ADR is superseded by ADR 0009 (`id-mot-adr-0009`): the Open Group exchange XML becomes the single edited source of the architecture, the ADRs and TOGAF documents move into the model, and the CSV files are removed. The text above stays as it was accepted; it describes the setup until the cutover (step 2 of #41).</documentation>
       <properties>
         <property propertyDefinitionRef="propid-status">
           <value xml:lang="en">Superseded by 0009</value>
@@ -941,7 +941,7 @@ Chosen: **option 1**, because it is what the domain already does (`Schedule::can
 - Follow-up: implementation in the task issues under stories #18 and #19.
 
 ## Notes
-- 2026-11-15: the known risk above (bug #26) is resolved by [ADR 0008](0008-atomic-schedule-update-through-the-port.md): every change to the schedule now goes through one atomic `update` operation on the repository port.</documentation>
+- 2026-11-15: the known risk above (bug #26) is resolved by ADR 0008 (`id-mot-adr-0008`): every change to the schedule now goes through one atomic `update` operation on the repository port.</documentation>
       <properties>
         <property propertyDefinitionRef="propid-status">
           <value xml:lang="en">Accepted</value>
@@ -1277,7 +1277,16 @@ Step 7 (#56) published the documents and the report. As with the amendments abov
 - **Site property:** the base URL is the property `Site` on the model root (`id-model-factory`), `https://num-bbro.github.io/rust-factory/`. With it, each view section of a TOGAF page has the line "Clickable version" linking the view's page in the report (`report/id-model-factory/views/&lt;view id&gt;.html`), and the TOGAF and ADR indexes link the site's home; without it no site link is generated. `gen_docs.py --check` refuses a value that is not an `https://` URL ending in `/`. Every site URL is made by `href`.
 - **Base path:** the Jekyll action learns the site's base path from the Pages API, so the `build` job (and only it) has `pages: read` next to `contents: read`; without it the pages would link under a fallback path. On `main`, before the upload, a step fails the run when `_site/index.html` does not link its stylesheet under `/&lt;repository name&gt;/`, so a site with broken links is never published. The `.md` originals are not published (`remove_originals`).
 - **Unbreakable links:** `mdwrap.wrap` never breaks a line inside an inline link or image, `[text](target)`, because `jekyll-relative-links` does not convert a link whose text is over two lines; the link may make the line longer than 100 characters, as a long URL already could.
-- **Not compared:** the site is a build artifact and is never compared, as decided above.</documentation>
+- **Not compared:** the site is a build artifact and is never compared, as decided above.
+
+## Amendment 2026-11-16: as built in step 8 (final sweep)
+Step 8 (#58) closed the change request. As with the amendments above, these points refine the decision:
+- **Manual views are checked:** for a view with the property `Layout = manual`, which the formatter does not rebuild, `check_model.py` (run by `just model-check`) fails unless the view draws exactly the relationships of the model whose two ends are both drawn in it, none missing and none extra, and every node lies inside its parent node. The messages name the view and the relationship or node.
+- **No relative links to Markdown files:** `gen_docs.py --check` fails when the text of an ADR or a document links to a `.md` file by a relative path, which is broken inside Archi's report; the text names the target and its element id in backticks instead (ADR 0009 (`id-mot-adr-0009`)), and the generator makes the id a link on the page: ADR pages now link identifiers in backticks by the same rules as TOGAF pages (an ADR does not link itself; the other ADR pages whose text cites identifiers changed with it). ADR 0002 and ADR 0007 were changed accordingly. `mdwrap.wrap` also keeps a link whole when its text holds a closing bracket inside a code span.
+- **One shared area for `/implement`:** `docs/architecture/model.xml`, the generated pages and `docs/architecture/views/` are one area: two tasks that change the model never run in the same wave, and a model task is held while a pull request that changes the model is open.
+- **New-project guide:** `docs/new-project.md` (hand-written, published on the site) lists the one-time steps and gives the prompt that starts a project from this template.
+
+With this step, change request #41 is complete.</documentation>
       <properties>
         <property propertyDefinitionRef="propid-status">
           <value xml:lang="en">Accepted</value>
