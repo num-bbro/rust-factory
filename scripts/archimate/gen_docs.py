@@ -1,28 +1,47 @@
 #!/usr/bin/env python3
-"""Generate the ADR pages from the model (ADR 0009).
+"""Generate the ADR and TOGAF pages from the model (ADR 0009).
 
-  python3 -I gen_docs.py [ROOT]            write docs/adr/NNNN-*.md and docs/adr/README.md
+  python3 -I gen_docs.py [ROOT]            write docs/adr/NNNN-*.md, docs/adr/README.md,
+                                           docs/togaf/*.md and docs/togaf/README.md
   python3 -I gen_docs.py --check [ROOT]    re-render in memory; exit 1 naming each page that is
                                            stale, missing or an orphan
+  --no-images                              skip the check that each view a document shows has a
+                                           committed image (`just model` uses it before the
+                                           build that renders the images)
 
 ROOT is the repository (default: this script's). The model is ROOT/docs/architecture/model.xml.
 
-Each ADR is a `Constraint` with identifier `id-mot-adr-NNNN` and name `ADR NNNN: <title>`, and
-the properties Status, Date, Issue, Deciders and File (the page's path, `docs/adr/NNNN-<slug>.md`).
-Its documentation is the page's Markdown body with each paragraph and list item on one line
-(ADR 0009, line breaks: option A); the page wraps them again at 100 characters (mdwrap.py). The
-header list's "ArchiMate elements" are the sources of the Realization and Influence relationships
-to the ADR, sorted; a directed Association named `supersedes` from a newer ADR to an older one
-gives the "Supersedes" and "Superseded by" lines; it and the older ADR's `Status = Superseded by
-NNNN` must agree.
+ADRs. Each ADR is a `Constraint` with identifier `id-mot-adr-NNNN` and name `ADR NNNN: <title>`,
+and the properties Status, Date, Issue, Deciders and File (the page's path,
+`docs/adr/NNNN-<slug>.md`). Its documentation is the page's Markdown body with each paragraph and
+list item on one line (ADR 0009, line breaks: option A); the page wraps them again at 100
+characters (mdwrap.py). The header list's "ArchiMate elements" are the sources of the Realization
+and Influence relationships to the ADR, sorted; a directed Association named `supersedes` from a
+newer ADR to an older one gives the "Supersedes" and "Superseded by" lines; it and the older ADR's
+`Status = Superseded by NNNN` must agree.
 
-An orphan is a `docs/adr/*.md` the model does not produce; `template.md` (the hand-written guide)
-is the one exception. Orphans are reported, never deleted. The output depends on the model only:
-no dates, no paths of this machine.
+TOGAF documents. Each is a `Deliverable` with identifier `id-impl-del-<slug>`, the document's
+title as name, the properties File (`docs/togaf/<name>.md`) and Phase, once each, and an ordered,
+repeated `View` naming the views that belong to the document. Its documentation is the narrative,
+one line per paragraph and list item as for the ADRs. The page is the narrative, in which each
+`id-…` in backticks becomes a link when it has a target (an ADR → its page; a view → its section
+here, else in the first other document showing it; an element → its catalog row here, else in the
+first other document whose views draw it; anything else stays plain code), then one section per
+view in `View` order: heading (the view's name), the view's documentation, its committed image
+`docs/architecture/views/<view-id>.png` and a catalog of the elements it draws, sorted by
+identifier (id, name, type, decisions, issues, crate / code, release, other documents). The release
+column is there only when the model has `Plateau` elements. Anchors are identifiers: a view's
+section has its view id, an element's first catalog row on a page has its element id. Documents
+are taken in File order. `docs/togaf/README.md` is the generated index.
+
+An orphan is a `.md` page in `docs/adr/` or `docs/togaf/` that the model does not produce;
+`template.md` (the hand-written guide) in each is the exception. Orphans are reported, never
+deleted. The output depends on the model only: no dates, no paths of this machine.
 """
 
 from __future__ import annotations
 
+import posixpath
 import re
 import sys
 from dataclasses import dataclass
@@ -38,16 +57,26 @@ ROOT = Path(__file__).resolve().parents[2]
 MODEL = "docs/architecture/model.xml"
 ADR_DIR = "docs/adr"
 INDEX = f"{ADR_DIR}/README.md"
-HAND_WRITTEN = {f"{ADR_DIR}/template.md"}
+TOGAF_DIR = "docs/togaf"
+TOGAF_INDEX = f"{TOGAF_DIR}/README.md"
+VIEWS_DIR = "docs/architecture/views"
+PAGE_DIRS = (ADR_DIR, TOGAF_DIR)
+HAND_WRITTEN = {f"{ADR_DIR}/template.md", f"{TOGAF_DIR}/template.md"}
 ADR_ID = re.compile(r"id-mot-adr-(\d{4})")
+DOC_ID = re.compile(r"id-impl-del-[a-z0-9]+(-[a-z0-9]+)*")
+DOC_FILE = re.compile(rf"{TOGAF_DIR}/[A-Za-z0-9]+(-[A-Za-z0-9]+)*\.md")
 HEADER_PROPS = ("Status", "Date", "Issue", "Deciders")
+DOC_PROPS = ("File", "Phase")
 LINKS = ("Realization", "Influence")
+RELEASE_LINKS = ("Aggregation", "Association")
 SUPERSEDES = "supersedes"
+CODE_ID = re.compile(r"`(id-[a-z0-9-]+)`")
+FENCE = re.compile(r"\s*(`{3,}|~{3,})")
 
 
-def generated_note(source: str) -> str:
+def generated_note(source: str, guide: str = f"{ADR_DIR}/template.md") -> str:
     return (f"<!-- Generated from {MODEL} ({source}) by `just model-docs`. Do not edit: change the "
-            f"model, see {ADR_DIR}/template.md. -->")
+            f"model, see {guide}. -->")
 
 
 INDEX_INTRO = f"""\
@@ -63,6 +92,37 @@ An ADR records **one significant decision**: the context, the options considered
 | # | Decision | Status |
 |---|---|---|"""
 
+TOGAF_INTRO = """\
+# TOGAF architecture documents
+
+The factory follows the **TOGAF Architecture Development Method (ADM)**. Each phase has one document here. Each document is a `Deliverable` element in the ArchiMate model [`../architecture/model.xml`](../architecture/model.xml): its documentation is the *narrative* (purpose, decisions, open questions), and its `View` properties name the views it shows, each with its diagram and a catalog of the elements drawn. The *structure* (actors, processes, applications, nodes and how they relate) lives in the same model; documents refer to model elements by ID (e.g. `id-bus-proc-review`) instead of repeating them, and the pages link each ID to its catalog row, view or ADR. These pages are generated by `just model-docs` and never edited by hand; [template.md](template.md) says how to add or change a document.
+
+**How the phases run in practice:** A–D are done for each epic, iterated lightly as stories are refined. E–F happen when the conductor splits work and plans releases. G is every PR. H is every change request. Requirements management runs continuously on the GitHub Project board.
+
+In this template, the documents describe **the factory itself**. A project created from the template replaces their content with its own business case and keeps the structure. Each document also has a short **Sample domain** part for the reservation service the factory builds as its worked example (epics from #17 on).
+
+| ADM phase | Document | Views |
+|---|---|---|"""
+
+
+def _text_problems(where: str, text: str, what: str) -> list[str]:
+    """The documentation rules shared by ADRs and documents (ADR 0009, line breaks: option A)."""
+    if not text:
+        return [f"{where}: has no documentation ({what})"]
+    if mdwrap.problems(text):
+        return [f"{where}: documentation {p}" for p in mdwrap.problems(text)]
+    if mdwrap.unwrap(text) != text:
+        return [f"{where}: a paragraph or list item is spread over several lines; store each on "
+                "one line (ADR 0009, line breaks: option A)"]
+    return []
+
+
+def _props(model: exchange.Model, ident: str) -> list[tuple[str, str]]:
+    """(name, value) of the properties of `ident`, in the model's order."""
+    return [(key, value) for owner, key, value in model.properties if owner == ident]
+
+
+# --- ADRs ---------------------------------------------------------------------------------------
 
 @dataclass
 class Adr:
@@ -92,11 +152,10 @@ def adrs(model: exchange.Model) -> tuple[list[Adr], list[str]]:
         if title == name or not title.strip():
             problems.append(f"{where}: name must be 'ADR {number}: <title>', is '{name}'")
         props: dict[str, str] = {}
-        for owner, key, value in model.properties:
-            if owner == ident:
-                if key in props:
-                    problems.append(f"{where}: property {key} is given more than once")
-                props[key] = value
+        for key, value in _props(model, ident):
+            if key in props:
+                problems.append(f"{where}: property {key} is given more than once")
+            props[key] = value
         for key in (*HEADER_PROPS, "File"):
             if not props.get(key, "").strip():
                 problems.append(f"{where}: property {key} is missing")
@@ -104,13 +163,7 @@ def adrs(model: exchange.Model) -> tuple[list[Adr], list[str]]:
         if file and not re.fullmatch(rf"{ADR_DIR}/{number}-[a-z0-9]+(-[a-z0-9]+)*\.md", file):
             problems.append(f"{where}: File must be {ADR_DIR}/{number}-<slug>.md, is '{file}'")
         text = model.documentation.get(ident, "")
-        if not text:
-            problems.append(f"{where}: has no documentation (the ADR's text)")
-        elif mdwrap.problems(text):
-            problems += [f"{where}: documentation {p}" for p in mdwrap.problems(text)]
-        elif mdwrap.unwrap(text) != text:
-            problems.append(f"{where}: a paragraph or list item is spread over several lines; "
-                            "store each on one line (ADR 0009, line breaks: option A)")
+        problems += _text_problems(where, text, "the ADR's text")
         found.append(Adr(ident, number, title, props, text))
     return found, problems + superseded(model, found)
 
@@ -162,17 +215,216 @@ def index(found: list[Adr]) -> str:
                       lambda m: f"{m.group(1)}[{m.group(2)}]({files[m.group(2)]})"
                       if m.group(2) in files else m.group(0), value)
 
-    rows = [f"| [{a.number}]({files[a.number]}) | {a.title.replace('|', chr(92) + '|')} | "
+    rows = [f"| [{a.number}]({files[a.number]}) | {_cell(a.title)} | "
             f"{status(a.props.get('Status', ''))} |" for a in found]
     return mdwrap.wrap("\n".join([generated_note("the ADR elements"), INDEX_INTRO, *rows])) + "\n"
 
+
+# --- TOGAF documents ----------------------------------------------------------------------------
+
+@dataclass
+class Document:
+    ident: str
+    title: str
+    file: str
+    phase: str
+    views: list[str]
+    text: str
+
+
+def documents(model: exchange.Model) -> tuple[list[Document], list[str]]:
+    """The document elements of the model, in File order, and every problem with them."""
+    found, problems = [], []
+    for ident in sorted(model.elements):
+        kind = model.elements[ident]
+        if not ident.startswith("id-impl-del-") and kind != "Deliverable":
+            continue
+        where = f"document element '{ident}'"
+        if not DOC_ID.fullmatch(ident):
+            problems.append(f"{where}: identifier must be id-impl-del-<slug>")
+            continue
+        if kind != "Deliverable":
+            problems.append(f"{where}: must be a Deliverable, is a {kind}")
+            continue
+        props: dict[str, str] = {}
+        views: list[str] = []
+        for key, value in _props(model, ident):
+            if key == "View":
+                if value not in model.views:
+                    problems.append(f"{where}: View = '{value}' names no view of the model")
+                elif value in views:
+                    problems.append(f"{where}: View = '{value}' is given more than once")
+                else:
+                    views.append(value)
+            elif key in DOC_PROPS and key in props:
+                problems.append(f"{where}: property {key} is given more than once")
+            else:
+                props[key] = value
+        for key in DOC_PROPS:
+            if not props.get(key, "").strip():
+                problems.append(f"{where}: property {key} is missing")
+        file = props.get("File", "")
+        if file and (not DOC_FILE.fullmatch(file) or file == TOGAF_INDEX or file in HAND_WRITTEN):
+            problems.append(f"{where}: File must be {TOGAF_DIR}/<name>.md (letters, digits and "
+                            f"hyphens; not README.md or template.md), is '{file}'")
+            file = ""
+        title = model.names.get(ident, "")
+        if not title.strip():
+            problems.append(f"{where}: has no name (the document's title)")
+        text = model.documentation.get(ident, "")
+        problems += _text_problems(where, text, "the document's narrative")
+        found.append(Document(ident, title, file, props.get("Phase", ""), views, text))
+    files = [d.file for d in found if d.file]
+    problems += [f"document elements: File = '{f}' is given to more than one"
+                 for f in sorted({f for f in files if files.count(f) > 1})]
+    return sorted(found, key=lambda d: (d.file, d.ident)), problems
+
+
+def href(from_file: str, to_file: str, anchor: str = "") -> str:
+    """The link from page `from_file` to `to_file` (both repository paths), at `anchor`.
+
+    Every link of the TOGAF pages is made here: the place where step 7 plugs in the site's base
+    URL for an element's own page.
+    """
+    fragment = f"#{anchor}" if anchor else ""
+    if to_file == from_file:
+        return fragment
+    return posixpath.relpath(to_file, posixpath.dirname(from_file)) + fragment
+
+
+def _cell(text: str) -> str:
+    return text.replace("|", "\\|")
+
+
+class Togaf:
+    """The TOGAF pages of a model: what each document shows and where each identifier links."""
+
+    def __init__(self, model: exchange.Model, docs: list[Document], adr_found: list[Adr]):
+        self.model = model
+        self.docs = [d for d in docs if d.file]
+        self.adr_files = {a.ident: a.props["File"] for a in adr_found if a.props.get("File")}
+        self.drawn: dict[str, set[str]] = {d.file: {e for v in d.views for e in model.views[v]}
+                                           for d in self.docs}
+        self.releases: dict[str, list[str]] = {}
+        plateaus = sorted(i for i, kind in model.elements.items() if kind == "Plateau")
+        self.has_releases = bool(plateaus)
+        for p in plateaus:
+            for r in model.relationships:
+                if r["Source"] == p and r["Type"] in RELEASE_LINKS:
+                    self.releases.setdefault(r["Target"], []).append(model.names.get(p, p))
+
+    def target(self, ident: str, here: Document) -> str | None:
+        """Where `ident`, written in `here`'s text, links to; None when it has no target."""
+        if ident in self.adr_files:
+            return href(here.file, self.adr_files[ident])
+        if ident in self.model.views:
+            shown = [d for d in self.docs if ident in d.views]
+        elif ident in self.model.elements:
+            shown = [d for d in self.docs if ident in self.drawn[d.file]]
+        else:
+            return None
+        if any(d.file == here.file for d in shown):
+            return href(here.file, here.file, ident)
+        return href(here.file, shown[0].file, ident) if shown else None
+
+    def link_ids(self, text: str, here: Document) -> str:
+        """`text` with each `id-…` in backticks that has a target made a link; code blocks kept."""
+        out, fence = [], ""
+        for line in text.split("\n"):
+            m = FENCE.match(line)
+            if fence:
+                if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence) \
+                        and not line[m.end():].strip():
+                    fence = ""
+                out.append(line)
+                continue
+            if m and not (m.group(1)[0] == "`" and "`" in line[m.end():]):
+                fence = m.group(1)
+                out.append(line)
+                continue
+
+            def link(found: re.Match[str]) -> str:
+                to = self.target(found.group(1), here)
+                return found.group(0) if to is None else f"[{found.group(0)}]({to})"
+
+            out.append(CODE_ID.sub(link, line))
+        return "\n".join(out)
+
+    def catalog(self, view: str, here: Document, anchored: set[str]) -> list[str]:
+        """The catalog table of the elements `view` draws, one row each, sorted by identifier."""
+        heads = ["ID", "Name", "Type", "Decisions", "Issues", "Crate / code"]
+        if self.has_releases:
+            heads.append("Release")
+        heads.append("Other documents")
+        rows = ["| " + " | ".join(heads) + " |", "|" + "---|" * len(heads)]
+        for ident in sorted(set(self.model.views[view])):
+            anchor = "" if ident in anchored else f'<a id="{ident}"></a>'
+            anchored.add(ident)
+            props = _props(self.model, ident)
+            decisions = sorted({r["Target"] for r in self.model.relationships
+                                if r["Source"] == ident and r["Type"] in LINKS
+                                and ADR_ID.fullmatch(r["Target"])})
+            cells = [f"{anchor}`{ident}`", _cell(self.model.names.get(ident, "")),
+                     self.model.elements[ident],
+                     ", ".join(f"[ADR {_number(a)}]({href(here.file, self.adr_files[a])})"
+                               if a in self.adr_files else f"ADR {_number(a)}" for a in decisions),
+                     _cell(", ".join(v for k, v in props if k == "Issue")),
+                     ", ".join(f"`{_cell(v)}`" for k, v in props if k in ("Crate", "Code"))]
+            if self.has_releases:
+                cells.append(_cell(", ".join(self.releases.get(ident, []))))
+            cells.append(", ".join(f"[{_cell(d.title)}]({href(here.file, d.file, ident)})"
+                                   for d in self.docs
+                                   if d.file != here.file and ident in self.drawn[d.file]))
+            rows.append("| " + " | ".join(cells) + " |")
+        return rows
+
+    def page(self, doc: Document) -> str:
+        """One document page: generated note, title, narrative, then a section per view."""
+        lines = [generated_note(doc.ident, f"{TOGAF_DIR}/template.md"), f"# {doc.title}", "",
+                 self.link_ids(doc.text, doc)]
+        anchored: set[str] = set()
+        for view in doc.views:
+            name = self.model.names.get(view, view)
+            lines += ["", f'## <a id="{view}"></a>{name}', ""]
+            text = self.model.documentation.get(view, "")
+            if text:
+                lines += [self.link_ids(text, doc), ""]
+            alt = name.replace("[", "\\[").replace("]", "\\]")
+            lines += [f"![{alt}]({href(doc.file, f'{VIEWS_DIR}/{view}.png')})", "",
+                      *self.catalog(view, doc, anchored)]
+        return mdwrap.wrap("\n".join(lines)) + "\n"
+
+    def index(self) -> str:
+        rows = []
+        for d in self.docs:
+            views = ", ".join(f"[{_cell(self.model.names.get(v, v))}]"
+                              f"({href(TOGAF_INDEX, d.file, v)})" for v in d.views)
+            rows.append(f"| {_cell(d.phase)} | [{_cell(d.title)}]({href(TOGAF_INDEX, d.file)}) | "
+                        f"{views or '—'} |")
+        return mdwrap.wrap("\n".join([generated_note("the Deliverable elements",
+                                                     f"{TOGAF_DIR}/template.md"),
+                                      TOGAF_INTRO, *rows])) + "\n"
+
+
+def missing_images(docs: list[Document], root: Path) -> list[str]:
+    """Each view a document shows whose image is not committed."""
+    return [f"document element '{d.ident}': View = '{v}' has no image {VIEWS_DIR}/{v}.png; run "
+            f"`just model` and commit `{VIEWS_DIR}/`"
+            for d in docs for v in d.views if not (root / VIEWS_DIR / f"{v}.png").is_file()]
+
+
+# --- all pages ----------------------------------------------------------------------------------
 
 def render(model: exchange.Model) -> tuple[dict[str, str], list[str]]:
     """{repository-relative path: content} for every generated page, and the model's problems."""
     found, problems = adrs(model)
     pages = {a.props["File"]: page(a, model) for a in found if a.props.get("File")}
     pages[INDEX] = index(found)
-    return dict(sorted(pages.items())), problems
+    docs, doc_problems = documents(model)
+    togaf = Togaf(model, docs, found)
+    pages.update({d.file: togaf.page(d) for d in togaf.docs})
+    pages[TOGAF_INDEX] = togaf.index()
+    return dict(sorted(pages.items())), problems + doc_problems
 
 
 def compare(pages: dict[str, str], root: Path) -> list[str]:
@@ -185,17 +437,19 @@ def compare(pages: dict[str, str], root: Path) -> list[str]:
         elif path.read_text(encoding="utf-8") != content:
             problems.append(f"{rel} is stale or was edited by hand: change the model, then run "
                             "`just model-docs`")
-    for path in sorted((root / ADR_DIR).glob("*.md")):
-        rel = path.relative_to(root).as_posix()
-        if rel not in pages and rel not in HAND_WRITTEN:
-            problems.append(f"{rel} is an orphan: no ADR element in {MODEL} has File = {rel}; "
-                            "add the element or delete the page")
+    for folder in PAGE_DIRS:
+        for path in sorted((root / folder).glob("*.md")):
+            rel = path.relative_to(root).as_posix()
+            if rel not in pages and rel not in HAND_WRITTEN:
+                problems.append(f"{rel} is an orphan: no element in {MODEL} has File = {rel}; "
+                                "add the element or delete the page")
     return problems
 
 
 def main(argv: list[str]) -> int:
     check = "--check" in argv
-    args = [a for a in argv if a != "--check"]
+    images = "--no-images" not in argv
+    args = [a for a in argv if a not in ("--check", "--no-images")]
     if len(args) > 1 or any(a.startswith("-") for a in args):
         print(__doc__, file=sys.stderr)
         return 2
@@ -214,6 +468,8 @@ def main(argv: list[str]) -> int:
                 path.write_text(content, encoding="utf-8")
                 print(f"wrote {rel}")
     problems += compare(pages, root)
+    if images:
+        problems += missing_images(documents(model)[0], root)
     for problem in problems:
         print(f"  - {problem}", file=sys.stderr)
     if problems:

@@ -1,3 +1,4 @@
+<!-- Generated from docs/architecture/model.xml (id-impl-del-architecture-change-management) by `just model-docs`. Do not edit: change the model, see docs/togaf/template.md. -->
 # H. Architecture Change Management
 
 **Purpose:** Handle changes to an approved architecture in a controlled way.
@@ -8,7 +9,9 @@
 - Decision: update now, later, or reject
 
 ## Content
-Business changes arrive as **Change request** issues (labelled `needs-human`). The architect agent assesses impact on the model and ADRs and updates them in a PR **before** any code changes; the human approves by merging.
+Business changes arrive as **Change request** issues (labelled `needs-human`). The architect agent
+assesses impact on the model and ADRs and updates them in a PR **before** any code changes; the
+human approves by merging.
 
 ## Open questions
 - _none yet_
