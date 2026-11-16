@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" identifier="id-model-fixture" xmlns="http://www.opengroup.org/xsd/archimate/3.0/">
+  <documentation>Formatter input, deliberately not canonical: sections, items and children out of
+order, no xml:lang, numbered property definitions (one unused), CDATA, an empty and a newline-ended
+documentation, an Access without accessType, a bare automatic view and a manual view.
+</documentation>
+  <name>Fixture</name>
+  <propertyDefinitions>
+    <propertyDefinition type="string" identifier="propid-2"><name>Layout</name></propertyDefinition>
+    <propertyDefinition identifier="propid-1" type="string"><name>Crate</name></propertyDefinition>
+    <propertyDefinition identifier="propid-3" type="string"><name>Never Used</name></propertyDefinition>
+  </propertyDefinitions>
+  <elements>
+    <element xsi:type="ApplicationComponent" identifier="id-app-comp-web">
+      <documentation>Serves the pages.
+</documentation>
+      <name>Web app</name>
+      <properties><property propertyDefinitionRef="propid-1"><value>crates/web</value></property></properties>
+    </element>
+    <element identifier="id-app-comp-api" xsi:type="ApplicationComponent">
+      <name>API</name>
+      <documentation></documentation>
+      <properties/>
+    </element>
+    <element identifier="id-app-data-booking" xsi:type="DataObject">
+      <name>Booking</name>
+      <documentation><![CDATA[Holds <id> & date]]></documentation>
+    </element>
+    <element identifier="id-app-comp-core" xsi:type="ApplicationComponent"><name>Core</name></element>
+    <element identifier="id-bus-proc-pay" xsi:type="BusinessProcess"><name>Pay</name></element>
+    <element identifier="id-bus-proc-book" xsi:type="BusinessProcess"><name>Book a room</name></element>
+    <element identifier="id-app-svc-booking" xsi:type="ApplicationService"><name>Booking service</name></element>
+  </elements>
+  <relationships>
+    <relationship identifier="id-rel-004" source="id-bus-proc-book" target="id-bus-proc-pay" xsi:type="Triggering"/>
+    <relationship identifier="id-rel-003" source="id-app-comp-core" target="id-app-data-booking" xsi:type="Access"/>
+    <relationship identifier="id-rel-001" source="id-app-comp-api" target="id-app-comp-core" xsi:type="Composition"/>
+    <relationship identifier="id-rel-005" source="id-app-comp-web" target="id-app-comp-api" xsi:type="Association" isDirected="true"><name>calls</name></relationship>
+    <relationship identifier="id-rel-002" source="id-app-svc-booking" target="id-bus-proc-book" xsi:type="Serving"/>
+    <relationship identifier="id-rel-006" source="id-app-comp-core" target="id-app-svc-booking" xsi:type="Realization"/>
+  </relationships>
+  <views>
+    <diagrams>
+      <view identifier="id-view-main" xsi:type="Diagram">
+        <name>Main</name>
+        <node xsi:type="Element" elementRef="id-bus-proc-pay"/>
+        <node xsi:type="Element" elementRef="id-app-comp-core"/>
+        <node xsi:type="Element" elementRef="id-app-svc-booking"/>
+        <node xsi:type="Element" elementRef="id-bus-proc-book"/>
+        <node xsi:type="Element" elementRef="id-app-data-booking"/>
+        <node xsi:type="Element" elementRef="id-app-comp-api"/>
+        <node xsi:type="Element" elementRef="id-app-comp-web"/>
+      </view>
+      <view identifier="id-view-hand" xsi:type="Diagram">
+        <name>Hand-arranged</name>
+        <properties><property propertyDefinitionRef="propid-2"><value>manual</value></property></properties>
+        <node identifier="hand-n1" xsi:type="Element" elementRef="id-app-comp-web" x="10" y="10" w="120" h="55">
+          <style><fillColor r="200" g="200" b="255"/></style>
+        </node>
+        <node identifier="hand-n2" xsi:type="Element" elementRef="id-app-comp-api" x="200" y="10" w="120" h="55"/>
+        <node identifier="hand-label" xsi:type="Label" x="10" y="100" w="300" h="30"><label>Drawn by hand</label></node>
+        <connection identifier="hand-c1" xsi:type="Relationship" relationshipRef="id-rel-005" source="hand-n1" target="hand-n2"/>
+      </view>
+    </diagrams>
+  </views>
+</model>

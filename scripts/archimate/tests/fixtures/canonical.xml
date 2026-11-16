@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Diagram.xsd" identifier="id-model-fixture">
+  <name xml:lang="en">Fixture</name>
+  <documentation xml:lang="en">Formatter input, deliberately not canonical: sections, items and children out of
+order, no xml:lang, numbered property definitions (one unused), CDATA, an empty and a newline-ended
+documentation, an Access without accessType, a bare automatic view and a manual view.</documentation>
+  <elements>
+    <element identifier="id-app-comp-api" xsi:type="ApplicationComponent">
+      <name xml:lang="en">API</name>
+    </element>
+    <element identifier="id-app-comp-core" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Core</name>
+    </element>
+    <element identifier="id-app-comp-web" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Web app</name>
+      <documentation xml:lang="en">Serves the pages.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-crate">
+          <value xml:lang="en">crates/web</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-app-data-booking" xsi:type="DataObject">
+      <name xml:lang="en">Booking</name>
+      <documentation xml:lang="en">Holds &lt;id&gt; &amp; date</documentation>
+    </element>
+    <element identifier="id-app-svc-booking" xsi:type="ApplicationService">
+      <name xml:lang="en">Booking service</name>
+    </element>
+    <element identifier="id-bus-proc-book" xsi:type="BusinessProcess">
+      <name xml:lang="en">Book a room</name>
+    </element>
+    <element identifier="id-bus-proc-pay" xsi:type="BusinessProcess">
+      <name xml:lang="en">Pay</name>
+    </element>
+  </elements>
+  <relationships>
+    <relationship identifier="id-rel-001" xsi:type="Composition" source="id-app-comp-api" target="id-app-comp-core"/>
+    <relationship identifier="id-rel-002" xsi:type="Serving" source="id-app-svc-booking" target="id-bus-proc-book"/>
+    <relationship identifier="id-rel-003" xsi:type="Access" source="id-app-comp-core" target="id-app-data-booking" accessType="Access"/>
+    <relationship identifier="id-rel-004" xsi:type="Triggering" source="id-bus-proc-book" target="id-bus-proc-pay"/>
+    <relationship identifier="id-rel-005" xsi:type="Association" source="id-app-comp-web" target="id-app-comp-api" isDirected="true">
+      <name xml:lang="en">calls</name>
+    </relationship>
+    <relationship identifier="id-rel-006" xsi:type="Realization" source="id-app-comp-core" target="id-app-svc-booking"/>
+  </relationships>
+  <propertyDefinitions>
+    <propertyDefinition identifier="propid-crate" type="string">
+      <name xml:lang="en">Crate</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-layout" type="string">
+      <name xml:lang="en">Layout</name>
+    </propertyDefinition>
+  </propertyDefinitions>
+  <views>
+    <diagrams>
+      <view identifier="id-view-hand" xsi:type="Diagram">
+        <name>Hand-arranged</name>
+        <properties>
+          <property propertyDefinitionRef="propid-layout">
+            <value>manual</value>
+          </property>
+        </properties>
+        <node identifier="hand-n1" xsi:type="Element" elementRef="id-app-comp-web" x="10" y="10" w="120" h="55">
+          <style>
+            <fillColor r="200" g="200" b="255"/>
+          </style>
+        </node>
+        <node identifier="hand-n2" xsi:type="Element" elementRef="id-app-comp-api" x="200" y="10" w="120" h="55"/>
+        <node identifier="hand-label" xsi:type="Label" x="10" y="100" w="300" h="30">
+          <label>Drawn by hand</label>
+        </node>
+        <connection identifier="hand-c1" xsi:type="Relationship" relationshipRef="id-rel-005" source="hand-n1" target="hand-n2"/>
+      </view>
+      <view identifier="id-view-main" xsi:type="Diagram">
+        <name xml:lang="en">Main</name>
+        <node identifier="id-view-main-band-0" xsi:type="Container" x="20" y="20" w="624" h="117">
+          <label xml:lang="en">Business</label>
+          <node identifier="id-view-main-n-id-bus-proc-book" xsi:type="Element" elementRef="id-bus-proc-book" x="244" y="62" w="160" h="55"/>
+          <node identifier="id-view-main-n-id-bus-proc-pay" xsi:type="Element" elementRef="id-bus-proc-pay" x="464" y="62" w="160" h="55"/>
+        </node>
+        <node identifier="id-view-main-band-1" xsi:type="Container" x="20" y="177" w="624" h="412">
+          <label xml:lang="en">Application</label>
+          <node identifier="id-view-main-n-id-app-comp-api" xsi:type="Element" elementRef="id-app-comp-api" x="40" y="219" w="190" h="100">
+            <node identifier="id-view-main-n-id-app-comp-core" xsi:type="Element" elementRef="id-app-comp-core" x="55" y="249" w="160" h="55"/>
+          </node>
+          <node identifier="id-view-main-n-id-app-comp-web" xsi:type="Element" elementRef="id-app-comp-web" x="290" y="219" w="160" h="55"/>
+          <node identifier="id-view-main-n-id-app-svc-booking" xsi:type="Element" elementRef="id-app-svc-booking" x="133" y="389" w="160" h="55"/>
+          <node identifier="id-view-main-n-id-app-data-booking" xsi:type="Element" elementRef="id-app-data-booking" x="133" y="514" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-main-c-id-rel-002" xsi:type="Relationship" relationshipRef="id-rel-002" source="id-view-main-n-id-app-svc-booking" target="id-view-main-n-id-bus-proc-book">
+          <bendpoint x="213" y="354"/>
+          <bendpoint x="269" y="354"/>
+          <bendpoint x="269" y="168"/>
+          <bendpoint x="324" y="168"/>
+        </connection>
+        <connection identifier="id-view-main-c-id-rel-003" xsi:type="Relationship" relationshipRef="id-rel-003" source="id-view-main-n-id-app-comp-core" target="id-view-main-n-id-app-data-booking">
+          <bendpoint x="135" y="362"/>
+          <bendpoint x="122" y="362"/>
+          <bendpoint x="122" y="479"/>
+          <bendpoint x="213" y="479"/>
+        </connection>
+        <connection identifier="id-view-main-c-id-rel-004" xsi:type="Relationship" relationshipRef="id-rel-004" source="id-view-main-n-id-bus-proc-book" target="id-view-main-n-id-bus-proc-pay"/>
+        <connection identifier="id-view-main-c-id-rel-005" xsi:type="Relationship" relationshipRef="id-rel-005" source="id-view-main-n-id-app-comp-web" target="id-view-main-n-id-app-comp-api"/>
+        <connection identifier="id-view-main-c-id-rel-006" xsi:type="Relationship" relationshipRef="id-rel-006" source="id-view-main-n-id-app-comp-core" target="id-view-main-n-id-app-svc-booking">
+          <bendpoint x="149" y="346"/>
+          <bendpoint x="227" y="346"/>
+        </connection>
+      </view>
+    </diagrams>
+  </views>
+</model>

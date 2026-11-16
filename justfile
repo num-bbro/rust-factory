@@ -13,7 +13,7 @@ coverage_min := "85"
 coverage_ignore := "crates/app/src/main.rs"
 
 # Run every gate: format, lint, tests, dependency policy, coverage, architecture model.
-check: fmt-check lint test deny coverage model-check
+check: fmt-check lint test deny coverage model-test model-check
     @echo "✔ all gates passed"
 
 # Quick gate for the edit loop: format, lint, tests.
@@ -149,9 +149,19 @@ project repo="num-bbro/rust-factory" title="":
 model:
     scripts/archimate/build.sh
 
-# Validate the ArchiMate text model and doc references only (fast; reads the relationship rules from the pinned Archi install, does not start Archi).
+# Validate the ArchiMate text model, doc references, canonical form and official schema (fast; reads the relationship rules and schema from the pinned Archi install, does not start Archi).
 model-check:
     scripts/archimate/build.sh --check
+
+# Put an ArchiMate exchange file in canonical form (ADR 0009); --check only reports. Default file:
+# docs/architecture/model.xml (created by step 2 of #41).
+[positional-arguments]
+model-fmt *args:
+    python3 -I scripts/archimate/model_fmt.py "$@"
+
+# Unit tests of the architecture model scripts (standard-library unittest, fixtures in tests/).
+model-test:
+    python3 -I -m unittest discover -s scripts/archimate/tests -t scripts/archimate/tests
 
 # Build the model, then open the HTML report in your browser.
 model-report: model
@@ -193,6 +203,7 @@ doctor:
     check python3        python3 --version
     check archi          bash -c '. tools/archi.env; f="${ARCHI_HOME:-$HOME/.local/opt/archi-$ARCHI_VERSION}/Archi"; [[ -x $f ]] && echo "Archi $ARCHI_VERSION ($f)"'
     check xvfb-run       bash -c 'command -v xvfb-run'
+    check xmllint        bash -c 'command -v xmllint >/dev/null && xmllint --version 2>&1 | head -1'
     if gh auth status >/dev/null 2>&1; then
       printf '  \033[32m✔\033[0m %-15s %s\n' "github login" "ok"
     else
