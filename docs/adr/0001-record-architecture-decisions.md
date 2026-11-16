@@ -1,15 +1,16 @@
+<!-- Generated from docs/architecture/model.xml (id-mot-adr-0001) by `just model-docs`. Do not edit: change the model, see docs/adr/template.md. -->
 # 0001. Record architecture decisions as ADRs
 
 - Status: Accepted
 - Date: 2026-11-15
 - Issue: #3
 - Deciders: product owner, conductor
-- ArchiMate elements: id-bus-obj-adr, id-mot-goal-traceable
+- ArchiMate elements: `id-bus-obj-adr`, `id-mot-goal-traceable`
 
 ## Context and problem
 In past projects, the reasons behind design choices were lost. Later changes broke assumptions
-nobody remembered. With AI agents writing much of the code, the reasoning would be lost even
-faster unless it is written down where agents and humans both look.
+nobody remembered. With AI agents writing much of the code, the reasoning would be lost even faster
+unless it is written down where agents and humans both look.
 
 ## Decision drivers
 - Decisions must survive staff and agent turnover.
@@ -22,8 +23,8 @@ faster unless it is written down where agents and humans both look.
 3. **Nothing formal**, only PR descriptions.
 
 ## Decision
-Chosen: **ADRs in the repo**, because they are versioned with the code, reviewed through the
-same PR gate, and readable by agents without extra tools.
+Chosen: **ADRs in the repo**, because they are versioned with the code, reviewed through the same PR
+gate, and readable by agents without extra tools.
 
 ## Consequences
 - Good: every significant decision has a findable, linked record.
