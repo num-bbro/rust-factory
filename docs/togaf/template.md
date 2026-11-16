@@ -9,9 +9,10 @@ hand-written file in `docs/togaf/`.
 The document's narrative is the element's `documentation`: Markdown, starting after the title
 (the title is the element's name). Write **each paragraph and each list item on one line**, as for
 ADRs (ADR 0009, line breaks: option A, and the Markdown subset of `docs/adr/template.md`); the
-page wraps them at 100 characters. Refer to model elements, views and ADRs by ID in backticks
-(`` `id-bus-proc-review` ``) and never repeat the model: the page makes each ID a link to its
-catalog row, view section or ADR page (an ID nothing on a page shows stays plain code), and
+page wraps them at 100 characters. Refer to model elements, views, ADRs and other documents by ID
+in single backticks (`` `id-bus-proc-review` ``) and never repeat the model: the page makes each
+such ID a link to its catalog row, view section or page (an ID nothing on a page shows stays plain
+code; IDs in code blocks, in longer code spans or in a link's text are never linked), and
 `just model-check` fails on an ID that is not in the model. Body template:
 
 ```markdown
@@ -32,11 +33,18 @@ catalog row, view section or ADR page (an ID nothing on a page shows stays plain
 
 ## 2. Add or edit the element in `docs/architecture/model.xml`
 In the XML, escape `&` as `&amp;`, `<` as `&lt;` and `>` as `&gt;`; no CDATA, no comments. The
-formatter sorts the elements, so add a new one anywhere inside `<elements>`. Properties:
+formatter sorts the elements, so add a new one anywhere inside `<elements>`. A `Deliverable` is a
+TOGAF document when it has a `File` property; one without `File` is an ordinary element, which the
+page generator leaves alone. A document's properties:
 
 - `File`: the generated page, `docs/togaf/<name>.md` (letters, digits and hyphens; existing file
   names never change);
-- `Phase`: the ADM phase, shown in the index (`Preliminary`, `A`–`H`, `Requirements Management`);
+- `Phase`: the ADM phase, one of `Preliminary`, `A`–`H`, `Requirements Management` (checked; the
+  index shows the phase's name);
+- `Viewpoints` (optional, Markdown, one line): the ArchiMate viewpoints suggested for the phase,
+  shown in the index;
+- `Artifacts` (optional, Markdown, one line): the factory artifacts of the phase, shown in the
+  index;
 - `View`, repeated, in the order the page shows them: the views that belong to the document. Each
   gets a section with its name, its documentation, its image and a catalog of the elements it
   draws. A document may have none. Which views belong to which document is the human's decision.
@@ -53,6 +61,8 @@ One line per paragraph, citing `id-bus-proc-plan` …</documentation>
   <properties>
     <property propertyDefinitionRef="propid-file"><value xml:lang="en">docs/togaf/E-opportunities-and-solutions.md</value></property>
     <property propertyDefinitionRef="propid-phase"><value xml:lang="en">E</value></property>
+    <property propertyDefinitionRef="propid-viewpoints"><value xml:lang="en">Project</value></property>
+    <property propertyDefinitionRef="propid-artifacts"><value xml:lang="en">Milestones, task split</value></property>
     <property propertyDefinitionRef="propid-view"><value xml:lang="en">id-view-lifecycle</value></property>
   </properties>
 </element>

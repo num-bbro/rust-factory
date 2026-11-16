@@ -106,12 +106,10 @@ Story/requirement issue → ADR → ArchiMate element id → crate/module → te
 Every artifact should link to its neighbors in this chain.
 
 ## Architecture (TOGAF + ArchiMate), see ADR 0009
-- **Narrative and structure** both live in `docs/architecture/model.xml`: a TOGAF document is a
-  `Deliverable` `id-impl-del-<slug>` (text, ordered `View` properties), an ADR a `Constraint`
+- **Narrative and structure** live in `docs/architecture/model.xml`: a TOGAF document (one per ADM
+  phase) is a `Deliverable` `id-impl-del-<slug>` with ordered `View`s, an ADR a `Constraint`
   `id-mot-adr-NNNN`; texts cite IDs in backticks (`` `id-bus-proc-review` ``), never repeating the
-  model. `docs/togaf/*.md`, `docs/adr/*.md` are generated, never hand-edited: edit the element,
-  `just model-fmt`, `model-docs`, `model-check` (`just model` if a view changed);
-  each folder's `template.md` is the guide.
+  model. `docs/togaf/*.md`, `docs/adr/*.md` are generated: never hand-edit them (see `template.md`).
 - Edit the model only in `docs/architecture/model.xml` (Open Group exchange format). In a view,
   list members only, as bare `<node xsi:type="Element" elementRef="id-…"/>`; then run
   `just model-fmt`, which sorts, lays out and normalises it. Never edit files under `build/`.
@@ -121,9 +119,9 @@ Every artifact should link to its neighbors in this chain.
 - Types use ArchiMate 3.2 names (`BusinessProcess`, `ApplicationComponent`, `Serving`, …); an
   `Access` states its `accessType`. Only use relationships ArchiMate allows between the two
   types: `just model-check` checks each against the pinned Archi's rules and names the allowed ones.
-- Run `just model-check` after every model or doc change (fast: form, schema, rules, IDs,
-  references, pages, images). If it flags a view image, run `just model` (`.archimate`, HTML
-  report, view PNGs) and commit `docs/architecture/views/`; never hand-edit its PNGs or lock.
+- After every model or doc change: `just model-fmt`, `just model-docs`, `just model-check` (fast:
+  form, schema, rules, IDs, references, pages, images). If it flags a view image, run `just model`
+  (`.archimate`, report, view PNGs), commit `docs/architecture/views/`; never hand-edit PNGs, lock.
 - Views are laid out automatically; you only choose *which* elements (about 25 at most; split a
   crowded view). Model "is part of" with Composition/Aggregation in one layer: drawn as nesting.
 - Any PR that changes behaviour across a layer boundary, adds a component, or makes a significant

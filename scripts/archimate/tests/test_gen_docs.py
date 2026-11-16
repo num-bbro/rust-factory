@@ -412,11 +412,13 @@ NARRATIVE = ("## Content\\nSee `id-mot-adr-0001`, `id-view-one`, `id-view-three`
 
 
 def togaf_model(first_views: tuple[str, ...] = ("id-view-two", "id-view-one"),
-                narrative: str = NARRATIVE, extra: str = "", rels: str = "") -> str:
-    """adr_model plus three views and three documents: the first shows `first_views`, the second
-    the third view, the third none."""
-    def doc(slug: str, title: str, file: str, phase: str, views: tuple[str, ...], text: str) -> str:
-        props = [("file", file), ("phase", phase)] + [("view", v) for v in views]
+                narrative: str = NARRATIVE, extra: str = "", rels: str = "",
+                first_props: tuple[tuple[str, str], ...] = ()) -> str:
+    """adr_model plus three views and three documents: the first shows `first_views` (and has
+    `first_props` after its Phase), the second the third view, the third none."""
+    def doc(slug: str, title: str, file: str, phase: str, views: tuple[str, ...], text: str,
+            more: tuple[tuple[str, str], ...] = ()) -> str:
+        props = [("file", file), ("phase", phase), *more] + [("view", v) for v in views]
         return (f'<element identifier="id-impl-del-{slug}" xsi:type="Deliverable">'
                 f'<name xml:lang="en">{title}</name>'
                 f'<documentation xml:lang="en">{text.replace(chr(92) + "n", chr(10))}'
@@ -439,7 +441,8 @@ def togaf_model(first_views: tuple[str, ...] = ("id-view-two", "id-view-one"),
         '<property propertyDefinitionRef="p-crate"><value xml:lang="en">crates/c</value></property>'
         '<property propertyDefinitionRef="p-code"><value xml:lang="en">src/c.rs</value></property>'
         "</properties></element>"
-        + doc("first", "A. First", "docs/togaf/A-first.md", "A", first_views, narrative)
+        + doc("first", "A. First", "docs/togaf/A-first.md", "A", first_views, narrative,
+              first_props)
         + doc("second", "B. Second", "docs/togaf/B-second.md", "B", ("id-view-three",),
               "Text with `id-app-comp-b` and `id-app-comp-a`.")
         + doc("third", "C. Third", "docs/togaf/C-third.md", "C", (), "Only `id-app-comp-b`.")
@@ -452,7 +455,7 @@ def togaf_model(first_views: tuple[str, ...] = ("id-view-two", "id-view-one"),
              + "</diagrams></views>")
     defs = "".join(f'<propertyDefinition identifier="p-{k}" type="string"><name xml:lang="en">'
                    f"{k.capitalize()}</name></propertyDefinition>"
-                   for k in ("phase", "view", "crate", "code"))
+                   for k in ("phase", "view", "crate", "code", "viewpoints", "artifacts"))
     return (adr_model(extra=elements)
             .replace("</relationships>", rels + "</relationships>")
             .replace("</propertyDefinitions>", defs + "</propertyDefinitions>")
@@ -562,14 +565,31 @@ class TogafPages(unittest.TestCase):
         alone = togaf(togaf_model(first_views=()))[0]["docs/togaf/C-third.md"]
         self.assertIn("Only `id-app-comp-b`.", alone)
 
-    def test_index_lists_phase_document_and_views(self):
-        index = togaf()[0]["docs/togaf/README.md"]
+    def test_index_lists_phase_document_views_viewpoints_and_artifacts(self):
+        xml = togaf_model(first_props=(("viewpoints", "Motivation | Goals"),
+                                       ("artifacts", "`CLAUDE.md`,\nEpic issues")))
+        index = togaf(xml)[0]["docs/togaf/README.md"]
         self.assertEqual(index.split("\n")[1], "# TOGAF architecture documents")
-        self.assertIn("| ADM phase | Document | Views |\n|---|---|---|\n"
-                      "| A | [A. First](A-first.md) | [Two](A-first.md#id-view-two), "
-                      "[One](A-first.md#id-view-one) |\n"
-                      "| B | [B. Second](B-second.md) | [Three](B-second.md#id-view-three) |\n"
-                      "| C | [C. Third](C-third.md) | — |\n", index)
+        table = ("| ADM phase | Document | Views | Suggested viewpoints | Factory artifacts |\n"
+                 "|---|---|---|---|---|\n"
+                 "| A. Architecture Vision | [A-first.md](A-first.md) | [Two](A-first.md#id-view-two), "
+                 "[One](A-first.md#id-view-one) | Motivation \\| Goals | `CLAUDE.md`, Epic issues |\n"
+                 "| B. Business Architecture | [B-second.md](B-second.md) | "
+                 "[Three](B-second.md#id-view-three) | — |  |\n"
+                 "| C. Information Systems | [C-third.md](C-third.md) | — | — |  |\n")
+        self.assertIn(table, index)
+        # Intro, table, then the closing paragraphs.
+        self.assertLess(index.index("Documents refer to model elements by ID"), index.index(table))
+        self.assertLess(index.index(table), index.index("**How the phases run in practice:**"))
+        self.assertLess(index.index("**How the phases run"), index.index("In this template,"))
+
+    def test_phase_label_of_requirements_management_keeps_centre(self):
+        xml = togaf_model().replace('<value xml:lang="en">C</value>',
+                                    '<value xml:lang="en">Requirements Management</value>', 1)
+        pages, problems = togaf(xml)
+        self.assertEqual(problems, [])
+        self.assertIn("| Requirements Management (centre) | [C-third.md](C-third.md) |",
+                      pages["docs/togaf/README.md"])
 
     def test_repeated_view_properties_keep_their_order(self):
         model = exchange.read(togaf_model(first_views=("id-view-two", "id-view-three",
@@ -581,20 +601,132 @@ class TogafPages(unittest.TestCase):
         self.assertEqual(togaf(), togaf())
 
 
+def first_page_linker() -> tuple[gen_docs.Togaf, gen_docs.Document]:
+    model = exchange.read(togaf_model().encode())
+    docs = gen_docs.documents(model)[0]
+    return gen_docs.Togaf(model, docs, gen_docs.adrs(model)[0]), docs[0]
+
+
+# Texts in which an identifier must not become a link (each would show link syntax as text, or
+# nest a link), on the first page, where `id-app-comp-a` has a target.
+NOT_LINKED = (
+    "`` `id-app-comp-a` ``",                      # double-backtick span around the identifier
+    "``id-app-comp-a``",                          # double-backtick span that is the identifier
+    "``code `id-app-comp-a` here``",              # identifier inside a longer span
+    "```text `id-app-comp-a` ```",                # one-line triple-backtick span
+    "[`id-app-comp-a`](https://example.com)",     # already a link
+    "[see `id-app-comp-a` here](https://example.com)",
+    "![alt `id-app-comp-a`](x.png)",              # an image's alt text
+    "\\`id-app-comp-a\\`",                        # escaped backticks: no code span
+    "` id-app-comp-a`",                           # the span holds more than the identifier
+    "Para.\n\n    `id-app-comp-a` is indented code",
+    "```\n`id-app-comp-a`\n```",                   # fenced code
+    "~~~~\n`id-app-comp-a`\n~~~\n~~~~",
+)
+
+
+class TogafLinks(unittest.TestCase):
+    def test_only_a_single_backtick_span_that_is_the_identifier_is_linked(self):
+        togaf_, here = first_page_linker()
+        for text in NOT_LINKED:
+            with self.subTest(text=text):
+                self.assertEqual(togaf_.link_ids(text, here), text)
+
+    def test_several_spans_on_a_line_and_in_a_list_paragraph(self):
+        togaf_, here = first_page_linker()
+        self.assertEqual(togaf_.link_ids("`id-app-comp-a`, ``x`` and `id-mot-req-r`.", here),
+                         "[`id-app-comp-a`](#id-app-comp-a), ``x`` and "
+                         "[`id-mot-req-r`](#id-mot-req-r).")
+        self.assertEqual(togaf_.link_ids("- item\n\n    `id-app-comp-a` in the item", here),
+                         "- item\n\n    [`id-app-comp-a`](#id-app-comp-a) in the item")
+        self.assertEqual(togaf_.link_ids("[x](y) then `id-app-comp-a`", here),
+                         "[x](y) then [`id-app-comp-a`](#id-app-comp-a)")
+
+    def test_a_document_identifier_links_to_its_page(self):
+        togaf_, here = first_page_linker()
+        self.assertEqual(togaf_.link_ids("See `id-impl-del-second` and `id-impl-del-first`.", here),
+                         "See [`id-impl-del-second`](B-second.md) and "
+                         "[`id-impl-del-first`](A-first.md).")
+
+
+class TogafCells(unittest.TestCase):
+    def row(self, xml: str, ident: str, page: str = "docs/togaf/B-second.md") -> str:
+        pages, problems = togaf(xml)
+        self.assertEqual(problems, [])
+        return next(line for line in pages[page].split("\n") if f"`{ident}` |" in line)
+
+    def test_a_name_shows_as_written(self):
+        xml = togaf_model().replace(
+            "c | see", "&lt;T&gt; *x* _x_ `b` | p ~s~ [l](u) &amp;amp; a\\b", 1)
+        self.assertIn(" | \\<T\\> \\*x\\* \\_x\\_ \\`b\\` \\| p \\~s\\~ \\[l\\](u) \\&amp; a\\\\b | ",
+                      self.row(xml, "id-app-comp-c"))
+
+    def test_values_with_line_breaks_pipes_and_backticks_stay_in_their_cell(self):
+        xml = (togaf_model().replace(">#7<", ">#26\n#27<", 1)
+               .replace(">crates/c<", ">a|b`c<", 1).replace(">src/c.rs<", ">src/\nc.rs<", 1))
+        row = self.row(xml, "id-app-comp-c")
+        self.assertIn(" | #26 #27 | ``a\\|b`c``, `src/ c.rs` | ", row)
+        self.assertEqual(row.count(" | "), 6)
+
+    def test_release_lists_only_aggregation_and_association(self):
+        plateau = ('<element identifier="id-impl-plat-v1-0-0" xsi:type="Plateau">'
+                   '<name xml:lang="en">v1.0.0</name></element>')
+        rels = ('<relationship identifier="id-rel-901" xsi:type="Composition" '
+                'source="id-impl-plat-v1-0-0" target="id-app-comp-c"/>'
+                '<relationship identifier="id-rel-902" xsi:type="Serving" '
+                'source="id-impl-plat-v1-0-0" target="id-app-comp-c"/>')
+        row = self.row(togaf_model(extra=plateau, rels=rels), "id-app-comp-c")
+        self.assertTrue(row.endswith(" | `crates/c`, `src/c.rs` |  |  |"), row)
+
+
 class TogafProblems(unittest.TestCase):
     def problems(self, old: str, new: str) -> str:
         xml = togaf_model()
         self.assertIn(old, xml)
         return "\n".join(togaf(xml.replace(old, new, 1))[1])
 
-    def test_wrong_identifier_or_type(self):
+    def test_wrong_identifier(self):
         self.assertIn("document element 'id-impl-del-Third': identifier must be id-impl-del-<slug>",
                       self.problems('"id-impl-del-third"', '"id-impl-del-Third"'))
         self.assertIn("'id-impl-deliverable': identifier must be id-impl-del-<slug>",
                       self.problems('"id-impl-del-third"', '"id-impl-deliverable"'))
-        self.assertIn("'id-impl-del-third': must be a Deliverable, is a WorkPackage",
-                      self.problems('"id-impl-del-third" xsi:type="Deliverable"',
-                                    '"id-impl-del-third" xsi:type="WorkPackage"'))
+
+    def test_only_a_deliverable_with_a_file_is_a_document(self):
+        file = ('<property propertyDefinitionRef="p-file"><value xml:lang="en">'
+                "docs/togaf/C-third.md</value></property>")
+        other = ('<element identifier="id-impl-del-release-notes" xsi:type="Deliverable">'
+                 '<name xml:lang="en">Release notes</name><properties>'
+                 '<property propertyDefinitionRef="p-phase"><value xml:lang="en">nonsense'
+                 "</value></property></properties></element>")
+        for old, new in ((file, ""),                                    # no File
+                         ('"id-impl-del-third" xsi:type="Deliverable"',  # not a Deliverable
+                          '"id-impl-del-third" xsi:type="WorkPackage"')):
+            with self.subTest(new=new):
+                xml = togaf_model(extra=other)
+                self.assertIn(old, xml)
+                pages, problems = togaf(xml.replace(old, new, 1))
+                self.assertEqual(problems, [])
+                self.assertNotIn("docs/togaf/C-third.md", pages)
+                self.assertNotIn("C-third.md", pages["docs/togaf/README.md"])
+        self.assertEqual(togaf(togaf_model(extra=other))[1], [])
+
+    def test_phase_must_be_an_adm_phase(self):
+        self.assertIn("'id-impl-del-third': Phase must be one of Preliminary, A, B, C, D, E, F, G, "
+                      "H, Requirements Management; is 'Phase C'",
+                      self.problems('<value xml:lang="en">C</value>',
+                                    '<value xml:lang="en">Phase C</value>'))
+
+    def test_document_without_a_name(self):
+        self.assertIn("'id-impl-del-third': has no name (the document's title)",
+                      self.problems('<name xml:lang="en">C. Third</name>', '<name xml:lang="en"> '
+                                    "</name>"))
+
+    def test_a_name_with_a_line_break_is_refused(self):
+        self.assertIn("'id-app-comp-c': the name has a line break; write it on one line",
+                      self.problems("c | see", "c\nsee"))
+        self.assertIn("'id-view-one': the name has a line break",
+                      self.problems('<name xml:lang="en">One</name>', '<name xml:lang="en">O\nne'
+                                    "</name>"))
 
     def test_missing_or_repeated_property(self):
         phase = '<property propertyDefinitionRef="p-phase"><value xml:lang="en">C</value></property>'

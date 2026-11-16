@@ -9,9 +9,10 @@
 # The checks: canonical form (model_fmt.py --check), the official ArchiMate 3.1 schema (xmllint),
 # relationship rules, ID convention, views and their connections, `View` properties, viewpoints,
 # document references, generated ADR and TOGAF pages current (gen_docs.py --check), view images
-# and views.lock current (views.py --check), and an image for each view a TOGAF page shows (the
-# last two before the build only with --check, since the build is what brings them up to date). Archi starts only on a file that passed the others, always under
-# Xvfb (PNG bytes depend on the display, ADR 0009 spike item 4), and under a timeout of
+# and views.lock current (views.py --check), and a committed image for each view a TOGAF page
+# shows. The build itself brings the images up to date, so before it the last two checks run
+# only with --check (gen_docs.py runs with --no-images), and after it they run in full.
+# Archi starts only on a file that passed the others, always under Xvfb (PNG bytes depend on the display, ADR 0009 spike item 4), and under a timeout of
 # ARCHI_TIMEOUT seconds (default 300): its importer hangs instead of exiting when its own schema
 # check fails.
 #
