@@ -108,7 +108,8 @@ Every artifact should link to its neighbors in this chain.
 ## Architecture (TOGAF + ArchiMate), see ADR 0009
 - **Narrative** lives in `docs/togaf/` (one document per ADM phase). **Structure** lives in the
   ArchiMate exchange model `docs/architecture/model.xml`. Documents refer to elements by ID in
-  backticks, e.g. `` `id-bus-proc-review` ``, and never duplicate the model.
+  backticks (`` `id-bus-proc-review` ``), never duplicating the model. ADRs are `Constraint`
+  elements `id-mot-adr-NNNN`; `docs/adr/*.md` are generated (`just model-docs`), never hand-edited.
 - Edit the model only in `docs/architecture/model.xml` (Open Group exchange format). In a view,
   list members only, as bare `<node xsi:type="Element" elementRef="id-…"/>`; then run
   `just model-fmt`, which sorts, lays out and normalises the file. Never edit files under `build/`.
@@ -118,12 +119,11 @@ Every artifact should link to its neighbors in this chain.
 - Types use ArchiMate 3.2 names (`BusinessProcess`, `ApplicationComponent`, `Serving`, …); an
   `Access` states its `accessType`. Only use relationships that ArchiMate allows between the two
   types: `just model-check` checks each against the pinned Archi's rules and names the allowed ones.
-- Run `just model-check` after every model or doc change (fast: canonical form, schema, rules, IDs,
-  references), and `just model` to build the `.archimate` and HTML report the human reviews.
+- Run `just model-check` after every model or doc change (fast: form, schema, rules, IDs,
+  references, pages), and `just model` to build the `.archimate` and HTML report the human reviews.
 - Views are laid out automatically: you only choose *which* elements a view shows. Keep views
-  focused (about 25 elements at most) and split a crowded view rather than fighting the layout.
-  Model "is part of" with Composition/Aggregation inside the same layer: those are drawn by
-  nesting, which keeps views readable.
+  focused (about 25 elements at most; split a crowded one). Model "is part of" with
+  Composition/Aggregation inside the same layer: drawn as nesting, which keeps views readable.
 - Any PR that changes behaviour across a layer boundary, adds a component, or makes a significant
   choice updates the model and adds an ADR (`docs/adr/template.md`). Architecture changes need
   human sign-off (gate 1).

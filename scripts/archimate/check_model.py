@@ -10,8 +10,9 @@
 * every view's viewpoint is an ArchiMate viewpoint: one of the ViewpointsEnum values of the
   pinned Archi's archimate3_View.xsd (the schema itself accepts any string there);
 * every `View` property names an existing view;
-* every `id-…` written in backticks in a Markdown file under <docs-dir> exists in the model, so
-  the narrative and the model cannot silently drift apart.
+* every `id-…` written in backticks in a Markdown file under <docs-dir>, or in the documentation
+  of anything in the model (an ADR's text, say), exists in the model, so the narrative and the
+  model cannot silently drift apart.
 
 Prints every problem, then exits 1; prints one line per check and exits 0 when all pass.
 """
@@ -76,7 +77,9 @@ def viewpoints(model: exchange.Model, known: set[str]) -> list[str]:
 
 def doc_refs(model: exchange.Model, docs: Path) -> list[str]:
     known = model.identifiers()
-    problems = []
+    problems = [f"documentation of '{owner}': {ref} is mentioned but is not in the model"
+                for owner, text in sorted(model.documentation.items())
+                for ref in sorted(set(DOC_REF.findall(text))) if ref not in known]
     for page in sorted(docs.rglob("*.md")):
         for ref in sorted(set(DOC_REF.findall(page.read_text(encoding="utf-8")))):
             if ref not in known:

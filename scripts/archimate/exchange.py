@@ -26,9 +26,9 @@ Anything else the standard allows but this form does not know (metadata, organiz
 viewpoints, foreign-namespace extensions, unknown attributes, hand-made nodes in an automatic
 view) is rejected with a message naming where it is: content is never dropped silently.
 
-`read(data)` returns what the model checks need from a canonical file (`Model`): element types,
-relationships, view members and viewpoints, property values and the ends of every diagram
-connection.
+`read(data)` returns what the model checks and the page generator need from a canonical file
+(`Model`): element types, names and documentation, relationships, view members and viewpoints,
+property values and the ends of every diagram connection.
 
 Pure functions, standard library only.
 """
@@ -178,11 +178,13 @@ class Connection:
 
 @dataclass
 class Model:
-    """What the model checks need from an exchange file."""
+    """What the model checks and the page generator need from an exchange file."""
 
     identifier: str = ""
     elements: dict[str, str] = field(default_factory=dict)        # id -> element type
-    relationships: list[dict[str, str]] = field(default_factory=list)  # ID, Type, Source, Target
+    relationships: list[dict[str, str]] = field(default_factory=list)  # ID, Type, Source, Target, Name
+    names: dict[str, str] = field(default_factory=dict)           # id -> name (if it has one)
+    documentation: dict[str, str] = field(default_factory=dict)   # id -> documentation (if any)
     views: dict[str, list[str]] = field(default_factory=dict)     # id -> member element ids
     viewpoints: dict[str, str] = field(default_factory=dict)      # view id -> viewpoint, if any
     properties: list[tuple[str, str, str]] = field(default_factory=list)  # owner id, name, value
@@ -206,6 +208,9 @@ def read(data: bytes) -> Model:
     m = Model(identifier=_ident(root))
 
     def props(owner: ET.Element) -> None:
+        for tag, texts in (("name", m.names), ("documentation", m.documentation)):
+            if owner.find(f"{q}{tag}") is not None:
+                texts[_ident(owner)] = owner.findtext(f"{q}{tag}") or ""
         for p in owner.iterfind(f"{q}properties/{q}property"):
             m.properties.append((_ident(owner), names.get(p.get("propertyDefinitionRef", ""), ""),
                                  p.findtext(f"{q}value") or ""))
@@ -216,15 +221,17 @@ def read(data: bytes) -> Model:
         props(e)
     for r in root.iterfind(f"{q}relationships/{q}relationship"):
         m.relationships.append({"ID": _ident(r), "Type": r.get(XSI_TYPE, ""),
-                                "Source": r.get("source", ""), "Target": r.get("target", "")})
+                                "Source": r.get("source", ""), "Target": r.get("target", ""),
+                                "Name": r.findtext(f"{q}name") or ""})
         props(r)
     for v in root.iterfind(f"{q}views/{q}diagrams/{q}view"):
         vid = _ident(v)
         props(v)
         nodes = {_ident(n): n.get("elementRef", "") for n in v.iter(f"{q}node")}
         m.views[vid] = [ref for ref in nodes.values() if ref]
-        if v.get("viewpoint") is not None:
-            m.viewpoints[vid] = v.get("viewpoint", "")
+        viewpoint = v.get("viewpoint")
+        if viewpoint is not None:
+            m.viewpoints[vid] = viewpoint
         for c in v.iter(f"{q}connection"):
             m.connections.append(Connection(vid, _ident(c), c.get("relationshipRef", ""),
                                             nodes.get(c.get("source", ""), ""),

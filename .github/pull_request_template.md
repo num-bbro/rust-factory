@@ -8,7 +8,7 @@ Closes #
 
 ## Traceability
 - Story / requirement: #
-- ADR: <!-- docs/adr/NNNN-....md, or "none" -->
+- ADR: <!-- element id-mot-adr-NNNN and its generated page docs/adr/NNNN-....md, or "none" -->
 - ArchiMate elements: <!-- element ids, or "none" -->
 
 ## Test evidence

@@ -52,7 +52,7 @@ gh auth login              # once per machine
 | `scripts/cost-report.py`, `tools/model-prices.toml` | `just cost`: agent spend per model, agent and task |
 | `docs/togaf/` | One document per TOGAF ADM phase (narrative) |
 | `docs/architecture/model.xml` | ArchiMate model (Open Group exchange format), built with `just model` |
-| `docs/adr/` | Architecture Decision Records |
+| `docs/adr/` | Architecture Decision Records, generated from the model (`just model-docs`); [template.md](docs/adr/template.md) says how to add one |
 | `scripts/archimate/` | Model formatter, checks and builder: exchange XML → Archi model + HTML report |
 | `tools/archi.env` | Pinned Archi version and checksum |
 
@@ -83,7 +83,8 @@ just cost            what it cost, per model and per task
 
 ```bash
 just model-fmt      # sort, lay out the views and normalise docs/architecture/model.xml
-just model-check    # fast: validate the model and the element IDs mentioned in docs
+just model-check    # fast: validate the model, the element IDs mentioned in docs, the ADR pages
+just model-docs     # write the ADR pages docs/adr/*.md from the model (never edit them)
 just model          # build build/architecture/model.archimate and report/index.html
 just model-report   # build, then open the HTML report in the browser
 ```

@@ -38,9 +38,14 @@ class Reader(unittest.TestCase):
         self.assertEqual(MODEL.identifier, "id-model-fixture")
         self.assertEqual(MODEL.elements["id-app-data-booking"], "DataObject")
         self.assertIn({"ID": "id-rel-003", "Type": "Access", "Source": "id-app-comp-core",
-                       "Target": "id-app-data-booking"}, MODEL.relationships)
+                       "Target": "id-app-data-booking", "Name": ""}, MODEL.relationships)
         self.assertEqual(sorted(MODEL.views["id-view-main"]), sorted(MODEL.elements))
         self.assertEqual(MODEL.views["id-view-hand"], ["id-app-comp-web", "id-app-comp-api"])
+
+    def test_reads_names_and_documentation(self):
+        self.assertEqual(MODEL.names["id-app-comp-web"], "Web app")
+        self.assertEqual(MODEL.documentation["id-app-comp-web"], "Serves the pages.")
+        self.assertNotIn("id-app-comp-core", MODEL.documentation)
 
     def test_reads_properties_by_definition_name(self):
         self.assertIn(("id-app-comp-web", "Crate", "crates/web"), MODEL.properties)
@@ -187,6 +192,14 @@ class DocumentReferences(unittest.TestCase):
         self.assertEqual(len(problems), 1)
         self.assertIn("a.md: id-app-comp-gone is mentioned but is not in the model", problems[0])
 
+    def test_unknown_id_in_documentation_names_its_owner(self):
+        model = edited("Serves the pages.", "Serves `id-app-comp-web` and `id-app-comp-gone`.")
+        with tempfile.TemporaryDirectory() as tmp:
+            problems = check_model.doc_refs(model, Path(tmp))
+        self.assertEqual(len(problems), 1)
+        self.assertIn("id-app-comp-gone is mentioned but is not in the model", problems[0])
+        self.assertIn("documentation of 'id-app-comp-web'", problems[0])
+
 
 class CommandLine(unittest.TestCase):
     def run_main(self, text: str) -> tuple[int, str, str]:
@@ -208,7 +221,6 @@ class CommandLine(unittest.TestCase):
         code, _, err = self.run_main("`id-app-comp-gone`")
         self.assertEqual(code, 1)
         self.assertIn("id-app-comp-gone", err)
-
 
     def test_viewpoints_that_cannot_be_read_are_a_setup_error(self):
         err = io.StringIO()
