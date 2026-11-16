@@ -33,8 +33,9 @@ jobs:
         with:
           source: ./docs
           destination: ./_site
+      # The Jekyll action runs in a container as root, so _site belongs to root.
       - name: Add the clickable report
-        run: cp -r build/architecture/report _site/report
+        run: sudo cp -r build/architecture/report _site/report
       - name: Upload the site for inspection (pull requests)
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
