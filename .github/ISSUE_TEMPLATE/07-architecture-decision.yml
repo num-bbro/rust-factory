@@ -6,7 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        The architect agent turns this into an ADR file under `docs/adr/` in a PR.
+        The architect agent records this as an ADR in the architecture model
+        (`docs/architecture/model.xml`, which generates the page under `docs/adr/`) in a PR.
         You approve the decision by merging that PR.
   - type: textarea
     id: context

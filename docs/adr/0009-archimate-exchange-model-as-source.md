@@ -204,14 +204,18 @@ spike):
 - Bad: agents must write Markdown as escaped XML text (`&lt;`, `&amp;`); the formatter and the
   generated page make mistakes visible, but diffs of long text are less pleasant than in a `.md`
   file.
-- **Open question for the human, to decide before step 3: line breaks inside paragraphs.** Archi's
-  HTML report renders every single line break in a documentation text as a `<br/>` (spike item 1),
-  and the ADRs and TOGAF files are hard-wrapped at about 100 characters. Two options:
+- **Line breaks inside paragraphs: decided by the human on 2026-11-16, option (A).** Archi's HTML
+  report renders every single line break in a documentation text as a `<br/>` (spike item 1), and
+  the ADRs and TOGAF files were hard-wrapped at about 100 characters. The two options put to the
+  human:
   - **(A) Unwrap each paragraph to one line at migration.** The text then reads well in Archi's
     report, on the site and in other tools. The lossless proof of step 3 and 5 then compares
     whitespace-normalised text, not the sha256 of the bytes.
   - **(B) Keep the text byte-identical.** The sha256 proof planned in #41 holds as written, and the
     report (and so the site's element pages) shows ragged paragraphs.
+  - **Decision: (A).** Each paragraph and each list item is stored in the model as one line; the
+    generated pages wrap them again at 100 characters, so they read and diff as before. This
+    replaces the open question that stood here until step 3.
 - Follow-up (each one task issue under #41, one PR each; `main` stays green after each):
   1. Canonical reader/writer and `just model-fmt`, schema validation, xmllint in bootstrap and
      doctor, tests on fixtures.
@@ -429,3 +433,26 @@ on. Anything not listed here is still decided by the text above, not by the code
 - The model's `Source` property now names `docs/architecture/model.xml`.
 - The CI artifact `architecture-model` no longer carries a copy of `model.xml`: the source is in the
   repo.
+
+## Amendment 2026-11-16: as built in step 3 (ADRs in the model)
+Step 3 (#48) moved the nine ADRs into the model. As with the amendment above, these points refine
+the decision:
+- **Line breaks: option (A)**, decided by the human (see Consequences).
+  `scripts/archimate/mdwrap.py` unwraps and wraps on block structure only: fenced code, tables,
+  headings, block quotes, HTML lines and break lines are never joined or wrapped; a wrap breaks only
+  at a single space, never before a word that would start a block and never after a backslash.
+  `gen_docs.py --check` fails when an ADR's paragraph or list item is spread over several lines.
+- **ADR elements** are recognised by their identifier `id-mot-adr-NNNN`; the generator also checks
+  their type (`Constraint`), name (`ADR NNNN: <title>`), the five properties and `File =
+  docs/adr/NNNN-<slug>.md`.
+- **The header list is derived:** "ArchiMate elements" lists the sources of the Realization and
+  Influence relationships to the ADR, sorted by identifier and in backticks; free text after the
+  list (as in this ADR's header until step 3) has no place there and moves into the body when it
+  matters. "Supersedes: ADR NNNN" and "Superseded by: ADR NNNN" come from the `supersedes`
+  Association.
+- **`docs/adr/README.md`** (the index) is generated too; its introduction lives in `gen_docs.py`.
+  `docs/adr/template.md` stays hand-written: it is the guide for adding an ADR.
+- **Orphans are reported, never deleted:** `just model-docs` writes the pages and fails on a
+  `docs/adr/*.md` that no ADR element produces; deleting it is the author's step.
+- **Document references** also cover the `` `id-…` `` cited inside any `documentation` text of the
+  model.

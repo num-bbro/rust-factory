@@ -22,8 +22,10 @@ not application code. Follow the "Architecture" section of `CLAUDE.md` and ADR 0
      `just model-fmt` (it lays the view out); keep each view focused (≤ ~25 elements); add a view
      rather than overloading one.
    - **TOGAF documents**: narrative only, citing element IDs in backticks.
-   - **ADRs** for each significant decision (`docs/adr/template.md`, Status `Proposed`, add to the
-     index in `docs/adr/README.md`).
+   - **ADRs** for each significant decision: a `Constraint` element `id-mot-adr-NNNN` in the model
+     with Status `Proposed`, its text one line per paragraph, linked by Realization / Influence
+     (`docs/adr/template.md`); then `just model-docs` writes the page and the index. Never edit
+     `docs/adr/*.md` by hand.
 4. Validate: `just model-check`, then `just model` and look at the generated view images under
    `build/architecture/report/` for readability.
 5. Deliver: commit `docs(architecture): ... (#<N>)`, push, PR with the template; list in the PR
