@@ -3,7 +3,7 @@
 The factory follows the **TOGAF Architecture Development Method (ADM)**. Each phase has one
 document here. The documents hold the *narrative*: purpose, decisions, open questions. The
 *structure* (actors, processes, applications, nodes and how they relate) lives in the ArchiMate
-model under [`../architecture/model/`](../architecture/model/). Documents refer to model
+model [`../architecture/model.xml`](../architecture/model.xml). Documents refer to model
 elements by ID (e.g. `id-bus-proc-review`) instead of repeating them.
 
 | ADM phase | Document | Main ArchiMate views | Factory artifacts |

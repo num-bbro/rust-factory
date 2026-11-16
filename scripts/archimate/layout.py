@@ -133,7 +133,7 @@ def layout(refs: list[str], types: dict[str, str], rels: list[dict[str, str]]) -
             parent[t] = s
             nested.add(r["ID"])
     boxes = {ref: Box(ref) for ref in refs}
-    for ref in refs:                                     # keep CSV order among siblings
+    for ref in refs:                                     # keep member order among siblings
         if ref in parent:
             boxes[parent[ref]].children.append(boxes[ref])
     for p in {parent[c] for c in parent}:
@@ -210,7 +210,7 @@ def layout(refs: list[str], types: dict[str, str], rels: list[dict[str, str]]) -
 
 
 def chain_order(kids: list[Box], rels: list[dict[str, str]], rtype: dict[str, str]) -> list[Box]:
-    """Order siblings along triggering/flow chains (topological), else keep CSV order."""
+    """Order siblings along triggering/flow chains (topological), else keep member order."""
     ids = [k.ref for k in kids]
     nxt = {i: [] for i in ids}
     indeg = dict.fromkeys(ids, 0)
@@ -226,7 +226,7 @@ def chain_order(kids: list[Box], rels: list[dict[str, str]], rtype: dict[str, st
             indeg[j] -= 1
             if indeg[j] == 0:
                 ready.append(j)
-    out += [i for i in ids if i not in out]               # cycles: keep the rest in CSV order
+    out += [i for i in ids if i not in out]               # cycles: keep the rest in member order
     by_id = {k.ref: k for k in kids}
     return [by_id[i] for i in out]
 

@@ -384,3 +384,41 @@ and Archi handle comfortably (the 84 KB spike file imports in 3.5 s).
 Every confirmed requirement can be met inside the standard. Nothing in the spike needed an
 Archi-specific construct; the differences found are rules of our canonical form and our own
 checks, listed above.
+
+## Amendment 2026-11-16: as built in steps 1 and 2
+Steps 1 (#44) and 2 (#46) built the tooling and the cutover. Where the code is stricter or more
+precise than the decision above, the code is the rule:
+- **XML comments, processing instructions and a DOCTYPE are rejected** with a message naming
+  them, not dropped. CDATA is accepted on input and written escaped.
+- **Unused property definitions are dropped** by the formatter, with a note on stderr ("every
+  definition is used" holds for the written file).
+- **A missing `accessType` is written as `Access`** by the formatter (the schema's default). The
+  rule that every `Access` states its type stays; the cutover states it on all seven existing
+  ones, and the human chooses the types in the cutover PR.
+- **Rejected for now**: `metadata`, `organizations`, `viewpoints`, `viewpointRef`, elements and
+  attributes in foreign namespaces, and texts in a language other than `en`. A future normaliser
+  for Archi exports must strip `organizations`, `metadata` and `<style>` (spike item 5) before
+  formatting.
+- **Views with `Layout = manual`** are copied as they are, so they are exempt from the
+  `xml:lang` rule as well as from the layout; only their property-definition references are
+  renamed.
+- **`xml.xsd` is pinned too**: `tools/archi.env` holds four sha256 values (the three ArchiMate
+  schemas and `xml.xsd`), and `xsd_check.py` fails when any of them differs.
+- **Trailing whitespace**, not only a trailing newline, is removed from `documentation`; inner
+  spaces and line breaks are kept.
+- **An empty view** (no members) is valid and written without nodes.
+- **View emission** lives in `scripts/archimate/exchange.py` (`add_diagram`, with
+  `layout.py`); `build_exchange.py` and the CSV files are gone. `exchange.read` is the one reader
+  the checks share.
+- **The checks of `just model-check`**, in order: canonical form (`model_fmt.py --check`), schema
+  (`xsd_check.py`), relationship rules (`check_relationships.py`), then `check_model.py`: the ID
+  convention (`id-<layer>-<kind>-<slug>`, `id-rel-NNN`, `id-view-<slug>`, and `id-model-<slug>`
+  for the model; before the cutover nothing checked it), every view member is an element, every
+  diagram connection joins nodes of its relationship's ends, every `View` property names a view,
+  and every `` `id-…` `` in `docs/**/*.md` exists. `build.sh` runs all of them before Archi,
+  also in `just model`. The checks for generated pages and the image lock come with steps 3–5.
+- **Relationship types** are written without the `Relationship` suffix in the exchange format
+  (`Serving`); `check_relationships.py` adds it to look up Archi's rules.
+- The model's `Source` property now names `docs/architecture/model.xml`.
+- The CI artifact `architecture-model` no longer carries a copy of `model.xml`: the source is in
+  the repo.
