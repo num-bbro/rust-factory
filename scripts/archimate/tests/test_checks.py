@@ -146,6 +146,55 @@ class ModelRules(unittest.TestCase):
             "'id-app-comp-web': property View = 'id-view-gone' names no view of the model"])
 
 
+class AdrViews(unittest.TestCase):
+    @staticmethod
+    def with_adr() -> exchange.Model:
+        """The fixture plus ADR 0001, linked from id-app-comp-web, with a view of the two."""
+        model = exchange.read(CANONICAL)
+        model.elements["id-mot-adr-0001"] = "Constraint"
+        model.relationships.append({"ID": "id-rel-900", "Type": "Realization",
+                                    "Source": "id-app-comp-web", "Target": "id-mot-adr-0001",
+                                    "Name": ""})
+        model.views["id-view-adr-0001"] = ["id-mot-adr-0001", "id-app-comp-web"]
+        model.properties.append(("id-mot-adr-0001", "View", "id-view-adr-0001"))
+        return model
+
+    def test_the_fixture_and_the_real_model_pass(self):
+        self.assertEqual(check_model.adr_views(MODEL), [])
+        self.assertEqual(check_model.adr_views(self.with_adr()), [])
+        self.assertEqual(check_model.adr_views(exchange.read(REAL_MODEL.read_bytes())), [])
+
+    def test_an_adr_without_a_view_property_is_reported(self):
+        model = self.with_adr()
+        model.properties.pop()
+        self.assertEqual(check_model.adr_views(model), [
+            "ADR 'id-mot-adr-0001': needs exactly one View property, has 0"])
+
+    def test_two_view_properties_are_reported(self):
+        model = self.with_adr()
+        model.properties.append(("id-mot-adr-0001", "View", "id-view-main"))
+        self.assertEqual(check_model.adr_views(model), [
+            "ADR 'id-mot-adr-0001': needs exactly one View property, has 2"])
+
+    def test_a_linked_element_missing_from_the_view_is_reported(self):
+        model = self.with_adr()
+        model.views["id-view-adr-0001"] = ["id-mot-adr-0001"]
+        self.assertIn("view 'id-view-adr-0001' is missing: id-app-comp-web",
+                      check_model.adr_views(model)[0])
+
+    def test_an_element_that_is_not_linked_in_the_view_is_reported(self):
+        model = self.with_adr()
+        model.views["id-view-adr-0001"].append("id-app-comp-api")
+        self.assertIn("view 'id-view-adr-0001' must not be shown: id-app-comp-api",
+                      check_model.adr_views(model)[0])
+
+    def test_a_source_of_another_relationship_type_is_not_a_member(self):
+        model = self.with_adr()
+        model.relationships[-1]["Type"] = "Association"
+        problems = "\n".join(check_model.adr_views(model))
+        self.assertIn("must not be shown: id-app-comp-web", problems)
+
+
 REAL_MODEL = HERE.parents[2] / "docs" / "architecture" / "model.xml"
 
 
@@ -307,7 +356,7 @@ class CommandLine(unittest.TestCase):
     def test_all_checks_pass_with_one_line_each(self):
         code, out, _ = self.run_main("`id-app-comp-web`")
         self.assertEqual(code, 0)
-        self.assertEqual(len(out.splitlines()), 5)
+        self.assertEqual(len(out.splitlines()), 6)
 
     def test_a_problem_fails_and_is_listed(self):
         code, _, err = self.run_main("`id-app-comp-gone`")

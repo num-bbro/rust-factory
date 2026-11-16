@@ -12,6 +12,8 @@
 * every view's viewpoint is an ArchiMate viewpoint: one of the ViewpointsEnum values of the
   pinned Archi's archimate3_View.xsd (the schema itself accepts any string there);
 * every `View` property names an existing view;
+* every ADR (`id-mot-adr-NNNN`) has a `View` property naming a view whose members are the ADR plus
+  exactly the sources of the Realization and Influence relationships to it (ADR 0011);
 * every `id-…` written in backticks in a Markdown file under <docs-dir>, or in the documentation
   of anything in the model (an ADR's text, say), exists in the model, so the narrative and the
   model cannot silently drift apart.
@@ -68,6 +70,30 @@ def views(model: exchange.Model) -> list[str]:
     problems += [f"'{owner}': property View = '{value}' names no view of the model"
                  for owner, name, value in model.properties
                  if name == "View" and value not in model.views]
+    return problems
+
+
+ADR_ID = re.compile(r"id-mot-adr-\d{4}")
+ADR_LINKS = ("Realization", "Influence")
+
+
+def adr_views(model: exchange.Model) -> list[str]:
+    """Each ADR needs a view showing it and the elements linked to it, no more and no fewer."""
+    problems = []
+    for adr in sorted(i for i in model.elements if ADR_ID.fullmatch(i)):
+        named = [v for o, k, v in model.properties if o == adr and k == "View"]
+        if len(named) != 1:
+            problems.append(f"ADR '{adr}': needs exactly one View property, has {len(named)}")
+            continue
+        if named[0] not in model.views:
+            continue                                     # reported by `views`
+        wanted = {adr} | {r["Source"] for r in model.relationships
+                          if r["Target"] == adr and r["Type"] in ADR_LINKS}
+        shown = set(model.views[named[0]])
+        for what, ids in (("is missing", wanted - shown), ("must not be shown", shown - wanted)):
+            if ids:
+                problems.append(f"ADR '{adr}': view '{named[0]}' {what}: " + ", ".join(sorted(ids))
+                                + " (members are the ADR plus the elements linked to it)")
     return problems
 
 
@@ -135,6 +161,8 @@ def main(argv: list[str]) -> int:
     checks = [("IDs: all follow the convention", id_convention(model)),
               ("views: all members are elements, connections match their relationships, "
                "View properties name views", views(model)),
+              ("ADR views: every ADR has a view of itself and its linked elements",
+               adr_views(model)),
               ("manual views: relationships drawn as in the model, nodes inside their parents",
                manual_views(model)),
               ("viewpoints: all are ArchiMate viewpoints", viewpoints(model, known)),
