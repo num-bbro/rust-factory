@@ -1,5 +1,5 @@
-"""The canonical form of an ArchiMate exchange file (ADR 0009), and the view emission it shares
-with build_exchange.py.
+"""The canonical form of an ArchiMate exchange file (ADR 0009), and the reader the model checks
+use.
 
 `canonical(data)` reads an Open Group ArchiMate Model Exchange file and returns it in the one
 canonical form of ADR 0009:
@@ -26,6 +26,9 @@ Anything else the standard allows but this form does not know (metadata, organiz
 viewpoints, foreign-namespace extensions, unknown attributes, hand-made nodes in an automatic
 view) is rejected with a message naming where it is: content is never dropped silently.
 
+`read(data)` returns what the model checks need from a canonical file (`Model`): element types,
+relationships, view members, `View` property values and the ends of every diagram connection.
+
 Pure functions, standard library only.
 """
 
@@ -33,6 +36,7 @@ from __future__ import annotations
 
 import re
 import sys
+from dataclasses import dataclass, field
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -71,7 +75,7 @@ class FormatError(Exception):
         self.problems = problems
 
 
-# --- view emission, shared with build_exchange.py -----------------------------------------------
+# --- view emission ------------------------------------------------------------------------------
 
 def text_el(parent: ET.Element, tag: str, text: str) -> None:
     """Add <tag xml:lang="en">text</tag>, or nothing when the text is empty."""
@@ -159,6 +163,70 @@ def serialize(root: ET.Element) -> str:
 
 
 # --- reading ------------------------------------------------------------------------------------
+
+@dataclass
+class Connection:
+    """A diagram connection: its relationship, and the elements of the nodes it joins."""
+
+    view: str
+    identifier: str
+    relationship: str
+    source: str
+    target: str
+
+
+@dataclass
+class Model:
+    """What the model checks need from an exchange file."""
+
+    identifier: str = ""
+    elements: dict[str, str] = field(default_factory=dict)        # id -> element type
+    relationships: list[dict[str, str]] = field(default_factory=list)  # ID, Type, Source, Target
+    views: dict[str, list[str]] = field(default_factory=dict)     # id -> member element ids
+    properties: list[tuple[str, str, str]] = field(default_factory=list)  # owner id, name, value
+    connections: list[Connection] = field(default_factory=list)
+
+    def identifiers(self) -> set[str]:
+        """The model's own, element, relationship and view identifiers."""
+        rels = {r["ID"] for r in self.relationships}
+        return {self.identifier} | set(self.elements) | rels | set(self.views)
+
+
+def read(data: bytes) -> Model:
+    """Read an exchange file. Raises FormatError when it is not well-formed XML."""
+    try:
+        root = ET.fromstring(data)
+    except ET.ParseError as err:
+        raise FormatError([f"not well-formed XML: {err}"]) from None
+    q = f"{{{NS}}}"
+    names = {d.get("identifier", ""): (d.findtext(f"{q}name") or "")
+             for d in root.iter(f"{q}propertyDefinition")}
+    m = Model(identifier=_ident(root))
+
+    def props(owner: ET.Element) -> None:
+        for p in owner.iterfind(f"{q}properties/{q}property"):
+            m.properties.append((_ident(owner), names.get(p.get("propertyDefinitionRef", ""), ""),
+                                 p.findtext(f"{q}value") or ""))
+
+    props(root)
+    for e in root.iterfind(f"{q}elements/{q}element"):
+        m.elements[_ident(e)] = e.get(XSI_TYPE, "")
+        props(e)
+    for r in root.iterfind(f"{q}relationships/{q}relationship"):
+        m.relationships.append({"ID": _ident(r), "Type": r.get(XSI_TYPE, ""),
+                                "Source": r.get("source", ""), "Target": r.get("target", "")})
+        props(r)
+    for v in root.iterfind(f"{q}views/{q}diagrams/{q}view"):
+        vid = _ident(v)
+        props(v)
+        nodes = {_ident(n): n.get("elementRef", "") for n in v.iter(f"{q}node")}
+        m.views[vid] = [ref for ref in nodes.values() if ref]
+        for c in v.iter(f"{q}connection"):
+            m.connections.append(Connection(vid, _ident(c), c.get("relationshipRef", ""),
+                                            nodes.get(c.get("source", ""), ""),
+                                            nodes.get(c.get("target", ""), "")))
+    return m
+
 
 def canonical(data: bytes) -> tuple[str, list[str]]:
     """Return (the file in canonical form, notes about what was normalised away).

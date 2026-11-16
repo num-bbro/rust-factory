@@ -145,16 +145,16 @@ labels *args:
 project repo="num-bbro/rust-factory" title="":
     scripts/setup-project.sh {{repo}} {{title}}
 
-# Build the ArchiMate model: text → build/architecture/model.archimate + report/index.html
+# Check docs/architecture/model.xml, then build build/architecture/model.archimate + report/index.html
 model:
     scripts/archimate/build.sh
 
-# Validate the ArchiMate text model, doc references, canonical form and official schema (fast; reads the relationship rules and schema from the pinned Archi install, does not start Archi).
+# Check docs/architecture/model.xml: canonical form, official schema, relationship rules, IDs, views, doc references (fast; reads the rules and schema from the pinned Archi install, does not start Archi).
 model-check:
     scripts/archimate/build.sh --check
 
-# Put an ArchiMate exchange file in canonical form (ADR 0009); --check only reports. Default file:
-# docs/architecture/model.xml (created by step 2 of #41).
+# Put an ArchiMate exchange file in canonical form and lay out its views (ADR 0009); --check only
+# reports. Default file: docs/architecture/model.xml.
 [positional-arguments]
 model-fmt *args:
     python3 -I scripts/archimate/model_fmt.py "$@"

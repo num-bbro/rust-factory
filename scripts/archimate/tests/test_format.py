@@ -296,7 +296,7 @@ class CommandLine(unittest.TestCase):
             with mock.patch.object(model_fmt, "DEFAULT", Path(tmp) / "model.xml"):
                 code, err = self.run_main("--check")
         self.assertEqual(code, 2)
-        self.assertIn("no such file (the exchange model is created by step 2 of #41", err)
+        self.assertIn("model.xml: no such file", err)
 
 
 if __name__ == "__main__":

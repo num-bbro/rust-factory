@@ -65,7 +65,6 @@ jobs:
           name: architecture-model
           path: |
             build/architecture/model.archimate
-            build/architecture/model.xml
             build/architecture/report/
 
   acceptance:

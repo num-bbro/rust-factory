@@ -4,7 +4,7 @@
   <documentation xml:lang="en">Architecture of the software factory itself: how a business need becomes rolled-out Rust software, with AI agents doing the work and a human holding the gates. Also holds the sample reservation domain the factory builds (epic #17 onward).</documentation>
   <properties>
     <property propertyDefinitionRef="propid-source">
-      <value xml:lang="en">Generated from docs/architecture/model/*.csv by scripts/archimate/build_exchange.py; do not edit the .archimate by hand</value>
+      <value xml:lang="en">docs/architecture/model.xml (ADR 0009), built by scripts/archimate/build.sh; do not edit the .archimate by hand</value>
     </property>
   </properties>
   <elements>
