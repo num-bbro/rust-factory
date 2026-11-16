@@ -441,7 +441,7 @@ def togaf_model(first_views: tuple[str, ...] = ("id-view-two", "id-view-one"),
         "</properties></element>"
         + doc("first", "A. First", "docs/togaf/A-first.md", "A", first_views, narrative)
         + doc("second", "B. Second", "docs/togaf/B-second.md", "B", ("id-view-three",),
-              "Text with `id-app-comp-b`.")
+              "Text with `id-app-comp-b` and `id-app-comp-a`.")
         + doc("third", "C. Third", "docs/togaf/C-third.md", "C", (), "Only `id-app-comp-b`.")
         + extra)
     views = ("<views><diagrams>"
@@ -553,6 +553,9 @@ class TogafPages(unittest.TestCase):
                       "[`id-mot-req-r`](#id-mot-req-r), "
                       "`id-rel-001` and `id-app-comp-zz`.", mdwrap.unwrap(page))
         self.assertIn("```\nSee `id-app-comp-a` here.\n```", page)          # code is kept
+        # On this page, even when an earlier document draws it too; else the first other page.
+        self.assertIn("Text with [`id-app-comp-b`](A-first.md#id-app-comp-b) and "
+                      "[`id-app-comp-a`](#id-app-comp-a).", togaf()[0]["docs/togaf/B-second.md"])
         self.assertIn("Only [`id-app-comp-b`](A-first.md#id-app-comp-b).",
                       togaf()[0]["docs/togaf/C-third.md"])
         # When no document's view draws the element, it has no target and stays code.
