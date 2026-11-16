@@ -22,6 +22,8 @@ just doctor                # every line should show ✔
 gh auth login              # once per machine
 ```
 
+To start a new project from this template, see [docs/new-project.md](docs/new-project.md).
+
 ## Layout
 
 | Path | Purpose |
