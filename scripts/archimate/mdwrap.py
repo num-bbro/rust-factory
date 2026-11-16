@@ -2,21 +2,28 @@
 line (ADR 0009, line breaks: option A); generated pages wrap them again at WIDTH characters so
 they read and diff like hand-written Markdown.
 
-Both directions work on block structure only, line by line:
+Both directions work on block structure only, line by line, and know which list items a line is
+inside (the "base" indent: the content indent of the innermost open list item, else 0):
 
-* never joined, never wrapped: blank lines, fenced code blocks (``` or ~~~, with everything
-  inside), ATX headings, table rows (`|`), block quotes (`>`), HTML lines (`<`), thematic breaks
-  and setext underlines, and a line indented 4 or more spaces that starts a block (indented code);
+* never joined, never wrapped ("raw"): blank lines; fenced code blocks (``` or ~~~ at any indent,
+  with everything up to the closing fence); a line indented 4 or more spaces past the base that
+  does not continue a paragraph (indented code); ATX headings, block quotes (`>`), HTML lines
+  (`<`, and the rest of that HTML block: up to `-->`, `?>`, `]]>`, `>` or the closing `</pre>`,
+  `</script>`, `</style>`, `</textarea>` for those, else up to the next blank line), thematic
+  breaks and setext underlines, each up to 3 spaces past the base; table rows
+  (a line starting with `|`, or a header line followed by a delimiter row such as `--- | ---`,
+  and every line of that table up to the next blank line);
 * a list item (`-`, `*`, `+`, `1.`, `1)`) is one unit with its continuation lines, which are
   written at the item's content indent;
 * any other line starts a paragraph; its continuation lines are written at its first line's indent;
 * a line ending in a backslash (a hard break) ends its unit.
 
 `unwrap(wrap(text)) == text` for every text `unwrap` returns, so a generated page reads back to the
-model's text. Wrapping never changes how the Markdown renders: it breaks only at a single space,
-never before a word that could start a block (a list marker, `#`, `>`, `|`, `<`, a fence, a break
-line) and never after a word ending in a backslash; a word longer than the width (a long URL or
-code span) stays whole on an over-long line.
+model's text. Wrapping never changes how the Markdown renders: raw lines are copied, and a list
+item or paragraph breaks only at a single space, never before a word that could start a block (a
+list marker, `#`, `>`, `|`, `<`, a fence, a break line, a delimiter-row fragment) and never after a
+word ending in a backslash; a word longer than the width (a long URL or code span) stays whole on
+an over-long line.
 
 Pure functions, standard library only.
 """
@@ -27,59 +34,101 @@ import re
 
 WIDTH = 100
 
-_FENCE = re.compile(r" {0,3}(`{3,}|~{3,})")
-_VERBATIM = re.compile(r" {0,3}(#{1,6}(\s|$)|>|<|(=+|-+) *$|([*_])( *\4){2,} *$)|\s*\|")
+_FENCE = re.compile(r"(\s*)(`{3,}|~{3,})(.*)")
+_RAW = re.compile(r" {0,3}(#{1,6}(\s|$)|>|<|(=+|-+) *$|([*_])( *\4){2,} *$)")
 _LIST = re.compile(r"(\s*)([-*+]|\d{1,9}[.)])( +|$)")
 # A word that would start a block (or end a paragraph) if it began a continuation line.
-_BLOCK_WORD = re.compile(r"#{1,6}|[-*+]|\d{1,9}[.)]|[-=_*]+|[>|<].*|`{3}.*|~{3}.*")
-
-
-def _blank(line: str) -> bool:
-    return not line.strip()
+_BLOCK_WORD = re.compile(r"#{1,6}|[-*+]|\d{1,9}[.)]|[-=_*]+|[>|<].*|`{3}.*|~{3}.*|:[-:|]*")
 
 
 def _indent(line: str) -> int:
     return len(line) - len(line.lstrip())
 
 
-def _lines_of(text: str):
-    """Yield (line, kind) with kind "raw" (never joined or wrapped), "list" or "para"."""
-    fence = ""
-    for line in text.split("\n"):
-        m = _FENCE.match(line)
+def _html_end(rel: str) -> re.Pattern[str]:
+    """What ends the HTML block that `rel` (a line starting with `<`) opens."""
+    for start, end in ((r"<(pre|script|style|textarea)\b", r"</(pre|script|style|textarea)>"),
+                       (r"<!--", r"-->"), (r"<\?", r"\?>"), (r"<!\[CDATA\[", r"\]\]>"),
+                       (r"<![A-Za-z]", r">")):
+        if re.match(start, rel.lstrip(), re.IGNORECASE):
+            return re.compile(end, re.IGNORECASE)
+    return re.compile(r"^\s*$")                  # any other HTML block ends at a blank line
+
+
+def _delimiter_row(line: str) -> bool:
+    return "|" in line and "-" in line and re.fullmatch(r"[\s|:-]+", line) is not None
+
+
+def _classify(text: str) -> list[tuple[str, str]]:
+    """Each line with its kind: "raw", "list" (starts an item), "para" (starts a paragraph) or
+    "cont" (continues the item or paragraph above)."""
+    lines = text.split("\n")
+    out: list[tuple[str, str]] = []
+    items: list[int] = []                # content indents of the open list items
+    fence: tuple[str, int, int] | None = None  # fence character, length, indent
+    html: re.Pattern[str] | None = None  # what ends the open HTML block
+    unit = table = False                 # a unit may continue / inside a table
+    for i, line in enumerate(lines):
+        ind = _indent(line)
         if fence:
-            if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence) \
-                    and not line[m.end():].strip():
-                fence = ""
-            yield line, "raw"
-        elif m:
-            fence = m.group(1)
-            yield line, "raw"
-        elif _blank(line) or _VERBATIM.match(line):
-            yield line, "raw"
-        elif _LIST.match(line):
-            yield line, "list"
+            m = _FENCE.fullmatch(line)
+            if m and m.group(2)[0] == fence[0] and len(m.group(2)) >= fence[1] \
+                    and not m.group(3).strip() and ind <= fence[2] + 3:
+                fence = None
+            out.append((line, "raw"))
+            continue
+        if html:
+            if html.search(line):
+                html = None
+            if line.strip():
+                out.append((line, "raw"))
+                continue
+        if not line.strip():
+            out.append((line, "raw"))
+            unit = table = False
+            continue
+        listed = _LIST.match(line)
+        if not unit or listed or _RAW.match(line.lstrip()):
+            while items and items[-1] > ind:     # a new block leaves the items it is not in
+                items.pop()
+        base = items[-1] if items else 0
+        rel = line[min(ind, base):]
+        fenced = _FENCE.match(line)
+        nxt = lines[i + 1] if i + 1 < len(lines) else ""
+        if fenced and not (fenced.group(2)[0] == "`" and "`" in fenced.group(3)):
+            fence = (fenced.group(2)[0], len(fenced.group(2)), ind)
+            kind = "raw"
+        elif table or line.lstrip().startswith("|") or _delimiter_row(nxt):
+            table = True
+            kind = "raw"
+        elif ind >= base + 4:
+            kind = "cont" if unit and not listed else "raw"
+        elif _RAW.match(rel):
+            if rel.lstrip().startswith("<"):
+                end = _html_end(rel)
+                html = None if end.search(rel.lstrip()[1:]) else end
+            kind = "raw"
+        elif listed:
+            spaces = len(listed.group(3))
+            items.append(len(listed.group(0)) if 1 <= spaces <= 4
+                         else len(listed.group(1)) + len(listed.group(2)) + 1)
+            kind = "list"
         else:
-            yield line, "para"
+            kind = "cont" if unit else "para"
+        unit = kind != "raw" and not line.endswith("\\")   # a hard break ends the unit
+        out.append((line, kind))
+    return out
 
 
 def unwrap(text: str) -> str:
     """Join each paragraph and each list item onto one line (continuation lines are stripped and
     joined with one space); everything else is kept as it is."""
     out: list[str] = []
-    open_unit = False                    # the last line of `out` may take continuation lines
-    for line, kind in _lines_of(text):
-        if kind == "para" and open_unit:
+    for line, kind in _classify(text):
+        if kind == "cont":
             out[-1] += " " + line.strip()
-        elif kind == "para" and _indent(line) >= 4:
-            out.append(line)             # indented code: starts no unit
-            open_unit = False
-            continue
         else:
-            out.append(line.rstrip() if kind != "raw" else line)
-            open_unit = kind != "raw"
-        if out[-1].endswith("\\"):
-            open_unit = False            # a hard break ends the unit
+            out.append(line if kind == "raw" else line.rstrip())
     return "\n".join(out)
 
 
@@ -109,12 +158,9 @@ def _wrap_line(line: str, kind: str, width: int) -> list[str]:
 def wrap(text: str, width: int = WIDTH) -> str:
     """Wrap each paragraph line and list-item line at `width` characters."""
     out: list[str] = []
-    open_unit = False
-    for line, kind in _lines_of(text):
-        if kind == "raw" or (kind == "para" and not open_unit and _indent(line) >= 4):
+    for line, kind in _classify(text):
+        if kind == "raw":
             out.append(line)
-            open_unit = False
-            continue
-        out.extend(_wrap_line(line, kind, width))
-        open_unit = not line.endswith("\\")
+        else:
+            out.extend(_wrap_line(line, "list" if kind == "list" else "para", width))
     return "\n".join(out)

@@ -438,13 +438,16 @@ on. Anything not listed here is still decided by the text above, not by the code
 Step 3 (#48) moved the nine ADRs into the model. As with the amendment above, these points refine
 the decision:
 - **Line breaks: option (A)**, decided by the human (see Consequences).
-  `scripts/archimate/mdwrap.py` unwraps and wraps on block structure only: fenced code, tables,
-  headings, block quotes, HTML lines and break lines are never joined or wrapped; a wrap breaks only
-  at a single space, never before a word that would start a block and never after a backslash.
-  `gen_docs.py --check` fails when an ADR's paragraph or list item is spread over several lines.
+  `scripts/archimate/mdwrap.py` unwraps and wraps on block structure only, and knows which list
+  items a line is inside: fenced code (at any indent, also inside nested list items), indented code,
+  tables (with or without a leading `|`), headings, block quotes, HTML blocks and break lines are
+  never joined or wrapped; a wrap breaks only at a single space, never before a word that would
+  start a block and never after a backslash. `gen_docs.py --check` fails when an ADR's paragraph or
+  list item is spread over several lines.
 - **ADR elements** are recognised by their identifier `id-mot-adr-NNNN`; the generator also checks
-  their type (`Constraint`), name (`ADR NNNN: <title>`), the five properties and `File =
-  docs/adr/NNNN-<slug>.md`.
+  their type (`Constraint`), name (`ADR NNNN: <title>`), the five properties, `File =
+  docs/adr/NNNN-<slug>.md`, and that `Status = Superseded by NNNN` and the `supersedes` Association
+  agree.
 - **The header list is derived:** "ArchiMate elements" lists the sources of the Realization and
   Influence relationships to the ADR, sorted by identifier and in backticks; free text after the
   list (as in this ADR's header until step 3) has no place there and moves into the body when it

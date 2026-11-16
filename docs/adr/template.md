@@ -39,7 +39,16 @@ Chosen: **<Option X>**, because <the reasons, tied to the drivers>.
 ## 2. Add the element and its links to `docs/architecture/model.xml`
 Take the next free number `NNNN` and relationship ids `id-rel-NNN`. In the XML, escape `&` as
 `&amp;`, `<` as `&lt;` and `>` as `&gt;`; no CDATA, no comments. The formatter sorts everything,
-so add the snippet anywhere inside `<elements>` and `<relationships>`:
+so add the element anywhere inside `<elements>` and the relationships anywhere inside
+`<relationships>`. The example below is ADR 0010 with three relationships:
+
+- a **Realization** from each core element (component, service, node, …) that implements the
+  decision, here `id-app-comp-application`;
+- an **Influence** from each motivation element (requirement, goal, driver, …) that shaped it,
+  here `id-mot-req-togaf`;
+- only when it replaces an older ADR: a directed **Association** named `supersedes` to that ADR,
+  here 0008; then also set the old ADR's Status to `Superseded by 0010` (`just model-check`
+  fails when the two do not agree).
 
 ```xml
 <element identifier="id-mot-adr-0010" xsi:type="Constraint">
@@ -55,20 +64,18 @@ One line per paragraph …</documentation>
   </properties>
 </element>
 
-<!-- a core element (component, service, node, …) that implements the decision -->
-<relationship identifier="id-rel-NNN" xsi:type="Realization" source="id-app-comp-…" target="id-mot-adr-0010"/>
-<!-- a motivation element (requirement, goal, driver, …) that shaped it -->
-<relationship identifier="id-rel-NNN" xsi:type="Influence" source="id-mot-req-…" target="id-mot-adr-0010"/>
-<!-- only when it replaces an older ADR; then also set that one's Status to "Superseded by 0010" -->
-<relationship identifier="id-rel-NNN" xsi:type="Association" source="id-mot-adr-0010" target="id-mot-adr-0007" isDirected="true">
+<relationship identifier="id-rel-114" xsi:type="Realization" source="id-app-comp-application" target="id-mot-adr-0010"/>
+<relationship identifier="id-rel-115" xsi:type="Influence" source="id-mot-req-togaf" target="id-mot-adr-0010"/>
+<relationship identifier="id-rel-116" xsi:type="Association" source="id-mot-adr-0010" target="id-mot-adr-0008" isDirected="true">
   <name xml:lang="en">supersedes</name>
 </relationship>
 ```
 
 The page's "ArchiMate elements" line lists the sources of the Realization and Influence
 relationships; "Supersedes" / "Superseded by" come from the Association. Status goes `Proposed`
-(open PR) → `Accepted` (PR merged) → `Superseded by NNNN` / `Deprecated`. An accepted ADR is not
-rewritten: changes are appended as a dated `## Amendment YYYY-MM-DD` section.
+(open PR) → `Accepted` (PR merged) → `Superseded by NNNN` / `Deprecated`. The decision of an
+accepted ADR is never rewritten: corrections and as-built notes are appended as a dated
+`## Amendment YYYY-MM-DD` section, and a changed decision needs a new ADR that supersedes it.
 
 ## 3. Format, generate, check
 ```sh

@@ -97,8 +97,9 @@ class Wrap(unittest.TestCase):
             self.assertEqual(len(line.split()), 1, line)
 
     def test_continuation_lines_use_the_content_indent(self):
-        wrapped = mdwrap.wrap("    1. An ordered item inside a nested list with words", 24)
-        self.assertEqual(wrapped.split("\n"), ["    1. An ordered item",
+        wrapped = mdwrap.wrap("- a\n  - b\n    1. An ordered item inside a nested list with words",
+                              24)
+        self.assertEqual(wrapped.split("\n")[2:], ["    1. An ordered item",
                                                "       inside a nested",
                                                "       list with words"])
         self.assertEqual(mdwrap.wrap("1.  two spaces after the marker", 16).split("\n"),
@@ -109,8 +110,46 @@ class Wrap(unittest.TestCase):
                      "aaaa > b", "aaaa | b", "aaaa <div> b", "aaaa ``` b", "aaaa --- b",
                      "aaaa === b", "aaaa ~~~ b"):
             with self.subTest(text=text):
-                self.assertEqual(mdwrap.wrap(text, 6).split("\n"),
+                self.assertEqual(mdwrap.wrap(text, 5).split("\n"),
                                  [" ".join(text.split()[:2]), "b"])
+
+    def test_a_hard_break_ends_the_unit(self):
+        text = "aaaa bbbb\\\ncccc dddd eeee"
+        self.assertEqual(mdwrap.unwrap(text), text)
+        self.assertEqual(mdwrap.wrap(text, 10), "aaaa bbbb\\\ncccc dddd\neeee")
+        self.assertEqual(mdwrap.unwrap(mdwrap.wrap(text, 10)), text)
+
+    def test_code_that_looks_like_a_list_is_never_wrapped(self):
+        step = "- run: cargo test --workspace --all-features --locked -- --test-threads 1 " \
+               "--nocapture --include-ignored now"
+        indented = f"The workflow step:\n\n    {step}\n\nMore text."
+        nested_fence = f"- a\n  - b\n\n    ```yaml\n    {step}\n\n    ```\n\nAfter."
+        deep_fence = f"1. one\n   - two\n\n     ```sh\n     {step}\n     ```"
+        for text in (indented, nested_fence, deep_fence):
+            with self.subTest(text=text):
+                self.assertEqual(mdwrap.unwrap(text), text)
+                self.assertEqual(mdwrap.wrap(text, 40), text)
+
+    def test_a_fence_closes_only_with_a_fence_at_least_as_long(self):
+        text = "````\n```\n- a list-like code line that is long\n````\n- an item that is long"
+        self.assertEqual(mdwrap.wrap(text, 20).split("\n"),
+                         ["````", "```", "- a list-like code line that is long", "````",
+                          "- an item that is", "  long"])
+
+    def test_html_blocks_are_kept_up_to_their_end(self):
+        text = "<pre>\n- a long preformatted line here\n\n- another one\n</pre>\n\nwords and more"
+        self.assertEqual(mdwrap.wrap(text, 12).split("\n")[:6], text.split("\n")[:6])
+        self.assertEqual(mdwrap.wrap(text, 12).split("\n")[6:], ["words and", "more"])
+        comment = "<!--\nsome hidden words\n-->\nvisible words"
+        self.assertEqual(mdwrap.wrap(comment, 8).split("\n"),
+                         ["<!--", "some hidden words", "-->", "visible", "words"])
+
+    def test_blocks_inside_nested_lists_and_pipeless_tables_are_one_line_already(self):
+        for text in ("- a\n  - b\n    > a quote", "- a\n  - b\n    # A heading\n    text",
+                     "a | b\n--- | ---\n1 | 2 with a long cell\n\nAfter the table."):
+            with self.subTest(text=text):
+                self.assertEqual(mdwrap.unwrap(text), text)
+                self.assertEqual(mdwrap.wrap(text, 10).split("\n")[:3], text.split("\n")[:3])
 
     def test_never_breaks_after_a_backslash_or_at_a_double_space(self):
         self.assertEqual(mdwrap.wrap("aaaa\\ bbbb", 6), "aaaa\\ bbbb")
@@ -220,6 +259,45 @@ class Pages(unittest.TestCase):
         _, problems = rendered(adr_model(extra='<element identifier="id-mot-adr-x" '
                                                'xsi:type="Constraint"><name>x</name></element>'))
         self.assertTrue(any("id-mot-adr-NNNN" in p for p in problems), problems)
+
+
+class ModelProblems(unittest.TestCase):
+    def problems(self, old: str, new: str) -> list[str]:
+        xml = adr_model()
+        self.assertIn(old, xml)
+        return rendered(xml.replace(old, new, 1))[1]
+
+    def test_the_valid_model_has_none(self):
+        self.assertEqual(rendered()[1], [])
+
+    def test_file_must_be_the_numbered_page(self):
+        for bad in ("docs/adr/0001-First.md", "docs/adr/0002-first.md", "docs/0001-first.md",
+                    "docs/adr/0001-first.txt"):
+            with self.subTest(file=bad):
+                problems = self.problems(">docs/adr/0001-first.md<", f">{bad}<")
+                self.assertIn(f"File must be docs/adr/0001-<slug>.md, is '{bad}'",
+                              "\n".join(problems))
+
+    def test_an_adr_must_be_a_constraint(self):
+        problems = self.problems('id-mot-adr-0002" xsi:type="Constraint"',
+                                 'id-mot-adr-0002" xsi:type="Requirement"')
+        self.assertTrue(any("must be a Constraint, is a Requirement" in p for p in problems),
+                        problems)
+
+    def test_a_property_given_twice_is_named(self):
+        status = ('<property propertyDefinitionRef="p-status"><value xml:lang="en">Accepted'
+                  "</value></property>")
+        problems = self.problems(status, status + status)
+        self.assertTrue(any("property Status is given more than once" in p for p in problems),
+                        problems)
+
+    def test_status_and_supersedes_link_must_agree(self):
+        problems = self.problems(">Superseded by 0002<", ">Accepted<")
+        self.assertTrue(any("'id-mot-adr-0001': a `supersedes` Association makes its Status "
+                            "'Superseded by 0002'" in p for p in problems), problems)
+        problems = self.problems(">Accepted<", ">Superseded by 0001<")
+        self.assertTrue(any("'id-mot-adr-0002': Status = 'Superseded by 0001' needs" in p
+                            for p in problems), problems)
 
 
 class Check(unittest.TestCase):

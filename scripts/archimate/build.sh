@@ -7,9 +7,9 @@
 #
 # The checks: canonical form (model_fmt.py --check), the official ArchiMate 3.1 schema (xmllint),
 # relationship rules, ID convention, views and their connections, `View` properties, viewpoints,
-# document references, generated ADR pages current (gen_docs.py --check). Archi starts only on a file that passed them, and runs under a timeout of
-# ARCHI_TIMEOUT seconds (default 300): its importer hangs instead of exiting when its own schema
-# check fails.
+# document references, generated ADR pages current (gen_docs.py --check). Archi starts only on
+# a file that passed them, and runs under a timeout of ARCHI_TIMEOUT seconds (default 300): its
+# importer hangs instead of exiting when its own schema check fails.
 #
 # Outputs (not committed; regenerate any time):
 #   build/architecture/model.archimate    open this in Archi
