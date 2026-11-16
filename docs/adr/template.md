@@ -63,6 +63,7 @@ One line per paragraph …</documentation>
     <property propertyDefinitionRef="propid-issue"><value xml:lang="en">#NN</value></property>
     <property propertyDefinitionRef="propid-deciders"><value xml:lang="en">human approver, architect agent</value></property>
     <property propertyDefinitionRef="propid-file"><value xml:lang="en">docs/adr/0010-short-title.md</value></property>
+    <property propertyDefinitionRef="propid-view"><value xml:lang="en">id-view-adr-0010</value></property>
   </properties>
 </element>
 
@@ -71,7 +72,21 @@ One line per paragraph …</documentation>
 <relationship identifier="id-rel-116" xsi:type="Association" source="id-mot-adr-0010" target="id-mot-adr-0008" isDirected="true">
   <name xml:lang="en">supersedes</name>
 </relationship>
+
+<view identifier="id-view-adr-0010" xsi:type="Diagram">
+  <name xml:lang="en">ADR 0010: what the decision applies to</name>
+  <node xsi:type="Element" elementRef="id-mot-adr-0010"/>
+  <node xsi:type="Element" elementRef="id-app-comp-application"/>
+  <node xsi:type="Element" elementRef="id-mot-req-togaf"/>
+</view>
 ```
+
+Every ADR also has a **view** of what it applies to (ADR 0011), added in the same PR: a `view`
+inside `<views><diagrams>` named "ADR NNNN: what the decision applies to", no viewpoint, whose
+members are the ADR plus exactly the sources of its Realization and Influence relationships (no
+Plateaus, no other ADRs), written as bare `<node xsi:type="Element" elementRef="…"/>` lines; the
+formatter lays it out. The ADR names it with the `View` property. `just model-check` fails when an
+ADR has no view or its members differ from the links. The page shows it under the header list.
 
 The page's "ArchiMate elements" line lists the sources of the Realization and Influence
 relationships; "Supersedes" / "Superseded by" come from the Association. Status goes `Proposed`
