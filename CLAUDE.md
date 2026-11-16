@@ -106,10 +106,12 @@ Story/requirement issue → ADR → ArchiMate element id → crate/module → te
 Every artifact should link to its neighbors in this chain.
 
 ## Architecture (TOGAF + ArchiMate), see ADR 0009
-- **Narrative** lives in `docs/togaf/` (one document per ADM phase). **Structure** lives in the
-  ArchiMate exchange model `docs/architecture/model.xml`. Documents refer to elements by ID in
-  backticks (`` `id-bus-proc-review` ``), never duplicating the model. ADRs are `Constraint`
-  elements `id-mot-adr-NNNN`; `docs/adr/*.md` are generated (`just model-docs`), never hand-edited.
+- **Narrative and structure** both live in `docs/architecture/model.xml`: a TOGAF document is a
+  `Deliverable` `id-impl-del-<slug>` (text, ordered `View` properties), an ADR a `Constraint`
+  `id-mot-adr-NNNN`; texts cite IDs in backticks (`` `id-bus-proc-review` ``), never repeating the
+  model. `docs/togaf/*.md`, `docs/adr/*.md` are generated, never hand-edited: edit the element,
+  `just model-fmt`, `model-docs`, `model-check` (`just model` if a view changed);
+  each folder's `template.md` is the guide.
 - Edit the model only in `docs/architecture/model.xml` (Open Group exchange format). In a view,
   list members only, as bare `<node xsi:type="Element" elementRef="id-…"/>`; then run
   `just model-fmt`, which sorts, lays out and normalises it. Never edit files under `build/`.

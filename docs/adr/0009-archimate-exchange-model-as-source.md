@@ -506,3 +506,47 @@ decision:
   `id-view-motivation` 980×387, `id-view-reservation-cancel` 1367×1246; the PNG bytes differed for
   all four, as expected. No font pinning is needed for now. A future difference fails CI, and how to
   handle it is the human's decision.
+## Amendment 2026-11-16: as built in step 5 (TOGAF documents in the model)
+Step 5 (#52) moved the ten TOGAF documents into the model. As with the amendments above, these
+points refine the decision:
+- **Document elements:** one `Deliverable` per document, identifier `id-impl-del-<slug>` (the file
+  name without its phase prefix, e.g. `id-impl-del-architecture-vision`), name = the document's
+  title, properties `File` (`docs/togaf/<name>.md`; the file names did not change) and `Phase`
+  (`Preliminary`, `A`–`H`, `Requirements Management`), once each, and `View`, repeated and ordered.
+  The documentation is the narrative, one line per paragraph and list item (option A). `gen_docs.py`
+  recognises them by their type or an identifier that starts with id-impl-del and checks the
+  identifier, the type, the two properties, the `File` form (not `README.md` or `template.md`, and
+  no two documents with one `File`), each `View` (an existing view, named once) and the text rules
+  of the ADRs. Which views belong to which document is the human's decision; step 5 proposes the
+  mapping in its PR.
+- **The page:** generated note, title, the narrative wrapped at 100 characters, then one section per
+  `View`, in order: the view's name as an `##` heading carrying the anchor `id-view-…`, the view's
+  documentation, its committed image `../architecture/views/<view-id>.png` (alt text: the view's
+  name), and a **catalog table** of the elements the view draws, sorted by identifier: ID, Name,
+  Type, Decisions (the ADRs the element realizes or influences, linked to their pages), Issues
+  (`Issue`), Crate / code (`Crate`, `Code`), Release, Other documents (the other pages whose views
+  draw the element, linked to its row there). The release column appears only when the model has
+  `Plateau` elements (step 6); it lists the Plateaus with an Aggregation or Association to the
+  element. The first catalog row of an element on a page carries the anchor of its identifier, so
+  anchors are stable and unique per page; GitHub keeps `<a id>` anchors (prefixed `user-content-`,
+  which its links resolve).
+- **Identifier links:** in a document's narrative and in a view's documentation shown on its page,
+  an `` `id-…` `` becomes a link when it has a target: an ADR → its page; a view → its section on
+  this page, else on the first other page (in `File` order) that shows it; an element → its row on
+  this page, else on the first other page whose views draw it. Anything else (a relationship, an
+  element no document's view draws, an unknown id) stays plain code; fenced code is never linked.
+  The link to an element's page on the site (step 7) is not there yet; every link is made by one
+  function (`href`), where the site's base URL will plug in.
+- **The index** `docs/togaf/README.md` is generated: ADM phase, document, views (linked to their
+  sections); its introduction lives in `gen_docs.py`. The hand-written index's columns "Main
+  ArchiMate views" (viewpoint names, not views of the model) and "Factory artifacts" are not carried
+  over. `docs/togaf/template.md` is the hand-written guide, exempt from the orphan check like
+  `docs/adr/template.md`.
+- **Checks:** `gen_docs.py --check` also fails for a stale, missing or orphan page under
+  `docs/togaf/` and for a `View` whose image `docs/architecture/views/<view-id>.png` is not
+  committed. Since that image comes from `just model`, `build.sh` skips the image part
+  (`--no-images`) before the build and runs the full check after it; `just model-docs` writes the
+  pages even when an image is missing, then fails naming it. The unknown-ID check of
+  `check_model.py` covers the documents' text as before.
+- **Not changed:** the ADR pages (an ADR's header still lists only its linked elements), the views
+  and their images.
