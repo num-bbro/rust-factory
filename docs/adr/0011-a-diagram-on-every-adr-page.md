@@ -77,4 +77,7 @@ formatter to layout only, and a check keeps the view and the links in step.
 ## Option details
 Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007
 ([`id-mot-adr-0007`](0007-cancel-reservation-by-delete.md)), 8 members in three bands (Motivation,
-Business, Application), rendered at 678 × 826 pixels.
+Business, Application), rendered at 678 × 877 pixels; the ADR box shows its whole title in four
+lines. Since task #73 the automatic layout makes a box grow in height to fit its whole name;
+spreading the ends of the lines that meet on one edge of a box (here the four Realization arrows at
+the bottom of the ADR box) is recorded as follow-up #75.

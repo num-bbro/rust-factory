@@ -1415,7 +1415,7 @@ Chosen: **option 1**, the human's choice of 2026-11-17, because it reuses what t
 - Follow-up: task #71 adds the views of all ADRs and their `View` properties, the page section in `gen_docs.py`, the guard in `check_model.py`, their tests and the rule in `docs/adr/template.md`.
 
 ## Option details
-Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mot-adr-0007`), 8 members in three bands (Motivation, Business, Application), rendered at 678 × 826 pixels.</documentation>
+Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mot-adr-0007`), 8 members in three bands (Motivation, Business, Application), rendered at 678 × 877 pixels; the ADR box shows its whole title in four lines. Since task #73 the automatic layout makes a box grow in height to fit its whole name; spreading the ends of the lines that meet on one edge of a box (here the four Realization arrows at the bottom of the ADR box) is recorded as follow-up #75.</documentation>
       <properties>
         <property propertyDefinitionRef="propid-status">
           <value xml:lang="en">Proposed</value>
@@ -1746,70 +1746,70 @@ Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mo
     <diagrams>
       <view identifier="id-view-adr-0007" xsi:type="Diagram">
         <name xml:lang="en">ADR 0007: what the decision applies to</name>
-        <node identifier="id-view-adr-0007-band-0" xsi:type="Container" x="20" y="20" w="658" h="242">
+        <node identifier="id-view-adr-0007-band-0" xsi:type="Container" x="20" y="20" w="658" h="293">
           <label xml:lang="en">Motivation</label>
           <node identifier="id-view-adr-0007-n-id-mot-out-rebook" xsi:type="Element" elementRef="id-mot-out-rebook" x="168" y="62" w="160" h="55"/>
-          <node identifier="id-view-adr-0007-n-id-mot-adr-0007" xsi:type="Element" elementRef="id-mot-adr-0007" x="58" y="187" w="160" h="55"/>
+          <node identifier="id-view-adr-0007-n-id-mot-adr-0007" xsi:type="Element" elementRef="id-mot-adr-0007" x="58" y="187" w="160" h="106"/>
           <node identifier="id-view-adr-0007-n-id-mot-req-cancel" xsi:type="Element" elementRef="id-mot-req-cancel" x="278" y="187" w="160" h="55"/>
           <node identifier="id-view-adr-0007-n-id-mot-req-cancel-refused" xsi:type="Element" elementRef="id-mot-req-cancel-refused" x="498" y="187" w="160" h="55"/>
         </node>
-        <node identifier="id-view-adr-0007-band-1" xsi:type="Container" x="20" y="302" w="658" h="117">
+        <node identifier="id-view-adr-0007-band-1" xsi:type="Container" x="20" y="353" w="658" h="117">
           <label xml:lang="en">Business</label>
-          <node identifier="id-view-adr-0007-n-id-bus-proc-cancel" xsi:type="Element" elementRef="id-bus-proc-cancel" x="151" y="344" w="160" h="55"/>
+          <node identifier="id-view-adr-0007-n-id-bus-proc-cancel" xsi:type="Element" elementRef="id-bus-proc-cancel" x="151" y="395" w="160" h="55"/>
         </node>
-        <node identifier="id-view-adr-0007-band-2" xsi:type="Container" x="20" y="459" w="658" h="367">
+        <node identifier="id-view-adr-0007-band-2" xsi:type="Container" x="20" y="510" w="658" h="367">
           <label xml:lang="en">Application</label>
-          <node identifier="id-view-adr-0007-n-id-app-intf-reservation-api" xsi:type="Element" elementRef="id-app-intf-reservation-api" x="151" y="501" w="160" h="55"/>
-          <node identifier="id-view-adr-0007-n-id-app-svc-cancel" xsi:type="Element" elementRef="id-app-svc-cancel" x="40" y="626" w="160" h="55"/>
-          <node identifier="id-view-adr-0007-n-id-app-data-schedule" xsi:type="Element" elementRef="id-app-data-schedule" x="262" y="751" w="160" h="55"/>
+          <node identifier="id-view-adr-0007-n-id-app-intf-reservation-api" xsi:type="Element" elementRef="id-app-intf-reservation-api" x="151" y="552" w="160" h="55"/>
+          <node identifier="id-view-adr-0007-n-id-app-svc-cancel" xsi:type="Element" elementRef="id-app-svc-cancel" x="40" y="677" w="160" h="55"/>
+          <node identifier="id-view-adr-0007-n-id-app-data-schedule" xsi:type="Element" elementRef="id-app-data-schedule" x="262" y="802" w="160" h="55"/>
         </node>
         <connection identifier="id-view-adr-0007-c-id-rel-054" xsi:type="Relationship" relationshipRef="id-rel-054" source="id-view-adr-0007-n-id-mot-req-cancel" target="id-view-adr-0007-n-id-mot-out-rebook">
           <bendpoint x="358" y="152"/>
           <bendpoint x="248" y="152"/>
         </connection>
         <connection identifier="id-view-adr-0007-c-id-rel-072" xsi:type="Relationship" relationshipRef="id-rel-072" source="id-view-adr-0007-n-id-app-intf-reservation-api" target="id-view-adr-0007-n-id-app-svc-cancel">
-          <bendpoint x="231" y="591"/>
-          <bendpoint x="120" y="591"/>
+          <bendpoint x="231" y="642"/>
+          <bendpoint x="120" y="642"/>
         </connection>
         <connection identifier="id-view-adr-0007-c-id-rel-075" xsi:type="Relationship" relationshipRef="id-rel-075" source="id-view-adr-0007-n-id-app-svc-cancel" target="id-view-adr-0007-n-id-bus-proc-cancel">
-          <bendpoint x="134" y="599"/>
-          <bendpoint x="138" y="599"/>
-          <bendpoint x="138" y="450"/>
-          <bendpoint x="231" y="450"/>
+          <bendpoint x="134" y="650"/>
+          <bendpoint x="138" y="650"/>
+          <bendpoint x="138" y="501"/>
+          <bendpoint x="231" y="501"/>
         </connection>
         <connection identifier="id-view-adr-0007-c-id-rel-076" xsi:type="Relationship" relationshipRef="id-rel-076" source="id-view-adr-0007-n-id-app-svc-cancel" target="id-view-adr-0007-n-id-mot-req-cancel">
-          <bendpoint x="106" y="583"/>
-          <bendpoint x="140" y="583"/>
-          <bendpoint x="140" y="293"/>
-          <bendpoint x="358" y="293"/>
+          <bendpoint x="106" y="634"/>
+          <bendpoint x="140" y="634"/>
+          <bendpoint x="140" y="344"/>
+          <bendpoint x="358" y="344"/>
         </connection>
         <connection identifier="id-view-adr-0007-c-id-rel-077" xsi:type="Relationship" relationshipRef="id-rel-077" source="id-view-adr-0007-n-id-app-svc-cancel" target="id-view-adr-0007-n-id-mot-req-cancel-refused">
-          <bendpoint x="148" y="607"/>
-          <bendpoint x="363" y="607"/>
-          <bendpoint x="363" y="301"/>
-          <bendpoint x="578" y="301"/>
+          <bendpoint x="148" y="658"/>
+          <bendpoint x="363" y="658"/>
+          <bendpoint x="363" y="352"/>
+          <bendpoint x="578" y="352"/>
         </connection>
         <connection identifier="id-view-adr-0007-c-id-rel-101" xsi:type="Relationship" relationshipRef="id-rel-101" source="id-view-adr-0007-n-id-app-data-schedule" target="id-view-adr-0007-n-id-mot-adr-0007">
-          <bendpoint x="342" y="716"/>
-          <bendpoint x="324" y="716"/>
-          <bendpoint x="324" y="285"/>
-          <bendpoint x="138" y="285"/>
+          <bendpoint x="342" y="767"/>
+          <bendpoint x="324" y="767"/>
+          <bendpoint x="324" y="336"/>
+          <bendpoint x="138" y="336"/>
         </connection>
         <connection identifier="id-view-adr-0007-c-id-rel-102" xsi:type="Relationship" relationshipRef="id-rel-102" source="id-view-adr-0007-n-id-app-intf-reservation-api" target="id-view-adr-0007-n-id-mot-adr-0007">
-          <bendpoint x="231" y="458"/>
-          <bendpoint x="148" y="458"/>
-          <bendpoint x="148" y="309"/>
-          <bendpoint x="152" y="309"/>
+          <bendpoint x="231" y="509"/>
+          <bendpoint x="148" y="509"/>
+          <bendpoint x="148" y="360"/>
+          <bendpoint x="152" y="360"/>
         </connection>
         <connection identifier="id-view-adr-0007-c-id-rel-103" xsi:type="Relationship" relationshipRef="id-rel-103" source="id-view-adr-0007-n-id-app-svc-cancel" target="id-view-adr-0007-n-id-mot-adr-0007">
-          <bendpoint x="92" y="575"/>
-          <bendpoint x="108" y="575"/>
-          <bendpoint x="108" y="277"/>
-          <bendpoint x="124" y="277"/>
+          <bendpoint x="92" y="626"/>
+          <bendpoint x="108" y="626"/>
+          <bendpoint x="108" y="328"/>
+          <bendpoint x="124" y="328"/>
         </connection>
         <connection identifier="id-view-adr-0007-c-id-rel-104" xsi:type="Relationship" relationshipRef="id-rel-104" source="id-view-adr-0007-n-id-bus-proc-cancel" target="id-view-adr-0007-n-id-mot-adr-0007">
-          <bendpoint x="231" y="317"/>
-          <bendpoint x="166" y="317"/>
+          <bendpoint x="231" y="368"/>
+          <bendpoint x="166" y="368"/>
         </connection>
         <connection identifier="id-view-adr-0007-c-id-rel-105" xsi:type="Relationship" relationshipRef="id-rel-105" source="id-view-adr-0007-n-id-mot-out-rebook" target="id-view-adr-0007-n-id-mot-adr-0007">
           <bendpoint x="262" y="160"/>
