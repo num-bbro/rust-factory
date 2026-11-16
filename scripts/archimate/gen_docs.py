@@ -106,6 +106,8 @@ def adrs(model: exchange.Model) -> tuple[list[Adr], list[str]]:
         text = model.documentation.get(ident, "")
         if not text:
             problems.append(f"{where}: has no documentation (the ADR's text)")
+        elif mdwrap.problems(text):
+            problems += [f"{where}: documentation {p}" for p in mdwrap.problems(text)]
         elif mdwrap.unwrap(text) != text:
             problems.append(f"{where}: a paragraph or list item is spread over several lines; "
                             "store each on one line (ADR 0009, line breaks: option A)")
@@ -119,8 +121,12 @@ def superseded(model: exchange.Model, found: list[Adr]) -> list[str]:
              if r["Type"] == "Association" and r["Name"] == SUPERSEDES}
     states = {(a.ident, a.props.get("Status", "")) for a in found
               if a.props.get("Status", "").startswith("Superseded by")}
-    return ([f"ADR element '{i}': Status = '{s}' needs a `{SUPERSEDES}` Association to it from "
-             f"id-mot-adr-{s[-4:]}, and no other" for i, s in sorted(states - links)]
+    def source(status: str) -> str:
+        m = re.fullmatch(r"Superseded by (\d{4})", status)
+        return f"from id-mot-adr-{m.group(1)}" if m else "(Status must be 'Superseded by NNNN')"
+
+    return ([f"ADR element '{i}': Status = '{s}' needs a `{SUPERSEDES}` Association to it "
+             f"{source(s)}, and no other" for i, s in sorted(states - links)]
             + [f"ADR element '{i}': a `{SUPERSEDES}` Association makes its Status '{s}'"
                for i, s in sorted(links - states)])
 

@@ -108,7 +108,7 @@ class Wrap(unittest.TestCase):
     def test_never_starts_a_line_with_a_block_marker(self):
         for text in ("aaaa - b", "aaaa + b", "aaaa * b", "aaaa 1. b", "aaaa 12) b", "aaaa # b",
                      "aaaa > b", "aaaa | b", "aaaa <div> b", "aaaa ``` b", "aaaa --- b",
-                     "aaaa === b", "aaaa ~~~ b"):
+                     "aaaa === b", "aaaa ~~~ b", "aaaa :--- b"):
             with self.subTest(text=text):
                 self.assertEqual(mdwrap.wrap(text, 5).split("\n"),
                                  [" ".join(text.split()[:2]), "b"])
@@ -135,6 +135,40 @@ class Wrap(unittest.TestCase):
         self.assertEqual(mdwrap.wrap(text, 20).split("\n"),
                          ["````", "```", "- a list-like code line that is long", "````",
                           "- an item that is", "  long"])
+
+    def test_a_fence_closes_only_with_a_bare_fence_at_most_3_spaces_in(self):
+        code = "- a list-like code line that is long"
+        for closer in ("``` not a close", "    ```"):
+            with self.subTest(closer=closer):
+                text = f"```\n{closer}\n{code}\n```"
+                self.assertEqual(mdwrap.wrap(text, 20), text)
+
+    def test_a_lazy_line_keeps_its_list_items_open(self):
+        text = "- a\n  - b\nlazy\n    - c is an item that is long"
+        self.assertEqual(mdwrap.wrap(text, 20).split("\n")[3:],
+                         ["    - c is an item", "      that is long"])
+
+    def test_inline_code_with_three_backticks_starts_a_paragraph_not_a_fence(self):
+        text = "```x``` starts a paragraph that is long"
+        self.assertEqual(mdwrap.wrap(text, 20), "```x``` starts a\nparagraph that is\nlong")
+
+    def test_tabs_in_the_indentation_are_refused_and_never_wrapped(self):
+        long = "cargo test --workspace --all-features --locked -- --test-threads 1 --nocapture"
+        for text in (f"Example:\n\n\t{long}\n\nMore.", f"- step\n\n\t\t- run: {long}",
+                     f"Text:\n\n\t- run: {long}\n\tlet x = 1;"):
+            with self.subTest(text=text):
+                self.assertTrue(any("a tab in the indentation; indent with spaces, or use a "
+                                    "fenced code block" in p for p in mdwrap.problems(text)))
+                self.assertEqual(mdwrap.unwrap(text), text)
+                self.assertEqual(mdwrap.wrap(text, 30), text)
+        self.assertEqual(mdwrap.problems(f"```\n\t{long}\n```"), [])
+
+    def test_a_fence_closed_left_of_its_list_item_is_refused(self):
+        text = "1. a\n\n   ```\n   code\n ```\n\n   para"
+        self.assertEqual(mdwrap.problems(text), [
+            "line 5: this fence closes at indent 1, left of its list item's content (indent 3); "
+            "close a fence at the indent it was opened"])
+        self.assertEqual(mdwrap.problems("1. a\n\n   ```\n   code\n   ```"), [])
 
     def test_html_blocks_are_kept_up_to_their_end(self):
         text = "<pre>\n- a long preformatted line here\n\n- another one\n</pre>\n\nwords and more"
@@ -291,13 +325,23 @@ class ModelProblems(unittest.TestCase):
         self.assertTrue(any("property Status is given more than once" in p for p in problems),
                         problems)
 
+    def test_unsupported_markdown_is_named_with_its_element(self):
+        problems = rendered(adr_model("Example:\\n\\n\tcode"))[1]
+        self.assertEqual(problems, ["ADR element 'id-mot-adr-0001': documentation line 3: a tab "
+                                    "in the indentation; indent with spaces, or use a fenced code "
+                                    "block"])
+
     def test_status_and_supersedes_link_must_agree(self):
         problems = self.problems(">Superseded by 0002<", ">Accepted<")
         self.assertTrue(any("'id-mot-adr-0001': a `supersedes` Association makes its Status "
                             "'Superseded by 0002'" in p for p in problems), problems)
         problems = self.problems(">Accepted<", ">Superseded by 0001<")
-        self.assertTrue(any("'id-mot-adr-0002': Status = 'Superseded by 0001' needs" in p
+        self.assertTrue(any("'id-mot-adr-0002': Status = 'Superseded by 0001' needs a "
+                            "`supersedes` Association to it from id-mot-adr-0001" in p
                             for p in problems), problems)
+        problems = self.problems(">Accepted<", ">Superseded by 0001 (partly)<")
+        self.assertTrue(any("(Status must be 'Superseded by NNNN')" in p for p in problems),
+                        problems)
 
 
 class Check(unittest.TestCase):

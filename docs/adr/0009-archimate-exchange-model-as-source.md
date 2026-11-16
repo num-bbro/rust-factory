@@ -442,8 +442,10 @@ the decision:
   items a line is inside: fenced code (at any indent, also inside nested list items), indented code,
   tables (with or without a leading `|`), headings, block quotes, HTML blocks and break lines are
   never joined or wrapped; a wrap breaks only at a single space, never before a word that would
-  start a block and never after a backslash. `gen_docs.py --check` fails when an ADR's paragraph or
-  list item is spread over several lines.
+  start a block and never after a backslash. What it does not support is refused, not guessed at: a
+  tab in the indentation of a line outside fenced code, and a fence closed left of its list item's
+  content. `gen_docs.py --check` fails when an ADR's paragraph or list item is spread over several
+  lines.
 - **ADR elements** are recognised by their identifier `id-mot-adr-NNNN`; the generator also checks
   their type (`Constraint`), name (`ADR NNNN: <title>`), the five properties, `File =
   docs/adr/NNNN-<slug>.md`, and that `Status = Superseded by NNNN` and the `supersedes` Association

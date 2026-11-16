@@ -9,7 +9,9 @@ hand-written file in `docs/adr/`.
 The ADR's text is the element's `documentation`: Markdown, starting at the first `##` heading
 (the title and the header list are generated). Write **each paragraph and each list item on one
 line** (ADR 0009, line breaks: option A); the page wraps them at 100 characters. Fenced code
-blocks, tables and headings are kept as written. Body template:
+blocks, tables and headings are kept as written. Indent with spaces, never tabs; prefer fenced code
+blocks to indented ones, and close a fence at the indent it was opened. `just model-check` refuses
+a tab in the indentation and a fence closed left of its list item. Body template:
 
 ```markdown
 ## Context and problem
