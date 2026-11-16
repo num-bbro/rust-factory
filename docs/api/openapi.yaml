@@ -1,0 +1,79 @@
+openapi: 3.1.0
+info:
+  title: Reservation API
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: The service is up.
+          content:
+            text/plain:
+              schema: { type: string, const: ok }
+  /reservations:
+    post:
+      operationId: book
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start, end]
+              properties:
+                start: { type: integer, minimum: 0, maximum: 65535 }
+                end: { type: integer, minimum: 0, maximum: 65535 }
+      responses:
+        "201":
+          description: Booked.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: integer, minimum: 0 }
+        "400": { $ref: "#/components/responses/Rejection" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "415": { $ref: "#/components/responses/Rejection" }
+        "422":
+          description: An invalid slot (JSON), or a body of the wrong shape (framework, plain text).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+            text/plain:
+              schema: { type: string }
+        "503": { $ref: "#/components/responses/Problem" }
+  /reservations/{id}:
+    delete:
+      operationId: cancel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, minimum: 0 }
+      responses:
+        "204": { description: Cancelled. }
+        "400": { $ref: "#/components/responses/Rejection" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "503": { $ref: "#/components/responses/Problem" }
+components:
+  responses:
+    Problem:
+      description: A business or storage error.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Rejection:
+      description: Rejected by the framework before the handler runs (plain text, ADR 0007).
+      content:
+        text/plain:
+          schema: { type: string }
+  schemas:
+    Problem:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }

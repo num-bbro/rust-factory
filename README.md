@@ -47,6 +47,7 @@ To start a new project from this template, see [docs/new-project.md](docs/new-pr
 | `.github/workflows/ci.yml`, `.github/actions/setup/` | CI: same gates as `just check`, on every PR and on `main`; machines set up by `bootstrap.sh` |
 | `Dockerfile` | Release image: 31 MB, non-root, health check ([ADR 0005](docs/adr/0005-release-image-and-acceptance.md)) |
 | `crates/acceptance-tests/` | Gherkin acceptance tests run against the real container (`just acceptance`) |
+| `docs/api/` | `openapi.yaml`, the hand-written OpenAPI contract of the HTTP API, and the Schemathesis config; checked against the running container by `just acceptance` ([ADR 0010](docs/adr/0010-openapi-specification-spec-first.md)) |
 | `.github/workflows/release.yml` | Tag `vX.Y.Z` → build once → acceptance → GHCR + GitHub Release (`just release X.Y.Z`) |
 | `deploy/` | Hosts per environment, Quadlet unit; `just deploy`, `just promote`, `just deploy-status` ([guide](deploy/README.md)) |
 | `.github/dependabot.yml` | Weekly grouped dependency update PRs |

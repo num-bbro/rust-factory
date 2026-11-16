@@ -63,6 +63,10 @@ anything that needs a password or secret.
 - **Acceptance tests** (`crates/acceptance-tests/tests/features/*.feature`, Gherkin) are the
   executable form of user-story scenarios: add or update the scenarios of the story you implement.
   They test the running container over HTTP only (black-box; enforced). Run: `just acceptance`.
+- **API contract** (ADR 0010): `docs/api/openapi.yaml` is the hand-written source of truth for the
+  HTTP API; `just acceptance` checks the running container against it (Schemathesis, `just
+  api-check`). A PR that changes HTTP behaviour changes the file in the same PR, and its
+  `info.version` when the contract changes (major breaking, minor addition, patch text).
 - **Releases**: bump `[workspace.package] version` in a PR, merge, then `just release X.Y.Z`
   (human decision). The Release workflow builds the image once, accepts it, and publishes it to
   GHCR. After a release, a task adds its Plateau `id-impl-plat-vX-Y-Z` to the model. Never deploy

@@ -86,6 +86,7 @@ acceptance image=(image_name + ":dev"):
     echo "service under test: {{image}} on http://127.0.0.1:$port"
     ACCEPTANCE_BASE_URL="http://127.0.0.1:$port" ACCEPTANCE_REQUIRED=1 \
       cargo test --locked -p acceptance-tests --test acceptance
+    just api-check "http://127.0.0.1:$port"
     echo "container health check (/app healthcheck inside the image):"
     podman healthcheck run "$name" && echo "  healthy"
     echo "graceful shutdown on SIGTERM (what podman stop sends):"
@@ -94,6 +95,12 @@ acceptance image=(image_name + ":dev"):
     podman logs "$name" 2>&1 | grep -q 'stopped' && [[ "$code" == 0 ]] \
       && echo "  stopped cleanly (exit code 0)" \
       || { echo "  did not shut down cleanly (exit code $code)"; podman logs "$name"; exit 1; }
+
+# Check that a running service answers as docs/api/openapi.yaml says (ADR 0010). Fixed seed and
+# deterministic generation: the same requests on every run.
+api-check base_url:
+    st --config-file docs/api/schemathesis.toml run docs/api/openapi.yaml --url {{base_url}} \
+      --seed 1 --generation-deterministic --no-color
 
 # Cut a release: tag vVERSION on an up-to-date, clean main. The Release workflow then builds,
 # accepts and publishes the image. Bump [workspace.package] version in Cargo.toml via a PR first.

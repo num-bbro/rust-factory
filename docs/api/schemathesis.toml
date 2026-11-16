@@ -1,0 +1,9 @@
+[[operations]]
+include-method = "POST"
+include-path = "/reservations"
+checks.positive_data_acceptance.expected-statuses = ["2xx", "409", "422"]
+
+[[operations]]
+include-method = "DELETE"
+include-path = "/reservations/{id}"
+checks.positive_data_acceptance.expected-statuses = ["2xx", "404"]
