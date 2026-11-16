@@ -8,6 +8,13 @@
 - ArchiMate elements: `id-app-comp-application`, `id-app-comp-db`, `id-app-data-schedule`
 - Released in: v0.2.1
 
+## <a id="id-view-adr-0008"></a>Elements this decision applies to
+
+![ADR 0008: what the decision applies to](../architecture/views/id-view-adr-0008.png)
+
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-adr-0008.html)
+
 ## Context and problem
 Both use cases (`BookSlot`, `CancelReservation`) loaded the schedule through the
 `ScheduleRepository` port, changed the copy, and saved it back. The in-memory adapter locked its

@@ -8,6 +8,13 @@
 - ArchiMate elements: `id-bus-proc-accept`, `id-tech-svc-ghcr`, `id-tech-sw-podman`
 - Released in: v0.1.0
 
+## <a id="id-view-adr-0005"></a>Elements this decision applies to
+
+![ADR 0005: what the decision applies to](../architecture/views/id-view-adr-0005.png)
+
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-adr-0005.html)
+
 ## Context and problem
 Unit and HTTP tests prove the code; they do not prove the thing we deploy: the binary's startup,
 configuration, packaging and runtime behaviour. Pilot and production must run exactly what was

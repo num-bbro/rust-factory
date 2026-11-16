@@ -9,6 +9,13 @@
   `id-tech-sw-podman`
 - Released in: v0.2.0
 
+## <a id="id-view-adr-0006"></a>Elements this decision applies to
+
+![ADR 0006: what the decision applies to](../architecture/views/id-view-adr-0006.png)
+
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-adr-0006.html)
+
 ## Context and problem
 A released image (ADR 0005) must reach users safely: first one pilot host, then production after a
 human decision, never leaving a host broken. There are no servers yet, and GitHub's cloud runners

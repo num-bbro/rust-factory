@@ -7,6 +7,13 @@
 - Deciders: product owner, conductor
 - ArchiMate elements: `id-bus-obj-adr`, `id-mot-goal-traceable`
 
+## <a id="id-view-adr-0001"></a>Elements this decision applies to
+
+![ADR 0001: what the decision applies to](../architecture/views/id-view-adr-0001.png)
+
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-adr-0001.html)
+
 ## Context and problem
 In past projects, the reasons behind design choices were lost. Later changes broke assumptions
 nobody remembered. With AI agents writing much of the code, the reasoning would be lost even faster
