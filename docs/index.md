@@ -6,4 +6,5 @@ This site publishes the architecture documentation of the software factory: the 
 - [Architecture decision records](adr/README.md): every significant decision and why it was taken.
 - [Start a new project from this factory](new-project.md): the one-time steps, the prompt for the conductor, and how to work cost-effectively.
 - [Clickable report](report/index.html): the model in Archi's HTML report; click a box to see the element, its relationships and its documentation.
+- [Reservation API contract](api/openapi.yaml): the OpenAPI 3.1 specification, checked against the running service by `just acceptance` (ADR 0010).
 - [The model file](architecture/model.xml): the ArchiMate Model Exchange File, opens in any ArchiMate tool.

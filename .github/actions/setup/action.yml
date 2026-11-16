@@ -13,6 +13,7 @@ runs:
         path: |
           ~/.rustup/toolchains
           ~/.local/share/mise
+          ~/.local/share/uv/python
           ~/.local/opt
         key: tools-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'mise.toml', 'tools/archi.env') }}
 
