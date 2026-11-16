@@ -2,7 +2,8 @@
 # <view-id> <sha256 of the view's rendering inputs> <sha256 of the PNG> <width>x<height>
 # Rendering inputs: the Archi version, the view without documentation and properties, the
 # type and name of each element drawn, the type, name, accessType, isDirected and modifier
-# of each relationship drawn (exact definition: views.py, rendering_inputs).
+# of each relationship drawn, the name of each view referred to (exact definition:
+# views.py, rendering_inputs).
 id-view-layered 0cf65be19229ffade0fcfcdf92d846a51768759f7652567c35c05d227b3f9ee4 37cf0840b1098a25a4c3354f5ffd2e0677cee9f98f92884a1a6e76a92f76a59c 1494x1028
 id-view-lifecycle 7e1803aa7e8040e056572f5b63c52ee1f57e1e356ab3e70f7b5586e4ec00dd5b 9ef2749fe94816a8bab0a364840cf1e5a848240a29b55575e18a00aeb95bee62 1010x432
 id-view-motivation 317ae12c197b3a62fe01f1a19e4a0ce2d36a83b1cfeb98bfb5f6b8955de877e2 bc7bd86ba8dfda5879883196e91465d50ee16a817dd032efdb4016a3d8760f81 980x387

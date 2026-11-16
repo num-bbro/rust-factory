@@ -473,16 +473,19 @@ decision:
 - **Rendering inputs**, whose sha256 is the lock's first hash: one JSON text (keys sorted, compact,
   UTF-8) of the pinned `ARCHI_VERSION`, the view in canonical form without its `documentation` and
   `properties`, `[identifier, type, name]` of each element a node draws, and `[identifier, type,
-  name, accessType, isDirected, modifier]` of each relationship a connection draws. The three
-  relationship attributes go beyond the plan's "type and name" because they change a line's
-  arrowheads or label. Documentation and properties of anything, and other views, do not change a
-  view's hash. `views.py` holds the definition and `scripts/archimate/tests/test_views.py` tests
-  both directions.
+  name, accessType, isDirected, modifier]` of each relationship a connection draws, and, only in a
+  view with view references (`<viewRef ref="…"/>`, possible in a `Layout = manual` view),
+  `[identifier, name]` of each view referred to, because Archi draws such a node with that view's
+  name. The three relationship attributes go beyond the plan's "type and name" because they change a
+  line's arrowheads or label. Documentation and properties of anything, and other views except the
+  name of a view referred to, do not change a view's hash. `views.py` holds the definition and
+  `scripts/archimate/tests/test_views.py` tests both directions.
 - **Only what is out of date is rewritten:** a view keeps its committed image when its lock entry
   has the current input hash and the file has the locked sha256 and size; otherwise the fresh render
   replaces it, so `just model` also repairs an edited, deleted or foreign image, not only a changed
-  view. Images and entries of views no longer in the model, and any other file in the folder, are
-  removed. With nothing changed, a re-run leaves the working tree untouched.
+  view. The image and lock entry of a view that left the model are removed. Any other file in the
+  folder is reported and fails the build, but is never deleted: as with orphan ADR pages, deleting
+  it is the author's step. With nothing changed, a re-run leaves the working tree untouched.
 - **Always Xvfb, and X11:** `build.sh` always runs Archi under `xvfb-run`, with `WAYLAND_DISPLAY`
   removed and `GDK_BACKEND=x11`: in a Wayland session GTK otherwise draws on the session's display
   despite `xvfb-run`, and the PNG bytes then differed from a build without a session. With this,
@@ -492,13 +495,14 @@ decision:
   updating them. It fails, naming the view and saying "run `just model` and commit
   `docs/architecture/views/`", for a view without a lock entry or with another input hash, a missing
   PNG, a PNG whose sha256 or size differs from the lock (also a file that is not a PNG or is
-  truncated), a lock entry or a file without a view, and a lock that is malformed or not in its
-  generated form. It never renders and never compares pixels.
+  truncated), a lock entry without a view or the image of such a view, and a lock that is malformed,
+  unreadable or not in its generated form. Any other file or folder there is reported with "delete
+  it", since `just model` leaves it. It never renders and never compares pixels.
 - **CI dimensions: equal.** The `architecture model` job runs `just model`, fails if that changed
   anything under `docs/architecture/views/`, then runs `just model-dims`, which compares the size of
-  each PNG rendered on CI with `views.lock` (bytes are not compared). On CI (Ubuntu 24.04 under
-  Xvfb, PR #51) all four views had the sizes rendered on the dev machine (Arch Linux under Xvfb):
-  `id-view-layered` 1494×1028, `id-view-lifecycle` 1010×432, `id-view-motivation` 980×387,
-  `id-view-reservation-cancel` 1367×1246; the PNG bytes differed for all four, as expected. No font
-  pinning is needed for now. A future difference fails CI, and how to handle it is the human's
-  decision.
+  each PNG rendered on CI with `views.lock` (bytes are not compared) and fails when it compared
+  nothing. On CI (Ubuntu 24.04 under Xvfb, PR #51) all four views had the sizes rendered on the dev
+  machine (Arch Linux under Xvfb): `id-view-layered` 1494×1028, `id-view-lifecycle` 1010×432,
+  `id-view-motivation` 980×387, `id-view-reservation-cancel` 1367×1246; the PNG bytes differed for
+  all four, as expected. No font pinning is needed for now. A future difference fails CI, and how to
+  handle it is the human's decision.

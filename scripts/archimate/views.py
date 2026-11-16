@@ -6,10 +6,12 @@
   python3 -I views.py --update ROOT REPORT         after an Archi build: take each view's PNG
                                                    from REPORT where the committed one is not
                                                    current, drop images of removed views, write
-                                                   the lock
+                                                   the lock; exit 1 naming any other file in the
+                                                   folder (deleting it is the author's step)
   python3 -I views.py --dims   ROOT REPORT         compare the dimensions of the PNGs in REPORT
                                                    with the lock (CI: bytes differ between
-                                                   machines, dimensions must not)
+                                                   machines, dimensions must not); exit 1 when
+                                                   nothing was compared
 
 ROOT is the repository (default: this script's): the model is ROOT/docs/architecture/model.xml,
 the images and lock are in ROOT/docs/architecture/views/, the Archi version in
@@ -31,9 +33,13 @@ sha256 is the lock's first hash:
 * "elements": [identifier, type, name] of each element a node draws, sorted;
 * "relationships": [identifier, type, name, accessType, isDirected, modifier] of each
   relationship a connection draws, sorted ("" where an attribute is absent): the three attributes
-  change a line's arrowheads or label.
+  change a line's arrowheads or label;
+* "views", only in a view with view references (`<viewRef ref="…"/>`, possible in a
+  `Layout = manual` view): [identifier, name] of each view referred to, sorted; Archi draws such
+  a node with that view's name.
 
-So documentation and properties of anything, and other views, never change a view's hash.
+So documentation and properties of anything, and other views (except the name of a view
+referred to), never change a view's hash.
 Standard library only; the PNG size comes from the file's IHDR header.
 """
 
@@ -67,7 +73,10 @@ LOCK_HEADER = (
     "# <view-id> <sha256 of the view's rendering inputs> <sha256 of the PNG> <width>x<height>\n"
     "# Rendering inputs: the Archi version, the view without documentation and properties, the\n"
     "# type and name of each element drawn, the type, name, accessType, isDirected and modifier\n"
-    "# of each relationship drawn (exact definition: views.py, rendering_inputs).\n")
+    "# of each relationship drawn, the name of each view referred to (exact definition:\n"
+    "# views.py, rendering_inputs).\n")
+STRAY = ("was not written by `just model` (no view of the model, not in views.lock), so the build "
+         "leaves it: delete it")
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 _LINE = re.compile(r"(\S+) ([0-9a-f]{64}) ([0-9a-f]{64}) ([1-9][0-9]*)x([1-9][0-9]*)")
 _Q = f"{{{exchange.NS}}}"
@@ -103,8 +112,13 @@ def rendering_inputs(root: ET.Element, view: ET.Element, archi_version: str) -> 
                    r.get("accessType", ""), r.get("isDirected", ""), r.get("modifier", "")]
                   for r in root.iterfind(f"{_Q}relationships/{_Q}relationship")
                   if _ident(r) in rel_refs)
+    linked = {r.get("ref") for r in view.iter(f"{_Q}viewRef")} - {None}
     payload = {"archi": archi_version, "view": exchange.serialize(drawn),
                "elements": elements, "relationships": rels}
+    if linked:
+        payload["views"] = sorted([_ident(v), v.findtext(f"{_Q}name") or ""]
+                                  for v in root.iterfind(f"{_Q}views/{_Q}diagrams/{_Q}view")
+                                  if _ident(v) in linked)
     return json.dumps(payload, sort_keys=True, ensure_ascii=False,
                       separators=(",", ":")).encode()
 
@@ -133,8 +147,10 @@ def png_size(data: bytes) -> tuple[int, int]:
     """(width, height) from a PNG's IHDR header. Raises ViewsError for anything else."""
     if data[:8] != PNG_SIGNATURE:
         raise ViewsError("not a PNG file (no PNG signature)")
-    if len(data) < 24 or data[12:16] != b"IHDR":
+    if len(data) < 24:
         raise ViewsError("truncated PNG: no IHDR header")
+    if data[12:16] != b"IHDR":
+        raise ViewsError("PNG does not start with an IHDR header")
     width, height = struct.unpack(">II", data[16:24])
     if not width or not height:
         raise ViewsError("PNG header gives a zero width or height")
@@ -203,23 +219,28 @@ def check(hashes: dict[str, str], lock: str | None, images: dict[str, bytes]) ->
                                 f", {LOCK} says {entry.width}x{entry.height}")
     problems += [f"{LOCK} lists '{vid}', which is not a view of the model"
                  for vid in sorted(entries) if vid not in hashes]
-    problems += [f"{VIEWS / name} belongs to no view of the model"
-                 for name in sorted(images) if name not in {f"{vid}.png" for vid in hashes}]
+    strays = [name for name in sorted(images) if name not in {f"{vid}.png" for vid in hashes}]
+    problems += [f"{VIEWS / name} is the image of '{name[:-4]}', which is no longer a view"
+                 for name in strays if name.endswith(".png") and name[:-4] in entries]
     if not problems and lock != format_lock(entries):
         problems.append(f"{VIEWS / LOCK} is not in its generated form (header, order, spacing)")
-    return [f"{p}; {FIX}" for p in problems]
+    return [f"{p}; {FIX}" for p in problems] + [
+        f"{VIEWS / name} {STRAY}" for name in strays
+        if not (name.endswith(".png") and name[:-4] in entries)]
 
 
-def update(hashes: dict[str, str], views: Path, rendered: Path) -> list[str]:
-    """Bring the views folder in step with the model; return what changed (empty: nothing).
+def update(hashes: dict[str, str], views: Path,
+           rendered: Path) -> tuple[list[str], list[str]]:
+    """Bring the views folder in step with the model; return (what changed, problems).
 
     A view keeps its committed image when its lock entry is current (same input hash, and the
-    file has the locked sha256 and size); otherwise the freshly rendered PNG replaces it. Images
-    and entries of views no longer in the model, and any other file in the folder, are removed.
+    file has the locked sha256 and size); otherwise the freshly rendered PNG replaces it. The
+    image and entry of a view the lock lists but the model no longer has are removed. Any other
+    file in the folder is left in place and reported as a problem, like orphan ADR pages.
     """
     views.mkdir(parents=True, exist_ok=True)
     lock_file = views / LOCK
-    old_text = lock_file.read_text(encoding="utf-8") if lock_file.exists() else ""
+    old_text = read_lock(views) or ""
     try:
         old = parse_lock(old_text)
     except ViewsError:
@@ -241,16 +262,18 @@ def update(hashes: dict[str, str], views: Path, rendered: Path) -> list[str]:
         entries[vid] = entry_for(inputs, source.read_bytes())
         shutil.copyfile(source, target)
         changes.append(f"rendered {target}")
+    for vid in sorted(set(old) - set(hashes)):
+        gone = views / f"{vid}.png"
+        if gone.is_file():
+            gone.unlink()
+            changes.append(f"removed {gone} (view '{vid}' left the model)")
     keep = {LOCK} | {f"{vid}.png" for vid in entries}
-    for stray in sorted(views.iterdir()):
-        if stray.name not in keep:
-            stray.unlink()
-            changes.append(f"removed {stray}")
+    problems = [f"{VIEWS / p.name} {STRAY}" for p in sorted(views.iterdir()) if p.name not in keep]
     new_text = format_lock(entries)
     if new_text != old_text:
         lock_file.write_text(new_text, encoding="utf-8")
         changes.append(f"wrote {lock_file}")
-    return changes
+    return changes, problems
 
 
 def dims(lock: str, rendered: Path) -> tuple[list[str], list[str]]:
@@ -268,15 +291,39 @@ def dims(lock: str, rendered: Path) -> tuple[list[str], list[str]]:
         if not same:
             problems.append(f"view '{vid}': rendered {width}x{height} here, but {LOCK} says "
                             f"{entry.width}x{entry.height}")
+    if not lines:
+        problems.append(f"nothing was compared: {LOCK} lists no view with a rendered image")
     return lines, problems
 
 
 # --- command line -------------------------------------------------------------------------------
 
-def _images(views: Path) -> dict[str, bytes]:
-    if not views.is_dir():
-        return {}
-    return {p.name: p.read_bytes() for p in sorted(views.iterdir()) if p.name != LOCK}
+def read_lock(views: Path) -> str | None:
+    """The text of views.lock, or None when there is none. Raises ViewsError when unreadable."""
+    lock_file = views / LOCK
+    if not lock_file.exists():
+        return None
+    try:
+        return lock_file.read_bytes().decode("utf-8")
+    except (OSError, UnicodeDecodeError) as err:
+        raise ViewsError(f"{VIEWS / LOCK} cannot be read ({err}); delete it, then "
+                         f"{FIX}") from None
+
+
+def read_images(views: Path) -> tuple[dict[str, bytes], list[str]]:
+    """(bytes of each file in the views folder other than the lock, problems reading them)."""
+    images, problems = {}, []
+    for p in sorted(views.iterdir()) if views.is_dir() else []:
+        if p.name == LOCK:
+            continue
+        if p.is_dir():
+            problems.append(f"{VIEWS / p.name} is a folder: {STRAY}")
+            continue
+        try:
+            images[p.name] = p.read_bytes()
+        except OSError as err:
+            problems.append(f"{VIEWS / p.name} cannot be read ({err}): {STRAY}")
+    return images, problems
 
 
 def main(argv: list[str]) -> int:
@@ -294,10 +341,14 @@ def main(argv: list[str]) -> int:
     except (OSError, KeyError, exchange.FormatError) as err:
         print(f"views: cannot read the model or the Archi version: {err}", file=sys.stderr)
         return 1
-    lock_file = views / LOCK
     if mode == "--check":
-        lock = lock_file.read_text(encoding="utf-8") if lock_file.is_file() else None
-        problems = check(hashes, lock, _images(views))
+        try:
+            lock = read_lock(views)
+        except ViewsError as err:
+            print(f"  - {err}", file=sys.stderr)
+            return 1
+        images, problems = read_images(views)
+        problems = check(hashes, lock, images) + problems
         for problem in problems:
             print(f"  - {problem}", file=sys.stderr)
         if not problems:
@@ -306,10 +357,12 @@ def main(argv: list[str]) -> int:
     rendered = Path(args[1]) / exchange.read(model).identifier / "images"
     try:
         if mode == "--update":
-            for change in update(hashes, views, rendered):
+            changes, problems = update(hashes, views, rendered)
+            for change in changes:
                 print(f"views: {change}")
-            return 0
-        lines, problems = dims(lock_file.read_text(encoding="utf-8"), rendered)
+            lines = []
+        else:
+            lines, problems = dims(read_lock(views) or "", rendered)
     except (OSError, ViewsError) as err:
         print(f"views: {err}", file=sys.stderr)
         return 1

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import os
 import struct
 import sys
 import tempfile
@@ -31,10 +32,16 @@ def png(width: int, height: int, body: bytes = b"") -> bytes:
     return views.PNG_SIGNATURE + chunk(b"IHDR", ihdr) + chunk(b"tEXt", body) + chunk(b"IEND", b"")
 
 
-def hashes(old: str = "", new: str = "", archi: str = ARCHI) -> dict[str, str]:
-    """Input hashes of the fixture with one text replaced (which must occur in it)."""
-    assert old in CANONICAL, old
-    return views.input_hashes(CANONICAL.replace(old, new, 1).encode(), archi)
+def hashes(old: str = "", new: str = "", archi: str = ARCHI, text: str = CANONICAL) -> dict[str, str]:
+    """Input hashes of the fixture (or `text`) with one text replaced (which must occur in it)."""
+    assert old in text, old
+    return views.input_hashes(text.replace(old, new, 1).encode(), archi)
+
+
+# The fixture with a view reference in the manual view, to the main view.
+VIEW_REF = CANONICAL.replace(
+    "<label>Drawn by hand</label>",
+    '<label>Drawn by hand</label>\n          <viewRef ref="id-view-main"/>', 1)
 
 
 BASE = hashes()
@@ -61,6 +68,21 @@ class RenderingInputs(unittest.TestCase):
                            {"id-view-hand", "id-view-main"})
         self.assertChanges('accessType="Access"', 'accessType="Read"', {"id-view-main"})
         self.assertChanges('isDirected="true"', "", {"id-view-hand", "id-view-main"})
+        influence = CANONICAL.replace('xsi:type="Triggering"', 'xsi:type="Influence" modifier="+"')
+        before, after = hashes(text=influence), hashes('modifier="+"', 'modifier="-"', text=influence)
+        self.assertEqual({vid for vid in before if after[vid] != before[vid]}, {"id-view-main"})
+
+    def test_changes_with_the_name_of_a_view_referred_to(self):
+        before = hashes(text=VIEW_REF)
+        after = hashes("<name xml:lang=\"en\">Main</name>", "<name xml:lang=\"en\">Overview</name>",
+                       text=VIEW_REF)
+        self.assertEqual({vid for vid in before if after[vid] != before[vid]},
+                         {"id-view-hand", "id-view-main"})
+        # Without the reference, renaming the main view changes only the main view.
+        self.assertChanges("<name xml:lang=\"en\">Main</name>",
+                           "<name xml:lang=\"en\">Overview</name>", {"id-view-main"})
+        # A view without view references has no "views" key, so its hash is as before.
+        self.assertEqual(before["id-view-main"], BASE["id-view-main"])
 
     def test_changes_with_the_view_itself(self):
         self.assertChanges('x="464" y="62"', 'x="465" y="62"', {"id-view-main"})
@@ -117,6 +139,11 @@ class PngHeader(unittest.TestCase):
             with self.assertRaisesRegex(views.ViewsError, "truncated"):
                 views.png_size(png(10, 10)[:size])
 
+    def test_rejects_a_png_whose_first_chunk_is_not_ihdr(self):
+        data = png(10, 10)
+        with self.assertRaisesRegex(views.ViewsError, "does not start with an IHDR"):
+            views.png_size(data[:12] + b"tEXt" + data[16:])
+
     def test_rejects_a_zero_size(self):
         with self.assertRaisesRegex(views.ViewsError, "zero"):
             views.png_size(png(0, 10))
@@ -137,7 +164,8 @@ class Lock(unittest.TestCase):
 
     def test_rejects_a_malformed_line(self):
         text = views.format_lock(self.ENTRIES).replace("30x40", "30 by 40")
-        with self.assertRaisesRegex(views.ViewsError, "line 6 is not"):
+        first = views.LOCK_HEADER.count("\n") + 1
+        with self.assertRaisesRegex(views.ViewsError, f"line {first} is not"):
             views.parse_lock(text)
 
     def test_rejects_a_view_listed_twice(self):
@@ -187,8 +215,19 @@ class Check(unittest.TestCase):
     def test_stray_png(self):
         lock, images = committed()
         images["id-view-gone.png"] = png(1, 1)
-        self.assertOneProblem(views.check(BASE, lock, images),
-                              "id-view-gone.png belongs to no view of the model")
+        problems = views.check(BASE, lock, images)
+        self.assertEqual(problems, ["docs/architecture/views/id-view-gone.png " + views.STRAY])
+
+    def test_image_of_a_view_that_left_the_model(self):
+        lock, images = committed()
+        only_main = dict(BASE)
+        del only_main["id-view-hand"]
+        problems = views.check(only_main, lock, images)
+        self.assertEqual(len(problems), 2, problems)
+        self.assertIn("lists 'id-view-hand', which is not a view", problems[0])
+        self.assertIn("id-view-hand.png is the image of 'id-view-hand', which is no longer a view",
+                      problems[1])
+        self.assertTrue(all(p.endswith(FIX) for p in problems))
 
     def test_hand_edited_lock(self):
         lock, images = committed()
@@ -234,16 +273,17 @@ class Update(unittest.TestCase):
             (self.rendered / f"{vid}.png").write_bytes(png(300, 100, body + vid.encode()))
 
     def files(self) -> dict[str, bytes]:
-        return {p.name: p.read_bytes() for p in sorted(self.views.iterdir())}
+        return {p.name: p.read_bytes() for p in sorted(self.views.iterdir()) if p.is_file()}
 
     def test_writes_images_and_lock_then_is_a_no_op(self):
-        self.assertEqual(len(views.update(BASE, self.views, self.rendered)), 3)
+        changes, problems = views.update(BASE, self.views, self.rendered)
+        self.assertEqual((len(changes), problems), (3, []))
         first = self.files()
         self.assertEqual(sorted(first), ["id-view-hand.png", "id-view-main.png", "views.lock"])
         images = {k: v for k, v in first.items() if k != "views.lock"}
         self.assertEqual(views.check(BASE, first["views.lock"].decode(), images), [])
         self.render(b"other machine")                  # bytes differ; inputs did not change
-        self.assertEqual(views.update(BASE, self.views, self.rendered), [])
+        self.assertEqual(views.update(BASE, self.views, self.rendered), ([], []))
         self.assertEqual(self.files(), first)
 
     def test_rewrites_only_the_changed_view(self):
@@ -251,7 +291,7 @@ class Update(unittest.TestCase):
         first = self.files()
         self.render(b"second")
         after = hashes('x="464" y="62"', 'x="465" y="62"')
-        changes = views.update(after, self.views, self.rendered)
+        changes, _ = views.update(after, self.views, self.rendered)
         self.assertEqual([c.split("/")[-1] for c in changes], ["id-view-main.png", "views.lock"])
         now = self.files()
         self.assertEqual(now["id-view-hand.png"], first["id-view-hand.png"])
@@ -261,19 +301,38 @@ class Update(unittest.TestCase):
         views.update(BASE, self.views, self.rendered)
         (self.views / "id-view-hand.png").write_bytes(png(300, 100, b"edited"))
         (self.views / "id-view-main.png").unlink()
-        self.assertEqual(len(views.update(BASE, self.views, self.rendered)), 2)
+        self.assertEqual(len(views.update(BASE, self.views, self.rendered)[0]), 2)
         self.assertEqual(self.files()["id-view-hand.png"],
                          (self.rendered / "id-view-hand.png").read_bytes())
 
-    def test_removes_images_of_removed_views_and_strays(self):
+    def test_removes_the_image_of_a_removed_view(self):
         views.update(BASE, self.views, self.rendered)
-        (self.views / "notes.txt").write_text("x")
         only_main = dict(BASE)
         del only_main["id-view-hand"]
-        views.update(only_main, self.views, self.rendered)
+        changes, problems = views.update(only_main, self.views, self.rendered)
+        self.assertEqual(problems, [])
+        self.assertIn("view 'id-view-hand' left the model", changes[0])
         self.assertEqual(sorted(self.files()), ["id-view-main.png", "views.lock"])
         self.assertEqual(list(views.parse_lock(self.files()["views.lock"].decode())),
                          ["id-view-main"])
+
+    def test_reports_and_keeps_other_files(self):
+        views.update(BASE, self.views, self.rendered)
+        (self.views / "notes.txt").write_text("x")
+        (self.views / "id-view-old.png").write_bytes(png(1, 1))   # not in the lock
+        (self.views / "sub").mkdir()
+        changes, problems = views.update(BASE, self.views, self.rendered)
+        self.assertEqual(changes, [])
+        self.assertEqual(problems, [f"docs/architecture/views/{name} {views.STRAY}"
+                                    for name in ("id-view-old.png", "notes.txt", "sub")])
+        self.assertEqual(sorted(self.files())[:2], ["id-view-hand.png", "id-view-main.png"])
+        self.assertTrue((self.views / "notes.txt").exists() and (self.views / "sub").is_dir())
+
+    def test_fails_on_a_lock_that_is_not_utf8(self):
+        views.update(BASE, self.views, self.rendered)
+        (self.views / "views.lock").write_bytes(b"\xff\xfe")
+        with self.assertRaisesRegex(views.ViewsError, "views.lock cannot be read .*delete it"):
+            views.update(BASE, self.views, self.rendered)
 
     def test_fails_when_archi_rendered_no_image(self):
         (self.rendered / "id-view-main.png").unlink()
@@ -297,6 +356,15 @@ class Dims(unittest.TestCase):
             self.assertEqual(problems, ["view 'id-view-main': rendered 642x600 here, but "
                                         "views.lock says 640x600"])
 
+    def test_fails_when_nothing_was_compared(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lock, _ = committed()
+            for text in (lock, views.LOCK_HEADER, ""):     # no rendered images; empty locks
+                lines, problems = views.dims(text, Path(tmp))
+                self.assertEqual(lines, [])
+                self.assertIn("nothing was compared: views.lock lists no view with a rendered "
+                              "image", problems)
+
 
 class CommandLine(unittest.TestCase):
     def run_main(self, *argv: str) -> tuple[int, str]:
@@ -308,17 +376,51 @@ class CommandLine(unittest.TestCase):
         self.assertEqual(self.run_main()[0], 2)
         self.assertEqual(self.run_main("--update", ".")[0], 2)
 
+    def repository(self, tmp: str) -> Path:
+        """A repository with the fixture model and a rendered report, no views folder yet."""
+        root = Path(tmp)
+        (root / "docs/architecture").mkdir(parents=True)
+        (root / "docs/architecture/model.xml").write_text(CANONICAL, encoding="utf-8")
+        (root / "tools").mkdir()
+        (root / "tools/archi.env").write_text(f"ARCHI_VERSION={ARCHI}\n", encoding="utf-8")
+        images = root / "report/id-model-fixture/images"
+        images.mkdir(parents=True)
+        for vid in BASE:
+            (images / f"{vid}.png").write_bytes(png(50, 40))
+        return root
+
+    def test_bad_lock_or_folder_ends_in_a_message(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.repository(tmp)
+            report = str(root / "report")
+            self.assertEqual(self.run_main("--update", tmp, report)[0], 0)
+            lock = root / "docs/architecture/views/views.lock"
+            text = lock.read_bytes()
+            lock.write_bytes(b"\xff" + text)
+            for argv in (("--check", tmp), ("--update", tmp, report), ("--dims", tmp, report)):
+                code, err = self.run_main(*argv)
+                self.assertEqual(code, 1, argv)
+                self.assertIn("views.lock cannot be read", err)
+                self.assertIn("delete it, then run `just model`", err)
+            lock.write_bytes(text)
+            if os.geteuid() != 0:                        # root can read a mode-000 file
+                lock.chmod(0)
+                code, err = self.run_main("--check", tmp)
+                lock.chmod(0o644)
+                self.assertEqual(code, 1)
+                self.assertIn("views.lock cannot be read", err)
+            (root / "docs/architecture/views/sub").mkdir()
+            code, err = self.run_main("--check", tmp)
+            self.assertEqual(code, 1)
+            self.assertIn("views/sub is a folder: was not written by `just model`", err)
+            code, err = self.run_main("--update", tmp, report)
+            self.assertEqual(code, 1)
+            self.assertIn("views/sub was not written by `just model`", err)
+
     def test_check_update_and_dims_on_a_repository(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / "docs/architecture").mkdir(parents=True)
-            (root / "docs/architecture/model.xml").write_text(CANONICAL, encoding="utf-8")
-            (root / "tools").mkdir()
-            (root / "tools/archi.env").write_text(f"ARCHI_VERSION={ARCHI}\n", encoding="utf-8")
+            root = self.repository(tmp)
             images = root / "report/id-model-fixture/images"
-            images.mkdir(parents=True)
-            for vid in BASE:
-                (images / f"{vid}.png").write_bytes(png(50, 40))
             code, err = self.run_main("--check", tmp)
             self.assertEqual(code, 1)
             self.assertIn("views.lock is missing", err)
