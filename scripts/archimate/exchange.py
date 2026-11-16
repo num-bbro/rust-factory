@@ -213,13 +213,18 @@ class Model:
 
 def _read_nodes(m: Model, view: str, holder: ET.Element, parent: str, q: str) -> None:
     for n in holder.iterfind(f"{q}node"):
-        box = [int(n.get(a) or 0) for a in ("x", "y", "w", "h")]
+        try:
+            box = [int(n.get(a) or 0) for a in ("x", "y", "w", "h")]
+        except ValueError:
+            raise FormatError([f"view '{view}': node '{_ident(n)}' has a bound that is not a whole "
+                               "number (x, y, w and h are integers)"]) from None
         m.nodes.append(Node(view, _ident(n), n.get("elementRef", ""), *box, parent))
         _read_nodes(m, view, n, _ident(n), q)
 
 
 def read(data: bytes) -> Model:
-    """Read an exchange file. Raises FormatError when it is not well-formed XML."""
+    """Read an exchange file. Raises FormatError when it is not well-formed XML or a node has a
+    bound that is not an integer."""
     try:
         root = ET.fromstring(data)
     except ET.ParseError as err:

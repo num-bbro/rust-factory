@@ -76,12 +76,15 @@ def manual_views(model: exchange.Model) -> list[str]:
     for vid in [o for o, name, value in model.properties
                 if (name, value) == exchange.MANUAL_LAYOUT and o in model.views]:
         members = set(model.views[vid])
-        drawn = {c.relationship for c in model.connections if c.view == vid and c.relationship}
+        shown = [c.relationship for c in model.connections if c.view == vid and c.relationship]
+        drawn = set(shown)
         expected = {r["ID"]: r for r in model.relationships
                     if r["Source"] in members and r["Target"] in members}
         problems += [f"view '{vid}' (Layout = manual): relationship {rid} joins '{r['Source']}' and "
                      f"'{r['Target']}', both drawn, but it has no connection"
                      for rid, r in sorted(expected.items()) if rid not in drawn]
+        problems += [f"view '{vid}' (Layout = manual): relationship {rid} is drawn more than once"
+                     for rid in sorted({r for r in shown if shown.count(r) > 1})]
         problems += [f"view '{vid}' (Layout = manual): the connection of relationship {rid} is drawn, "
                      "but the model has no such relationship between two members of the view"
                      for rid in sorted(drawn - set(expected))]

@@ -179,11 +179,63 @@ class ManualViews(unittest.TestCase):
             "view 'id-view-releases' (Layout = manual): node 'id-view-releases-n-id-impl-plat-v0-2-1'"
             " (1500,400 160x55) is not inside its parent 'id-view-releases-band-1' (20,177 1080x117)"])
 
+    def releases(self, x: int = 920, y: int = 219, w: int = 160, h: int = 55) -> exchange.Model:
+        text = REAL_MODEL.read_text(encoding="utf-8")
+        old = 'elementRef="id-impl-plat-v0-2-1" x="920" y="219" w="160" h="55"'
+        self.assertIn(old, text)
+        return exchange.read(text.replace(
+            old, f'elementRef="id-impl-plat-v0-2-1" x="{x}" y="{y}" w="{w}" h="{h}"').encode())
+
+    def test_a_box_exactly_flush_with_its_parent_passes(self):
+        # band-1 is 20,177 1080x117: right edge 1100, bottom edge 294
+        self.assertEqual(check_model.manual_views(self.releases(x=940, y=239)), [])
+        self.assertEqual(check_model.manual_views(self.releases(x=20, y=177, w=1080, h=117)), [])
+
+    def test_a_box_one_pixel_over_any_edge_fails(self):
+        for what, box in (("right", dict(x=941, y=239)), ("bottom", dict(x=940, y=240)),
+                          ("left", dict(x=19, y=239)), ("top", dict(x=940, y=176))):
+            with self.subTest(edge=what):
+                problems = check_model.manual_views(self.releases(**box))
+                self.assertEqual(len(problems), 1, problems)
+                self.assertIn("node 'id-view-releases-n-id-impl-plat-v0-2-1'", problems[0])
+                self.assertIn("is not inside its parent 'id-view-releases-band-1'", problems[0])
+
     def test_an_automatic_view_is_not_checked(self):
-        model = exchange.read(CANONICAL)
+        model = exchange.read(REAL_MODEL.read_bytes())
         model.properties = [p for p in model.properties if p[1:] != ("Layout", "manual")]
-        model.connections = []
         self.assertEqual(check_model.manual_views(model), [])
+        model.connections = [c for c in model.connections if c.view != "id-view-releases"]
+        node = next(n for n in model.nodes
+                    if n.identifier == "id-view-releases-n-id-impl-plat-v0-2-1")
+        node.x, node.y = 1500, 400
+        self.assertEqual(check_model.manual_views(model), [])
+
+    def test_a_relationship_drawn_twice_is_reported(self):
+        model = exchange.read(CANONICAL)
+        model.connections.append(next(c for c in model.connections if c.view == "id-view-hand"))
+        self.assertEqual(check_model.manual_views(model), [
+            "view 'id-view-hand' (Layout = manual): relationship id-rel-005 is drawn more than once"])
+
+    def test_a_bound_that_is_not_a_whole_number_is_a_clear_error(self):
+        text = CANONICAL.decode().replace('x="200" y="10"', 'x="2.5" y="10"', 1)
+        with self.assertRaises(exchange.FormatError) as err:
+            exchange.read(text.encode())
+        self.assertEqual(err.exception.problems, [
+            "view 'id-view-hand': node 'hand-n2' has a bound that is not a whole number "
+            "(x, y, w and h are integers)"])
+
+    def test_main_exits_non_zero_on_a_manual_view_problem(self):
+        out, err = io.StringIO(), io.StringIO()
+        text = CANONICAL.decode().replace('xsi:type="Relationship" relationshipRef="id-rel-005"',
+                                          'xsi:type="Line"', 1)
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "model.xml").write_text(text, encoding="utf-8")
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), \
+                    mock.patch.object(xsd_check, "viewpoints", return_value={"Layered"}):
+                code = check_model.main([str(Path(tmp) / "model.xml"), tmp, "archi"])
+        self.assertEqual(code, 1)
+        self.assertIn("view 'id-view-hand' (Layout = manual): relationship id-rel-005", err.getvalue())
+        self.assertNotIn("manual views", out.getvalue())
 
 
 class Viewpoints(unittest.TestCase):
