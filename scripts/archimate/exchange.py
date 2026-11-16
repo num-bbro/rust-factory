@@ -87,15 +87,16 @@ def text_el(parent: ET.Element, tag: str, text: str) -> None:
 
 
 def add_diagram(view: ET.Element, view_id: str, refs: list[str], types: dict[str, str],
-                rels: list[dict[str, str]]) -> None:
+                names: dict[str, str], rels: list[dict[str, str]]) -> None:
     """Append the laid-out nodes and connections of one view to `view`.
 
-    `refs` are the member element ids, `types` maps each to its element type, `rels` are the
-    model's relationships as {"ID", "Type", "Source", "Target"}; a relationship is drawn when both
-    of its ends are members. Node and connection identifiers derive from the view and element or
-    relationship ids, so the same input always gives the same output.
+    `refs` are the member element ids, `types` and `names` map each to its element type and name
+    (a box is as tall as its name needs), `rels` are the model's relationships as {"ID", "Type",
+    "Source", "Target"}; a relationship is drawn when both of its ends are members. Node and
+    connection identifiers derive from the view and element or relationship ids, so the same
+    input always gives the same output.
     """
-    lay = layout.layout(refs, types, rels)
+    lay = layout.layout(refs, types, names, rels)
     node_id = {ref: f"{view_id}-n-{ref}" for ref in refs}
 
     def xywh(x: float, y: float, w: float, h: float) -> dict[str, str]:
@@ -306,6 +307,7 @@ class _Canonicaliser:
         self.prop_defs: dict[str, tuple[str, str, str, str]] = {}  # new id -> name, type, doc, old id
         self.used: set[str] = set()
         self.types: dict[str, str] = {}                  # element id -> element type
+        self.names: dict[str, str] = {}                  # element id -> element name
         self.rels: list[dict[str, str]] = []
 
     def problem(self, where: str, message: str) -> None:
@@ -451,6 +453,7 @@ class _Canonicaliser:
             o.set(XSI_TYPE, a.get(XSI_TYPE, ""))
             self.named(o, self.children(e, where, ("name", "documentation", "properties")), where,
                        required=True)
+            self.names[a.get("identifier", "")] = o.findtext("name", "")
         return out
 
     def relationships(self, holder: ET.Element) -> ET.Element:
@@ -613,7 +616,8 @@ class _Canonicaliser:
                                     "cannot place; set the view property Layout = manual")
         if len(self.problems) > problems_before or not members:
             return                                       # an empty view is valid: no nodes
-        add_diagram(out, vid, members, {r: self.types[r] for r in members}, self.rels)
+        add_diagram(out, vid, members, {r: self.types[r] for r in members},
+                    {r: self.names[r] for r in members}, self.rels)
 
     def members(self, node: ET.Element, vid: str, where: str, refs: list[str]) -> None:
         """Collect the element ids of a (bare or formatted) automatic view."""
