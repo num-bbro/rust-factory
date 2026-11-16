@@ -2,10 +2,10 @@
 # Dependabot proposes updates. See docs/adr/0005-release-image-and-acceptance.md.
 
 # --- build stage: compile with the same Rust version as rust-toolchain.toml -----------------
-FROM docker.io/library/rust:1.99-slim-trixie@sha256:e97df055c54a05160e7c67ba3b2963de6ddb95903911baf8922dbcd1b394f698 AS build
+FROM docker.io/library/rust:1.100-slim-trixie@sha256:e9d95b74296f7126a83ae3d041aeaba1ff4c478f13abc5cc034fcf7c131c3d4a AS build
 WORKDIR /src
 COPY . .
-# The image already contains Rust 1.99; drop the toolchain file so rustup does not download the
+# The image already contains Rust 1.100; drop the toolchain file so rustup does not download the
 # extra components (rustfmt, clippy, llvm-tools) it lists for development.
 RUN rm -f rust-toolchain.toml
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
