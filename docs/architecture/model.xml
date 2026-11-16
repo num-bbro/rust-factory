@@ -1362,7 +1362,7 @@ Spike of task #61 (2026-11-16): Schemathesis 4.33.4, the latest stable release, 
 - **Per-operation configuration:** with two `[[operations]]` entries (`include-method`, `include-path`, `checks.positive_data_acceptance.expected-statuses`) passed by `--config-file`, the run passed (836 cases); leaving out `404` for `DELETE` made the check fail (ST202), so the scoping is applied.</documentation>
       <properties>
         <property propertyDefinitionRef="propid-status">
-          <value xml:lang="en">Proposed</value>
+          <value xml:lang="en">Accepted</value>
         </property>
         <property propertyDefinitionRef="propid-date">
           <value xml:lang="en">2026-11-16</value>

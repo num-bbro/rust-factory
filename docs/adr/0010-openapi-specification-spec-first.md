@@ -1,7 +1,7 @@
 <!-- Generated from docs/architecture/model.xml (id-mot-adr-0010) by `just model-docs`. Do not edit: change the model, see docs/adr/template.md. -->
 # 0010. OpenAPI specification, spec-first, checked against the running service
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-16
 - Issue: #60 (task #61)
 - Deciders: human approver (approach chosen on 2026-11-16, change request #60), architect agent
