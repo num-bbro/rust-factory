@@ -145,11 +145,11 @@ labels *args:
 project repo="num-bbro/rust-factory" title="":
     scripts/setup-project.sh {{repo}} {{title}}
 
-# Check docs/architecture/model.xml, then build build/architecture/model.archimate + report/index.html
+# Check docs/architecture/model.xml, build build/architecture/model.archimate + report/index.html (Archi under Xvfb), then update the committed view images docs/architecture/views/*.png and views.lock where a view changed. Commit docs/architecture/views/ afterwards.
 model:
     scripts/archimate/build.sh
 
-# Check docs/architecture/model.xml: canonical form, official schema, relationship rules, IDs, views, doc references, generated ADR pages current (fast; reads the rules and schema from the pinned Archi install, does not start Archi).
+# Check docs/architecture/model.xml: canonical form, official schema, relationship rules, IDs, views, doc references, generated ADR pages and view images current (fast; reads the rules and schema from the pinned Archi install, does not start Archi).
 model-check:
     scripts/archimate/build.sh --check
 
@@ -166,6 +166,10 @@ model-fmt *args:
 # Unit tests of the architecture model scripts (standard-library unittest, fixtures in tests/).
 model-test:
     python3 -I -m unittest discover -s scripts/archimate/tests -t scripts/archimate/tests
+
+# Compare the dimensions of the view PNGs rendered by the last `just model` (build/) with docs/architecture/views/views.lock; CI runs it after its own build.
+model-dims:
+    python3 -I scripts/archimate/views.py --dims . build/architecture/report
 
 # Build the model, then open the HTML report in your browser.
 model-report: model

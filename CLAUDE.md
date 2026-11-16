@@ -112,18 +112,18 @@ Every artifact should link to its neighbors in this chain.
   elements `id-mot-adr-NNNN`; `docs/adr/*.md` are generated (`just model-docs`), never hand-edited.
 - Edit the model only in `docs/architecture/model.xml` (Open Group exchange format). In a view,
   list members only, as bare `<node xsi:type="Element" elementRef="id-…"/>`; then run
-  `just model-fmt`, which sorts, lays out and normalises the file. Never edit files under `build/`.
+  `just model-fmt`, which sorts, lays out and normalises it. Never edit files under `build/`.
 - ID convention: `id-<layer>-<kind>-<slug>`, with layer one of `mot`, `str`, `bus`, `app`, `tech`,
   `impl`, e.g. `id-app-comp-booking-api`. Relationships: `id-rel-NNN`. Views: `id-view-<slug>`.
   The model itself: `id-model-<slug>`. IDs never change once merged; rename the Name instead.
 - Types use ArchiMate 3.2 names (`BusinessProcess`, `ApplicationComponent`, `Serving`, …); an
-  `Access` states its `accessType`. Only use relationships that ArchiMate allows between the two
+  `Access` states its `accessType`. Only use relationships ArchiMate allows between the two
   types: `just model-check` checks each against the pinned Archi's rules and names the allowed ones.
 - Run `just model-check` after every model or doc change (fast: form, schema, rules, IDs,
-  references, pages), and `just model` to build the `.archimate` and HTML report the human reviews.
-- Views are laid out automatically: you only choose *which* elements a view shows. Keep views
-  focused (about 25 elements at most; split a crowded one). Model "is part of" with
-  Composition/Aggregation inside the same layer: drawn as nesting, which keeps views readable.
+  references, pages, images). If it flags a view image, run `just model` (`.archimate`, HTML
+  report, view PNGs) and commit `docs/architecture/views/`; never hand-edit its PNGs or lock.
+- Views are laid out automatically; you only choose *which* elements (about 25 at most; split a
+  crowded view). Model "is part of" with Composition/Aggregation in one layer: drawn as nesting.
 - Any PR that changes behaviour across a layer boundary, adds a component, or makes a significant
   choice updates the model and adds an ADR (`docs/adr/template.md`). Architecture changes need
   human sign-off (gate 1).

@@ -21,7 +21,8 @@ or approve. The human makes the merge decision; your job is to make that decisio
    - **Architecture**: layering (`domain` pure, dependencies inward), no gate weakened (lints,
      deny, coverage, architecture tests), new significant decisions have an ADR element in
      `docs/architecture/model.xml` with its generated page (no hand edits in `docs/adr/*.md`),
-     model and docs updated when structure changed.
+     model and docs updated when structure changed, and a changed view comes with its image and
+     `views.lock` entry from `just model` (never hand-edited; `just model-check` compares them).
    - **Traceability**: PR body has `Closes #`, model used, complexity, escalation info.
    - **Simplicity**: dead code, duplication, needless abstraction.
 3. Run the gates on the PR branch without modifying it: `git fetch origin <branch>` then, in a

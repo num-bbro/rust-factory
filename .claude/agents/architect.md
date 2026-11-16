@@ -26,8 +26,10 @@ not application code. Follow the "Architecture" section of `CLAUDE.md` and ADR 0
      with Status `Proposed`, its text one line per paragraph, linked by Realization / Influence
      (`docs/adr/template.md`); then `just model-docs` writes the page and the index. Never edit
      `docs/adr/*.md` by hand.
-4. Validate: `just model-check`, then `just model` and look at the generated view images under
-   `build/architecture/report/` for readability.
+4. Validate: `just model-check`, then `just model` and look at the view images in
+   `docs/architecture/views/` for readability. `just model` rewrites the image and `views.lock`
+   entry of every view the change altered: commit `docs/architecture/views/` with the model;
+   never edit the images or the lock by hand.
 5. Deliver: commit `docs(architecture): ... (#<N>)`, push, PR with the template; list in the PR
    body which elements, views and ADRs changed and **what the human should look at in Archi**.
    Label the issue `needs-human` (architecture sign-off is a human gate).
