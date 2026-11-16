@@ -9,9 +9,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import layout  # noqa: E402
-from layout import (BAND_PAD, CHARS_PER_LINE, H, LINE_H, PAR_PAD, PAR_TITLE, ROW_GAP,  # noqa: E402
+from layout import (BAND_PAD, CHARS_PER_LINE, EXTRA, H, LINE, PAR_PAD, PAR_TITLE, ROW_GAP,  # noqa: E402
                     box_height, name_lines)
 
+TWO_LINES = "Customers can free slots"                          # 13 / 10 characters
 THREE_LINES = "Customers can free slots they no longer need"   # 13 / 15 / 14 characters
 FIVE_LINES = "ADR 0005: Release image built once, accepted, then promoted unchanged"
 
@@ -93,21 +94,22 @@ class NameLines(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertGreaterEqual(max(3, name_lines(name)), drawn)
 
-    def test_names_archi_draws_in_three_lines_keep_the_standard_height(self):
-        for name, drawn in ARCHI_LINES:
-            if drawn <= 3:
-                with self.subTest(name=name):
-                    self.assertEqual(box_height(name), H)
-
 
 class BoxHeight(unittest.TestCase):
-    def test_up_to_three_lines_keep_the_standard_height(self):
+    def test_one_and_two_lines_keep_the_standard_height(self):
         self.assertEqual(box_height("Customer"), H)
-        self.assertEqual(box_height(THREE_LINES), H)
+        self.assertEqual(box_height(TWO_LINES), H)
 
-    def test_each_further_line_adds_one_line_height(self):
-        self.assertEqual(box_height(THREE_LINES + " now"), H + LINE_H)
-        self.assertEqual(box_height(FIVE_LINES), H + 2 * LINE_H)
+    def test_three_lines_and_more_use_the_fitted_formula(self):
+        self.assertEqual(box_height(THREE_LINES), EXTRA + 3 * LINE)
+        self.assertEqual(box_height(THREE_LINES + " now"), EXTRA + 4 * LINE)
+        self.assertEqual(box_height(FIVE_LINES), EXTRA + 5 * LINE)
+
+    def test_height_never_decreases_as_lines_grow(self):
+        heights = [box_height(" ".join(["x" * CHARS_PER_LINE] * n)) for n in range(1, 9)]
+        self.assertEqual(heights, sorted(heights))
+        self.assertEqual(heights[2], 63)
+        self.assertEqual(heights[3], 80)
 
 
 def lay(names: dict[str, str], types: dict[str, str],
@@ -138,8 +140,8 @@ class Layout(unittest.TestCase):
     def test_a_view_with_only_short_names_is_unchanged(self):
         before = lay(SHORT, TYPES, RELS)
         self.assertTrue(all(b.h == H for b in before.boxes.values() if not b.children))
-        three = dict.fromkeys(TYPES, THREE_LINES)
-        self.assertEqual(geometry(lay(three, TYPES, RELS)), geometry(before))
+        two = dict.fromkeys(TYPES, TWO_LINES)
+        self.assertEqual(geometry(lay(two, TYPES, RELS)), geometry(before))
 
     def test_a_row_takes_the_height_of_its_tallest_box(self):
         short = lay(SHORT, TYPES, RELS)

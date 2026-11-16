@@ -66,12 +66,12 @@ LINE_STEP = 8                  # spacing between parallel lines
 # Name wrapping, calibrated against Archi's rendering (Archi version in tools/archi.env) of every
 # element name in the model in a W-wide box: Archi centres the name at the top and wraps it at
 # word breaks (and after a hyphen) by pixel width: a line holds 9 ("MMMM MMMM") to 38 ("iii…")
-# characters, usually 16 to 20; lines are 17 pixels apart and three fill an H-tall box.
+# characters, usually 16 to 20; lines are 17 pixels apart and two fill an H-tall box.
 # CHARS_PER_LINE is the largest value for which the estimate is never smaller than what Archi
 # draws (counting the three lines any box shows), and the only one that also keeps every name of
-# up to three Archi lines at height H (tests/test_layout.py, ARCHI_LINES).
+# up to three Archi lines (tests/test_layout.py, ARCHI_LINES).
 CHARS_PER_LINE = 17
-LINE_H, TEXT_PAD = 17, 4       # height of a line of the name / room above and below it
+EXTRA, LINE = 12, 17           # box height from 3 lines up: EXTRA + LINE * lines (issue #77)
 
 
 @dataclass
@@ -161,8 +161,10 @@ def name_lines(name: str) -> int:
 
 
 def box_height(name: str) -> int:
-    """Height of an element box: H, or taller when the wrapped name needs it."""
-    return max(H, TEXT_PAD + LINE_H * name_lines(name))
+    """Height of an element box: H for one or two lines, EXTRA + LINE * lines from three up.
+    EXTRA and LINE were fitted to rendered pixels (issue #77), not only to line counts."""
+    lines = name_lines(name)
+    return H if lines <= 2 else EXTRA + LINE * lines
 
 
 def layout(refs: list[str], types: dict[str, str], names: dict[str, str],
