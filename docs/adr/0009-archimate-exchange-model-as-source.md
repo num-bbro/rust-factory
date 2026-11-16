@@ -578,8 +578,9 @@ points refine the decision:
   `id-mot-goal-free-slots`, `id-app-comp-application`, `id-app-comp-http`,
   `id-app-intf-reservation-api` and `id-mot-adr-0007`. `id-impl-plat-v0-2-1` delivers
   `id-app-comp-application`, `id-app-comp-db`, `id-app-data-schedule` and `id-mot-adr-0008`.
-- **View:** `id-view-releases` (viewpoint Implementation and Migration) shows the three releases,
-  four ADRs and the application elements they deliver; it is a `View` of the phase F document.
+- **View:** `id-view-releases` (viewpoint Implementation and Migration) shows the three releases and
+  the four ADRs they deliver (seven boxes); the other delivered elements stay linked in the model
+  and appear in the Release column of the catalogs. It is a `View` of the phase F document.
 - **Generator:** the catalogs' Release column lists each Plateau once per element, in version order
   (`v0-10-0` after `v0-2-1`), counting an Association in either direction; an ADR page's header
   gains `Released in: <tags>` when a Plateau links to the ADR; `--check` applies the one-line rule
