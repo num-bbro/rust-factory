@@ -1,19 +1,26 @@
 #!/usr/bin/env bash
 # build.sh — docs/architecture/model.xml (the source, ADR 0009) → Archi model (.archimate) + HTML report.
 #
-#   scripts/archimate/build.sh            check, then build into build/architecture/
+#   scripts/archimate/build.sh            check, build into build/architecture/, then update the
+#                                         committed view images docs/architecture/views/
 #   scripts/archimate/build.sh --check    check only (fast; reads the relationship rules and the
 #                                         exchange schema from the pinned Archi, does not start it)
 #
 # The checks: canonical form (model_fmt.py --check), the official ArchiMate 3.1 schema (xmllint),
 # relationship rules, ID convention, views and their connections, `View` properties, viewpoints,
-# document references, generated ADR pages current (gen_docs.py --check). Archi starts only on
-# a file that passed them, and runs under a timeout of ARCHI_TIMEOUT seconds (default 300): its
-# importer hangs instead of exiting when its own schema check fails.
+# document references, generated ADR pages current (gen_docs.py --check), view images and
+# views.lock current (views.py --check; before the build only with --check, since the build is
+# what brings them up to date). Archi starts only on a file that passed the others, always under
+# Xvfb (PNG bytes depend on the display, ADR 0009 spike item 4), and under a timeout of
+# ARCHI_TIMEOUT seconds (default 300): its importer hangs instead of exiting when its own schema
+# check fails.
 #
 # Outputs (not committed; regenerate any time):
 #   build/architecture/model.archimate    open this in Archi
 #   build/architecture/report/index.html  browsable HTML report with all views
+# Committed (views.py --update rewrites a view's image and lock entry only when they are not
+# current for the model, so a re-run on another machine changes nothing):
+#   docs/architecture/views/<view-id>.png and views.lock
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -32,6 +39,9 @@ python3 -I "$SCRIPTS/xsd_check.py" "$MODEL" 2>&1 | sed "s|$ROOT/||g" || status=1
 python3 -I "$SCRIPTS/check_relationships.py" "$MODEL" "$ARCHI_DIR" 2>&1 | sed "s|$ROOT/||g" || status=1
 python3 -I "$SCRIPTS/check_model.py" "$MODEL" "$ROOT/docs" "$ARCHI_DIR" 2>&1 | sed "s|$ROOT/||g" || status=1
 python3 -I "$SCRIPTS/gen_docs.py" --check "$ROOT" 2>&1 | sed "s|$ROOT/||g" || status=1
+if [[ "${1:-}" == "--check" ]]; then
+  python3 -I "$SCRIPTS/views.py" --check "$ROOT" 2>&1 | sed "s|$ROOT/||g" || status=1
+fi
 (( status == 0 )) || { echo "model check failed: docs/architecture/model.xml" >&2; exit 1; }
 [[ "${1:-}" == "--check" ]] && exit 0
 
@@ -40,13 +50,11 @@ python3 -I "$SCRIPTS/gen_docs.py" --check "$ROOT" 2>&1 | sed "s|$ROOT/||g" || st
 rm -rf "$OUT"
 mkdir -p "$OUT"
 
-# Archi is a desktop app even in command-line mode: it needs a display.
-# Use the real one if present; otherwise a virtual one (Xvfb), as in CI.
-RUN=()
-if [[ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
-  command -v xvfb-run >/dev/null || { echo "No display and no xvfb-run — run ./bootstrap.sh" >&2; exit 1; }
-  RUN=(xvfb-run -a)
-fi
+# Archi is a desktop app even in command-line mode: it needs a display. Always a virtual one
+# (Xvfb), as in CI, even when a real one is present: the PNG bytes depend on the display.
+command -v xvfb-run >/dev/null || { echo "No xvfb-run — run ./bootstrap.sh" >&2; exit 1; }
+# A Wayland session would win over Xvfb in GTK, so it is hidden from Archi and X11 forced.
+RUN=(env -u WAYLAND_DISPLAY GDK_BACKEND=x11 xvfb-run -a)
 
 # Archi keeps its workspace in ~/.archi by default; use a private one so builds never touch
 # (or are confused by) your interactive Archi settings. The timeout runs inside xvfb-run, so it
@@ -70,5 +78,7 @@ fi
 
 [[ -f "$OUT/model.archimate" && -f "$OUT/report/index.html" ]] || { echo "Archi build failed" >&2; exit 1; }
 rm -rf "$OUT/.workspace"
+python3 -I "$SCRIPTS/views.py" --update "$ROOT" "$OUT/report" 2>&1 | sed "s|$ROOT/||g"
+python3 -I "$SCRIPTS/views.py" --check "$ROOT" 2>&1 | sed "s|$ROOT/||g"
 echo "Model:  $OUT/model.archimate"
 echo "Report: $OUT/report/index.html"

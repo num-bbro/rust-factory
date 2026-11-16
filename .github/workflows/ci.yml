@@ -59,6 +59,15 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Build ArchiMate model and HTML report (headless, Xvfb)
         run: just model
+      # The build keeps the committed view images when views.lock is current, so it must leave
+      # the working tree unchanged; nothing is committed from CI.
+      - name: Build left the committed view images unchanged
+        run: |
+          changed=$(git status --porcelain -- docs/architecture/views)
+          [[ -z "$changed" ]] || { echo "just model changed committed images:"; echo "$changed"; exit 1; }
+      # PNG bytes differ between machines (fonts, display); dimensions must not (ADR 0009).
+      - name: View images rendered on CI have the dimensions in views.lock
+        run: just model-dims
       - name: Upload model and report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
