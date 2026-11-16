@@ -6,6 +6,7 @@
 - Issue: #5
 - Deciders: product owner, conductor
 - ArchiMate elements: `id-app-comp-reservation-svc`, `id-mot-goal-healthy`, `id-tech-sw-rust`
+- Released in: v0.1.0
 
 ## Context and problem
 The product owner's experience: in long-lived projects, business logic mixed with database and HTTP

@@ -12,9 +12,9 @@
 # and views.lock current (views.py --check), and a committed image for each view a TOGAF page
 # shows. The build itself brings the images up to date, so before it the last two checks run
 # only with --check (gen_docs.py runs with --no-images), and after it they run in full.
-# Archi starts only on a file that passed the others, always under Xvfb (PNG bytes depend on the display, ADR 0009 spike item 4), and under a timeout of
-# ARCHI_TIMEOUT seconds (default 300): its importer hangs instead of exiting when its own schema
-# check fails.
+# Archi starts only on a file that passed the others, always under Xvfb (PNG bytes depend on the
+# display, ADR 0009 spike item 4), and under a timeout of ARCHI_TIMEOUT seconds (default 300): its
+# importer hangs instead of exiting when its own schema check fails.
 #
 # Outputs (not committed; regenerate any time):
 #   build/architecture/model.archimate    open this in Archi

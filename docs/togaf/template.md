@@ -83,3 +83,38 @@ just model         # only if a view changed or a new view needs its image; commi
 ```
 
 Commit `model.xml` and the generated pages together; the PR names the element id and the page.
+
+## Recording a release
+After `just release X.Y.Z`, a task adds the release to the model as a `Plateau` (ADR 0009): the
+catalogs then show which release delivered each element, and the Releases view
+(`id-view-releases`) shows the releases. Add the element, one link to each element the release
+delivered, and a Triggering from the previous release; nothing else changes:
+
+```xml
+<element identifier="id-impl-plat-v0-2-1" xsi:type="Plateau">
+  <name xml:lang="en">Release v0.2.1</name>
+  <documentation xml:lang="en">Schedule changes are atomic (bug #26).</documentation>
+  <properties>
+    <property propertyDefinitionRef="propid-date">
+      <value xml:lang="en">2026-11-15</value>
+    </property>
+    <property propertyDefinitionRef="propid-tag">
+      <value xml:lang="en">v0.2.1</value>
+    </property>
+  </properties>
+</element>
+<relationship identifier="id-rel-NNN" xsi:type="Aggregation" source="id-impl-plat-v0-2-1" target="id-app-comp-db"/>
+<relationship identifier="id-rel-NNN" xsi:type="Triggering" source="id-impl-plat-v0-2-0" target="id-impl-plat-v0-2-1"/>
+```
+
+- The identifier is `id-impl-plat-vX-Y-Z`, the name `Release vX.Y.Z`, `Date` the release date and
+  `Tag` the git tag. Elements are shown in version order, so `v0-10-0` comes after `v0-2-1`.
+- Use an **Aggregation** from the Plateau to each element (`just model-check` says which pairs
+  ArchiMate allows; for a pair it does not allow, use an undirected Association). A catalog's
+  Release column lists each Plateau once per element, and an ADR page's "Released in" line lists
+  the tags of the Plateaus linked to the ADR.
+- The Releases view (`id-view-releases`) is hand-arranged (`Layout = manual`): add the new Plateau's
+  box to the right of the last one, a box for each ADR it delivers above it, and one connection
+  per link, copying the existing nodes; the other elements a release delivers show in the
+  catalogs' Release column and are not drawn. Then run `just model-fmt`, `just model-docs`,
+  `just model-check` and `just model`, and commit the new image and its `views.lock` entry.

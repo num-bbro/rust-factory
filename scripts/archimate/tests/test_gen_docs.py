@@ -604,7 +604,7 @@ class TogafPages(unittest.TestCase):
 def first_page_linker() -> tuple[gen_docs.Togaf, gen_docs.Document]:
     model = exchange.read(togaf_model().encode())
     docs = gen_docs.documents(model)[0]
-    return gen_docs.Togaf(model, docs, gen_docs.adrs(model)[0]), docs[0]
+    return gen_docs.Togaf(model, docs, gen_docs.adrs(model)[0], gen_docs.releases(model)), docs[0]
 
 
 # Texts in which an identifier must not become a link (each would show link syntax as text, or
@@ -831,6 +831,120 @@ class RealModel(unittest.TestCase):
         docs = gen_docs.documents(exchange.read((root / gen_docs.MODEL).read_bytes()))[0]
         self.assertEqual(len(docs), 10)
         self.assertEqual(gen_docs.missing_images(docs, root), [])
+
+
+PLATEAUS = "".join(
+    f'<element identifier="id-impl-plat-{k}" xsi:type="Plateau"><name xml:lang="en">Release '
+    f'{k.replace("-", ".")}</name><properties><property propertyDefinitionRef="p-tag">'
+    f'<value xml:lang="en">{k.replace("-", ".")}</value></property></properties></element>'
+    for k in ("v0-10-0", "v0-2-1", "v0-2-0"))
+
+
+def release_rels(*links: tuple[str, str, str]) -> str:
+    return "".join(f'<relationship identifier="id-rel-9{n:02}" xsi:type="{kind}" source="{s}" '
+                   f'target="{t}"/>' for n, (kind, s, t) in enumerate(links))
+
+
+class Releases(unittest.TestCase):
+    def model(self, *links: tuple[str, str, str]) -> str:
+        return (togaf_model(extra=PLATEAUS, rels=release_rels(*links))
+                .replace("</propertyDefinitions>",
+                         '<propertyDefinition identifier="p-tag" type="string"><name '
+                         'xml:lang="en">Tag</name></propertyDefinition></propertyDefinitions>'))
+
+    def release_cell(self, xml: str, ident: str = "id-app-comp-a") -> str:
+        pages, problems = togaf(xml)
+        self.assertEqual(problems, [])
+        row = next(r for r in pages["docs/togaf/A-first.md"].split("\n") if f"`{ident}` |" in r)
+        return row.split(" | ")[-2]
+
+    def test_plateaus_are_sorted_by_version_number_not_by_text(self):
+        xml = self.model(("Aggregation", "id-impl-plat-v0-10-0", "id-app-comp-a"),
+                         ("Aggregation", "id-impl-plat-v0-2-1", "id-app-comp-a"),
+                         ("Aggregation", "id-impl-plat-v0-2-0", "id-app-comp-a"))
+        self.assertEqual(self.release_cell(xml),
+                         "Release v0.2.0, Release v0.2.1, Release v0.10.0")
+
+    def test_a_plateau_is_listed_once_per_element_even_with_two_relationships(self):
+        xml = self.model(("Aggregation", "id-impl-plat-v0-2-1", "id-app-comp-a"),
+                         ("Association", "id-impl-plat-v0-2-1", "id-app-comp-a"),
+                         ("Association", "id-app-comp-a", "id-impl-plat-v0-2-1"))
+        self.assertEqual(self.release_cell(xml), "Release v0.2.1")
+
+    def test_an_association_counts_in_either_direction(self):
+        xml = self.model(("Association", "id-app-comp-a", "id-impl-plat-v0-2-0"),
+                         ("Association", "id-impl-plat-v0-2-1", "id-app-comp-a"))
+        self.assertEqual(self.release_cell(xml), "Release v0.2.0, Release v0.2.1")
+
+    def test_an_aggregation_towards_a_plateau_is_not_a_release_link(self):
+        xml = self.model(("Aggregation", "id-app-comp-a", "id-impl-plat-v0-2-1"),
+                         ("Aggregation", "id-mot-adr-0001", "id-impl-plat-v0-2-1"))
+        self.assertEqual(self.release_cell(xml), "")
+        self.assertNotIn("Released in", rendered(xml)[0]["docs/adr/0001-first.md"])
+        self.assertEqual(gen_docs.releases(exchange.read(xml.encode())), {})
+
+    def test_an_adr_page_says_in_which_releases_it_was_released(self):
+        xml = self.model(("Aggregation", "id-impl-plat-v0-10-0", "id-mot-adr-0001"),
+                         ("Association", "id-mot-adr-0001", "id-impl-plat-v0-2-1"),
+                         ("Aggregation", "id-impl-plat-v0-2-1", "id-mot-adr-0001"))
+        pages = rendered(xml)[0]
+        self.assertIn("- ArchiMate elements: `id-app-comp-a`, `id-app-comp-b`, `id-mot-req-r`\n"
+                      "- Released in: v0.2.1, v0.10.0\n", pages["docs/adr/0001-first.md"])
+        self.assertNotIn("Released in", pages["docs/adr/0002-second.md"])
+        self.assertNotIn("Released in", rendered()[0]["docs/adr/0001-first.md"])
+
+
+class ViewText(unittest.TestCase):
+    def test_a_code_span_over_two_lines_in_a_views_documentation_is_refused(self):
+        xml = togaf_model().replace("Shows `id-app-comp-c`.",
+                                    "Who does what `x\n`id-bus-proc-review` b in the lifecycle.")
+        problems = "\n".join(togaf(xml)[1])
+        self.assertIn("view 'id-view-two': a paragraph or list item is spread over several "
+                      "lines", problems)
+
+    def test_a_views_documentation_over_two_lines_is_refused_only_when_a_document_shows_it(self):
+        spread = "Shows\n`id-app-comp-c`."
+        problems = togaf(togaf_model().replace("Shows `id-app-comp-c`.", spread))[1]
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("view 'id-view-two': a paragraph or list item is spread over several "
+                      "lines",
+                      problems[0])
+        hidden = togaf_model(first_views=("id-view-one",)).replace("Shows `id-app-comp-c`.",
+                                                                   spread)
+        self.assertEqual(togaf(hidden)[1], [])
+
+
+class SurvivingRules(unittest.TestCase):
+    """Rules that a reviewer's mutation run showed nothing tested."""
+
+    def test_a_span_closes_only_with_a_backtick_run_of_equal_length(self):
+        self.assertEqual(gen_docs._spans("`a`"), [(0, 3, 1, False)])
+        self.assertEqual(gen_docs._spans("`a``"), [])
+        self.assertEqual(gen_docs._spans("``a`"), [])
+        self.assertEqual(gen_docs._spans("``a`` `b`"), [(0, 5, 2, False), (6, 9, 1, False)])
+
+    def test_a_backslash_escapes_the_next_character_outside_spans(self):
+        self.assertEqual(gen_docs._spans("\\`a`"), [])
+        self.assertEqual(gen_docs._spans("\\\\`a`"), [(2, 5, 1, False)])
+
+    def test_a_code_value_with_a_backtick_at_either_end_is_padded(self):
+        self.assertEqual(gen_docs._code("`x"), "`` `x ``")
+        self.assertEqual(gen_docs._code("x`"), "`` x` ``")
+        self.assertEqual(gen_docs._code("`"), "`` ` ``")
+        self.assertEqual(gen_docs._code("a`b"), "``a`b``")
+
+    def test_a_repeated_viewpoints_or_artifacts_property_is_refused(self):
+        for key in ("viewpoints", "artifacts"):
+            with self.subTest(key=key):
+                xml = togaf_model(first_props=((key, "a"), (key, "b")))
+                self.assertIn(f"'id-impl-del-first': property {key.capitalize()} is given more "
+                              "than once", "\n".join(togaf(xml)[1]))
+
+    def test_a_views_name_is_escaped_in_its_heading(self):
+        xml = togaf_model().replace('<name xml:lang="en">One</name>',
+                                    '<name xml:lang="en">A *b* &lt;c&gt; |d</name>')
+        page = togaf(xml)[0]["docs/togaf/A-first.md"]
+        self.assertIn('## <a id="id-view-one"></a>A \\*b\\* \\<c\\> \\|d\n', page)
 
 
 if __name__ == "__main__":

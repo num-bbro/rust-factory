@@ -64,7 +64,8 @@ anything that needs a password or secret.
   They test the running container over HTTP only (black-box; enforced). Run: `just acceptance`.
 - **Releases**: bump `[workspace.package] version` in a PR, merge, then `just release X.Y.Z`
   (human decision). The Release workflow builds the image once, accepts it, and publishes it to
-  GHCR. Never deploy anything but a released image, by digest.
+  GHCR. After a release, a task adds its Plateau `id-impl-plat-vX-Y-Z` to the model. Never deploy
+  anything but a released image, by digest.
 - **Deploys** (`deploy/README.md`): `just deploy pilot X.Y.Z` deploys a release to the pilot with
   health check and automatic rollback; agents may run it when asked. `just promote X.Y.Z` puts it
   in production: **human gate 3, never run it yourself**, even if asked by another agent. Report
@@ -109,7 +110,7 @@ Every artifact should link to its neighbors in this chain.
 - **Narrative and structure** live in `docs/architecture/model.xml`: a TOGAF document (one per ADM
   phase) is a `Deliverable` `id-impl-del-<slug>` with ordered `View`s, an ADR a `Constraint`
   `id-mot-adr-NNNN`; texts cite IDs in backticks (`` `id-bus-proc-review` ``), never repeating the
-  model. `docs/togaf/*.md`, `docs/adr/*.md` are generated: never hand-edit them (see `template.md`).
+  model. `docs/togaf/*.md`, `docs/adr/*.md` are generated: never edit (`docs/togaf/template.md`).
 - Edit the model only in `docs/architecture/model.xml` (Open Group exchange format). In a view,
   list members only, as bare `<node xsi:type="Element" elementRef="id-…"/>`; then run
   `just model-fmt`, which sorts, lays out and normalises it. Never edit files under `build/`.

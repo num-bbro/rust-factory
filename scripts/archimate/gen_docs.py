@@ -18,7 +18,9 @@ list item on one line (ADR 0009, line breaks: option A); the page wraps them aga
 characters (mdwrap.py). The header list's "ArchiMate elements" are the sources of the Realization
 and Influence relationships to the ADR, sorted; a directed Association named `supersedes` from a
 newer ADR to an older one gives the "Supersedes" and "Superseded by" lines; it and the older ADR's
-`Status = Superseded by NNNN` must agree.
+`Status = Superseded by NNNN` must agree. A line `- Released in: <tags>` follows when a
+Plateau is linked to the ADR (see the release rules below): the Plateaus' `Tag` properties (their
+names when they have none), sorted by version, comma-separated; no line otherwise.
 
 TOGAF documents. A document is a `Deliverable` with a `File` property (any other Deliverable is
 an ordinary element): identifier `id-impl-del-<slug>`, the document's title as name, the
@@ -34,7 +36,15 @@ code spans and link texts are never linked. Then one section per view in `View` 
 `docs/architecture/views/<view-id>.png` and a catalog of the elements it draws, sorted by
 identifier (id, name, type, decisions, issues, crate / code, release, other documents). The release
 column is there only when the model has `Plateau` elements. Names and issue references are
-escaped so that they show as written; a name with a line break is refused. Anchors are
+escaped so that they show as written; a name with a line break is refused. The documentation of
+every view a document shows is held to the one-line-per-paragraph rule and `mdwrap.problems` too
+(a code span over two lines would get a link inside it).
+
+Releases. A `Plateau` is a release; it is linked to an element by an Aggregation from the Plateau,
+or by an Association in either direction (an Aggregation towards a Plateau is not a release
+link). The Release column of a catalog and the ADR header list each Plateau once per element,
+sorted by the numbers of its identifier (`id-impl-plat-v0-10-0` after `id-impl-plat-v0-2-1`);
+the column shows the Plateau's name. Anchors are
 identifiers: a view's section has its view id, an element's first catalog row on a page has its
 element id. Documents are taken in File order. `docs/togaf/README.md` is the generated index.
 
@@ -73,7 +83,6 @@ HEADER_PROPS = ("Status", "Date", "Issue", "Deciders")
 DOC_PROPS = ("File", "Phase")
 DOC_TEXT_PROPS = ("Viewpoints", "Artifacts")
 LINKS = ("Realization", "Influence")
-RELEASE_LINKS = ("Aggregation", "Association")
 SUPERSEDES = "supersedes"
 CODE_ID = re.compile(r"id-[a-z0-9-]+")
 
@@ -130,6 +139,28 @@ def _text_problems(where: str, text: str, what: str) -> list[str]:
         return [f"{where}: a paragraph or list item is spread over several lines; store each on "
                 "one line (ADR 0009, line breaks: option A)"]
     return []
+
+
+def _version(ident: str) -> tuple[tuple[int, ...], str]:
+    """Sort key of a Plateau: the numbers of its identifier (`v0-10-0` after `v0-2-1`)."""
+    return tuple(int(n) for n in re.findall(r"\d+", ident)), ident
+
+
+def releases(model: exchange.Model) -> dict[str, list[str]]:
+    """{element: its Plateaus sorted by version, each once}: a Plateau's Aggregation to the
+    element, or an Association between them in either direction."""
+    plateaus = {i for i, kind in model.elements.items() if kind == "Plateau"}
+    found: dict[str, set[str]] = {}
+    for r in model.relationships:
+        source, target = r["Source"], r["Target"]
+        if r["Type"] == "Aggregation" and source in plateaus:
+            found.setdefault(target, set()).add(source)
+        elif r["Type"] == "Association":
+            if source in plateaus:
+                found.setdefault(target, set()).add(source)
+            if target in plateaus:
+                found.setdefault(source, set()).add(target)
+    return {e: sorted(p, key=_version) for e, p in found.items()}
 
 
 def _props(model: exchange.Model, ident: str) -> list[tuple[str, str]]:
@@ -204,7 +235,7 @@ def _number(ident: str) -> str:
     return m.group(1) if m else ident
 
 
-def page(adr: Adr, model: exchange.Model) -> str:
+def page(adr: Adr, model: exchange.Model, released_in: dict[str, list[str]]) -> str:
     """One ADR page: generated note, title, header list, body; wrapped at mdwrap.WIDTH."""
     linked = sorted({r["Source"] for r in model.relationships
                      if r["Target"] == adr.ident and r["Type"] in LINKS})
@@ -213,6 +244,10 @@ def page(adr: Adr, model: exchange.Model) -> str:
     header = [f"- {key}: {adr.props.get(key, '')}" for key in HEADER_PROPS]
     if linked:
         header.append("- ArchiMate elements: " + ", ".join(f"`{i}`" for i in linked))
+    released = [dict(_props(model, p)).get("Tag") or model.names.get(p, p)
+                for p in released_in.get(adr.ident, [])]
+    if released:
+        header.append("- Released in: " + ", ".join(released))
     header += [f"- Supersedes: ADR {_number(r['Target'])}"
                for r in sorted(supersedes, key=lambda r: r["Target"]) if r["Source"] == adr.ident]
     header += [f"- Superseded by: ADR {_number(r['Source'])}"
@@ -303,6 +338,17 @@ def documents(model: exchange.Model) -> tuple[list[Document], list[str]]:
     return sorted(found, key=lambda d: (d.file, d.ident)), problems
 
 
+def view_problems(model: exchange.Model, docs: list[Document]) -> list[str]:
+    """The line rules of the documentation of every view a document shows: it appears on the
+    page, where a code span over two lines would get a link inside it."""
+    problems = []
+    for view in sorted({v for d in docs for v in d.views}):
+        text = model.documentation.get(view, "")
+        if text:
+            problems += _text_problems(f"view '{view}'", text, "the view's text")
+    return problems
+
+
 def line_breaks(model: exchange.Model) -> list[str]:
     """Names with a line break: a name is one line in a heading, a link or a table row."""
     return [f"'{ident}': the name has a line break; write it on one line"
@@ -381,20 +427,17 @@ def _spans(line: str) -> list[tuple[int, int, int, bool]]:
 class Togaf:
     """The TOGAF pages of a model: what each document shows and where each identifier links."""
 
-    def __init__(self, model: exchange.Model, docs: list[Document], adr_found: list[Adr]):
+    def __init__(self, model: exchange.Model, docs: list[Document], adr_found: list[Adr],
+                 released_in: dict[str, list[str]]):
         self.model = model
         self.docs = [d for d in docs if d.file]
         self.adr_files = {a.ident: a.props["File"] for a in adr_found if a.props.get("File")}
         self.doc_files = {d.ident: d.file for d in self.docs}
         self.drawn: dict[str, set[str]] = {d.file: {e for v in d.views for e in model.views[v]}
                                            for d in self.docs}
-        self.releases: dict[str, list[str]] = {}
-        plateaus = sorted(i for i, kind in model.elements.items() if kind == "Plateau")
-        self.has_releases = bool(plateaus)
-        for p in plateaus:
-            for r in model.relationships:
-                if r["Source"] == p and r["Type"] in RELEASE_LINKS:
-                    self.releases.setdefault(r["Target"], []).append(model.names.get(p, p))
+        self.releases = {e: [model.names.get(p, p) for p in found]
+                         for e, found in released_in.items()}
+        self.has_releases = any(kind == "Plateau" for kind in model.elements.values())
 
     def target(self, ident: str, here: Document) -> str | None:
         """Where `ident`, written in `here`'s text, links to; None when it has no target."""
@@ -500,11 +543,13 @@ def missing_images(docs: list[Document], root: Path) -> list[str]:
 def render(model: exchange.Model) -> tuple[dict[str, str], list[str]]:
     """{repository-relative path: content} for every generated page, and the model's problems."""
     found, problems = adrs(model)
-    pages = {a.props["File"]: page(a, model) for a in found if a.props.get("File")}
+    released_in = releases(model)
+    pages = {a.props["File"]: page(a, model, released_in) for a in found
+             if a.props.get("File")}
     pages[INDEX] = index(found)
     docs, doc_problems = documents(model)
-    doc_problems += line_breaks(model)
-    togaf = Togaf(model, docs, found)
+    doc_problems += line_breaks(model) + view_problems(model, docs)
+    togaf = Togaf(model, docs, found, released_in)
     pages.update({d.file: togaf.page(d) for d in togaf.docs})
     pages[TOGAF_INDEX] = togaf.index()
     return dict(sorted(pages.items())), problems + doc_problems

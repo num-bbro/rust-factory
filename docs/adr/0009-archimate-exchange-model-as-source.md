@@ -561,3 +561,38 @@ points refine the decision:
   `check_model.py` covers the documents' text as before.
 - **Not changed:** the ADR pages (an ADR's header still lists only its linked elements), the views
   and their images.
+
+## Amendment 2026-11-16: as built in step 6 (releases as Plateaus)
+Step 6 (#54) recorded the three releases as `Plateau` elements. As with the amendments above, these
+points refine the decision:
+- **Elements:** `id-impl-plat-v0-1-0`, `id-impl-plat-v0-2-0` and `id-impl-plat-v0-2-1`, named
+  `Release vX.Y.Z`, with the properties `Date` (2026-11-15 for all three) and `Tag` (the git tag),
+  and a one-line documentation. A Triggering relationship leads from each release to the next.
+- **Links:** from each Plateau, an Aggregation to every element the release delivered; `just
+  model-check` allowed Aggregation for every pair, so no Association was needed. Recorded contents:
+  `id-impl-plat-v0-1-0` delivers `id-app-comp-reservation-svc`, `id-app-comp-domain`,
+  `id-app-comp-application`, `id-app-comp-db`, `id-app-comp-http`, `id-app-intf-reservation-api`,
+  `id-app-svc-book`, `id-app-data-schedule`, `id-bus-proc-reserve`, `id-bus-obj-reservation`,
+  `id-mot-adr-0003` and `id-mot-adr-0005`. `id-impl-plat-v0-2-0` delivers `id-app-svc-cancel`,
+  `id-bus-proc-cancel`, `id-mot-req-cancel`, `id-mot-req-cancel-refused`, `id-mot-out-rebook`,
+  `id-mot-goal-free-slots`, `id-app-comp-application`, `id-app-comp-http`,
+  `id-app-intf-reservation-api`, `id-mot-adr-0006` (pilot and rollout landed before v0.2.0, the
+  first release deployed that way) and `id-mot-adr-0007`. `id-impl-plat-v0-2-1` delivers
+  `id-app-comp-application`, `id-app-comp-db`, `id-app-comp-http` (#37 changed the HTTP adapter),
+  `id-app-data-schedule` and `id-mot-adr-0008`.
+- **View:** `id-view-releases` (viewpoint Implementation and Migration, documentation: "The releases
+  in order and the decisions each one delivered; the Release column of the other catalogs shows what
+  else each release delivered.") shows the three releases and the five ADRs they deliver (eight
+  boxes: `id-mot-adr-0003`, `id-mot-adr-0005`, `id-mot-adr-0006`, `id-mot-adr-0007`,
+  `id-mot-adr-0008`), with an Aggregation per ADR and the two Triggering links; the other delivered
+  elements stay linked in the model and appear in the Release column of the catalogs. It is
+  hand-arranged (view property `Layout = manual`, as this ADR allows): the automatic layout bent two
+  links over the same segment, so that v0.2.1 seemed to deliver ADR 0007. Each release box stands
+  under the ADRs it delivers and every link is a straight line. It is a `View` of the phase F
+  document.
+- **Generator:** the catalogs' Release column lists each Plateau once per element, in version order
+  (`v0-10-0` after `v0-2-1`), counting an Association in either direction; an ADR page's header
+  gains `Released in: <tags>` when a Plateau links to the ADR; `--check` applies the one-line rule
+  to the documentation of every view a document shows.
+- **Rule:** after a release, a task adds its Plateau (`docs/togaf/template.md`, "Recording a
+  release").

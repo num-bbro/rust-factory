@@ -20,7 +20,7 @@ drawn.
 | C. Information Systems | [C-information-systems-architecture.md](C-information-systems-architecture.md) | [Factory overview](C-information-systems-architecture.md#id-view-layered), [Reservations: cancel a reservation](C-information-systems-architecture.md#id-view-reservation-cancel) | Application Cooperation, Information Structure | Crates, data model |
 | D. Technology Architecture | [D-technology-architecture.md](D-technology-architecture.md) | [Factory overview](D-technology-architecture.md#id-view-layered) | Technology, Implementation and Deployment | `deploy/`, CI |
 | E. Opportunities & Solutions | [E-opportunities-and-solutions.md](E-opportunities-and-solutions.md) | — | Project | Milestones, task split |
-| F. Migration Planning | [F-migration-planning.md](F-migration-planning.md) | — | Migration | Releases, pilot plan |
+| F. Migration Planning | [F-migration-planning.md](F-migration-planning.md) | [Releases](F-migration-planning.md#id-view-releases) | Migration | Releases, pilot plan |
 | G. Implementation Governance | [G-implementation-governance.md](G-implementation-governance.md) | [Delivery lifecycle](G-implementation-governance.md#id-view-lifecycle) | — | PR gates, reviews |
 | H. Architecture Change Mgmt | [H-architecture-change-management.md](H-architecture-change-management.md) | — | — | Change-request issues |
 | Requirements Management (centre) | [requirements-management.md](requirements-management.md) | [Reservations: cancel a reservation](requirements-management.md#id-view-reservation-cancel) | Requirements Realization | Requirement issues, board |
