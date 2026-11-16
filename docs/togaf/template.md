@@ -113,8 +113,25 @@ delivered, and a Triggering from the previous release; nothing else changes:
   ArchiMate allows; for a pair it does not allow, use an undirected Association). A catalog's
   Release column lists each Plateau once per element, and an ADR page's "Released in" line lists
   the tags of the Plateaus linked to the ADR.
-- The Releases view (`id-view-releases`) is hand-arranged (`Layout = manual`): add the new Plateau's
-  box to the right of the last one, a box for each ADR it delivers above it, and one connection
-  per link, copying the existing nodes; the other elements a release delivers show in the
-  catalogs' Release column and are not drawn. Then run `just model-fmt`, `just model-docs`,
-  `just model-check` and `just model`, and commit the new image and its `views.lock` entry.
+- The Releases view (`id-view-releases`) is hand-arranged (`Layout = manual`: the formatter does
+  not lay it out, and `just model-check` checks that it draws exactly the relationships between its
+  boxes and that every box lies inside its band). Edit its `<view>` in `docs/architecture/model.xml`
+  by copying the existing nodes and connections:
+  - the new Plateau's box goes in the Implementation & Migration band (`id-view-releases-band-1`),
+    to the right of the last one (its `x` is the last Plateau box's plus 220; `y` and size are the
+    same as the others);
+  - each ADR the release delivers gets a box in the Motivation band (`id-view-releases-band-0`),
+    with the same `x` as the Plateau box, so the connection is vertical; an ADR already drawn keeps
+    its box, and a release that delivers an ADR drawn elsewhere gets a connection to it as it is;
+  - widen both bands by the width of one column (220) for each column you added: raise `w` of
+    `id-view-releases-band-0` and `id-view-releases-band-1` by 220;
+  - name each node `id-view-releases-n-<element id>` and each connection
+    `id-view-releases-c-<relationship id>`, with `source` and `target` the node names; draw one
+    connection for every new relationship between two boxes of the view (the Triggering from the
+    previous release and each Aggregation to an ADR), none for the other elements, and no
+    bendpoints; place the boxes so that each connection is a straight line;
+  - the other elements a release delivers show in the catalogs' Release column and are not drawn.
+
+  Then run `just model-fmt`, `just model-docs`, `just model-check` and `just model`, **open the
+  picture** `docs/architecture/views/id-view-releases.png`, and commit it with its `views.lock`
+  entry.

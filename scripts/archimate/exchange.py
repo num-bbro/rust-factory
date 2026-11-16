@@ -177,6 +177,20 @@ class Connection:
 
 
 @dataclass
+class Node:
+    """A diagram node: its rectangle (absolute) and the node that contains it ("" at top level)."""
+
+    view: str
+    identifier: str
+    element: str
+    x: int
+    y: int
+    w: int
+    h: int
+    parent: str
+
+
+@dataclass
 class Model:
     """What the model checks and the page generator need from an exchange file."""
 
@@ -189,11 +203,19 @@ class Model:
     viewpoints: dict[str, str] = field(default_factory=dict)      # view id -> viewpoint, if any
     properties: list[tuple[str, str, str]] = field(default_factory=list)  # owner id, name, value
     connections: list[Connection] = field(default_factory=list)
+    nodes: list[Node] = field(default_factory=list)
 
     def identifiers(self) -> set[str]:
         """The model's own, element, relationship and view identifiers."""
         rels = {r["ID"] for r in self.relationships}
         return {self.identifier} | set(self.elements) | rels | set(self.views)
+
+
+def _read_nodes(m: Model, view: str, holder: ET.Element, parent: str, q: str) -> None:
+    for n in holder.iterfind(f"{q}node"):
+        box = [int(n.get(a) or 0) for a in ("x", "y", "w", "h")]
+        m.nodes.append(Node(view, _ident(n), n.get("elementRef", ""), *box, parent))
+        _read_nodes(m, view, n, _ident(n), q)
 
 
 def read(data: bytes) -> Model:
@@ -232,6 +254,7 @@ def read(data: bytes) -> Model:
         viewpoint = v.get("viewpoint")
         if viewpoint is not None:
             m.viewpoints[vid] = viewpoint
+        _read_nodes(m, vid, v, "", q)
         for c in v.iter(f"{q}connection"):
             m.connections.append(Connection(vid, _ident(c), c.get("relationshipRef", ""),
                                             nodes.get(c.get("source", ""), ""),

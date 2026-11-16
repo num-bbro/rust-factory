@@ -7,6 +7,8 @@
   (the model itself: `id-model-<slug>`);
 * every view member is an element, and every diagram connection joins nodes of its
   relationship's two ends (neither the schema nor Archi checks this);
+* a view with the property `Layout = manual` (hand-arranged, the formatter does not rebuild it)
+  draws exactly the relationships between its members, and every node lies inside its parent;
 * every view's viewpoint is an ArchiMate viewpoint: one of the ViewpointsEnum values of the
   pinned Archi's archimate3_View.xsd (the schema itself accepts any string there);
 * every `View` property names an existing view;
@@ -69,6 +71,31 @@ def views(model: exchange.Model) -> list[str]:
     return problems
 
 
+def manual_views(model: exchange.Model) -> list[str]:
+    problems = []
+    for vid in [o for o, name, value in model.properties
+                if (name, value) == exchange.MANUAL_LAYOUT and o in model.views]:
+        members = set(model.views[vid])
+        drawn = {c.relationship for c in model.connections if c.view == vid and c.relationship}
+        expected = {r["ID"]: r for r in model.relationships
+                    if r["Source"] in members and r["Target"] in members}
+        problems += [f"view '{vid}' (Layout = manual): relationship {rid} joins '{r['Source']}' and "
+                     f"'{r['Target']}', both drawn, but it has no connection"
+                     for rid, r in sorted(expected.items()) if rid not in drawn]
+        problems += [f"view '{vid}' (Layout = manual): the connection of relationship {rid} is drawn, "
+                     "but the model has no such relationship between two members of the view"
+                     for rid in sorted(drawn - set(expected))]
+        nodes = {n.identifier: n for n in model.nodes if n.view == vid}
+        for n in nodes.values():
+            p = nodes.get(n.parent)
+            if p and not (p.x <= n.x and p.y <= n.y and n.x + n.w <= p.x + p.w
+                          and n.y + n.h <= p.y + p.h):
+                problems.append(f"view '{vid}' (Layout = manual): node '{n.identifier}' "
+                                f"({n.x},{n.y} {n.w}x{n.h}) is not inside its parent "
+                                f"'{p.identifier}' ({p.x},{p.y} {p.w}x{p.h})")
+    return problems
+
+
 def viewpoints(model: exchange.Model, known: set[str]) -> list[str]:
     return [f"view '{vid}': viewpoint '{vp}' is not an ArchiMate viewpoint; one of: "
             + ", ".join(sorted(known))
@@ -105,6 +132,8 @@ def main(argv: list[str]) -> int:
     checks = [("IDs: all follow the convention", id_convention(model)),
               ("views: all members are elements, connections match their relationships, "
                "View properties name views", views(model)),
+              ("manual views: relationships drawn as in the model, nodes inside their parents",
+               manual_views(model)),
               ("viewpoints: all are ArchiMate viewpoints", viewpoints(model, known)),
               ("docs: all element references resolve", doc_refs(model, docs))]
     failed = False

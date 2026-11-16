@@ -167,13 +167,20 @@ def unwrap(text: str) -> str:
 
 
 def _closing(line: str, start: int, open_: str, close: str) -> int:
-    """The index of the bracket that closes the one at `start`, or -1 (backslash escapes skipped)."""
+    """The index of the bracket that closes the one at `start`, or -1 (backslash escapes and, for
+    square brackets, code spans skipped)."""
     depth = 0
     i = start
     while i < len(line):
         if line[i] == "\\":
             i += 2
             continue
+        if line[i] == "`" and open_ == "[":
+            ticks = re.match(r"`+", line[i:]).group(0)
+            end = line.find(ticks, i + len(ticks))
+            if end > 0:
+                i = end + len(ticks)
+                continue
         depth += line[i] == open_
         depth -= line[i] == close
         if depth == 0:

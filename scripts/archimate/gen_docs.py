@@ -141,6 +141,14 @@ PHASES = {"Preliminary": "Preliminary", "A": "A. Architecture Vision",
           "Requirements Management": "Requirements Management (centre)"}
 
 
+# An inline link to a Markdown file by a relative path, `[text](0009-x.md)`: broken inside Archi's
+# report, which shows the text outside the repository.
+_MD_LINK = re.compile(r"\]\((?![A-Za-z][A-Za-z0-9+.-]*:|/|#)[^)\s]*\.md(?:#[^)\s]*)?(?:\s+[^)]*)?\)")
+
+
+_CODE_SPAN = re.compile(r"(`+).+?\1")
+
+
 def _text_problems(where: str, text: str, what: str) -> list[str]:
     """The documentation rules shared by ADRs and documents (ADR 0009, line breaks: option A)."""
     if not text:
@@ -150,7 +158,11 @@ def _text_problems(where: str, text: str, what: str) -> list[str]:
     if mdwrap.unwrap(text) != text:
         return [f"{where}: a paragraph or list item is spread over several lines; store each on "
                 "one line (ADR 0009, line breaks: option A)"]
-    return []
+    code = mdwrap.code_lines(text)
+    return [f"{where}: documentation line {n + 1} links to a Markdown file by a relative path "
+            f"('{m.group(0)[2:-1]}'); cite the element id in backticks instead, the page links it"
+            for n, line in enumerate(text.split("\n")) if n not in code
+            for m in _MD_LINK.finditer(_CODE_SPAN.sub("", line))]
 
 
 def _version(ident: str) -> tuple[tuple[int, ...], str]:

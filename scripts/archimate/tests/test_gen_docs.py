@@ -282,6 +282,21 @@ class Pages(unittest.TestCase):
     def test_is_deterministic(self):
         self.assertEqual(rendered(), rendered())
 
+    def test_a_relative_link_to_a_markdown_file_is_refused(self):
+        for target in ("0002-second.md", "./0002-second.md#x", "../adr/0002-second.md",
+                       '0002-second.md "title"'):
+            with self.subTest(target=target):
+                _, problems = rendered(adr_model(f"See [ADR 0002]({target})."))
+                self.assertEqual(problems, [
+                    "ADR element 'id-mot-adr-0001': documentation line 1 links to a Markdown file by a "
+                    f"relative path ('{target}'); cite the element id in backticks instead, the "
+                    "page links it"])
+
+    def test_other_links_and_code_are_allowed(self):
+        text = ("See [the site](https://example.org/a.md), [root](/a.md), [here](#top), "
+                "[page](a.html), `[x](a.md)` and `id-mot-adr-0002`.\n\n```\n[x](a.md)\n```")
+        self.assertEqual(rendered(adr_model(text))[1], [])
+
     def test_model_problems_are_named(self):
         _, problems = rendered(adr_model("Spread over\\ntwo lines."))
         self.assertTrue(any("option A" in p and "id-mot-adr-0001" in p for p in problems), problems)
@@ -751,6 +766,12 @@ class TogafProblems(unittest.TestCase):
         self.assertIn("'id-impl-del-first': View = 'id-view-two' is given more than once",
                       "\n".join(togaf(togaf_model(first_views=("id-view-two",) * 2))[1]))
 
+    def test_a_relative_markdown_link_is_refused_in_a_document(self):
+        problems = self.problems("Only `id-app-comp-b`.", "See [ADR](0002-x.md).")
+        self.assertIn("'id-impl-del-third': documentation line 1 links to a Markdown file by a "
+                      "relative path ('0002-x.md'); cite the element id in backticks instead, "
+                      "the page links it", problems)
+
     def test_text_rules_as_for_adrs(self):
         self.assertIn("'id-impl-del-third': a paragraph or list item is spread over several lines",
                       self.problems("Only `id-app-comp-b`.", "Only\nthis."))
@@ -876,6 +897,24 @@ class WrapLinks(unittest.TestCase):
     def test_a_link_text_with_a_code_span(self):
         lines = self.wrapped("Read [the `some code` part of it](t.md) now and then.")
         self.assertTrue(any("[the `some code` part of it](t.md)" in ln for ln in lines))
+
+    def test_nested_brackets_in_the_link_text_stay_whole(self):
+        lines = self.wrapped("Some words before [text [nested] more words](a.md) and after.")
+        self.assertTrue(any("[text [nested] more words](a.md)" in ln for ln in lines))
+        self.assertGreater(len(lines), 1)
+
+    def test_an_escaped_bracket_is_not_a_link(self):
+        lines = self.wrapped("Some words before \\[not a link at all and more](x) and after.")
+        self.assertFalse(any("\\[not a link at all and more](x)" in ln for ln in lines))
+
+    def test_an_opening_without_a_closing_parenthesis_is_not_a_link(self):
+        text = "Some words before and more [text of it](a.md and then a lot more words after it."
+        lines = self.wrapped(text)
+        self.assertEqual(lines[0], "Some words before and more [text of")
+
+    def test_a_closing_bracket_inside_a_code_span_does_not_end_the_link_text(self):
+        lines = self.wrapped("Read this and more words [the `a]b` text of it](t.md) now and then.")
+        self.assertTrue(any("[the `a]b` text of it](t.md)" in ln for ln in lines))
 
     def test_a_link_longer_than_the_width_goes_over_long(self):
         lines = self.wrapped("[a link text that is longer than the width of twenty](t.md)", 20)

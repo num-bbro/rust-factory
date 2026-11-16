@@ -146,6 +146,46 @@ class ModelRules(unittest.TestCase):
             "'id-app-comp-web': property View = 'id-view-gone' names no view of the model"])
 
 
+REAL_MODEL = HERE.parents[2] / "docs" / "architecture" / "model.xml"
+
+
+class ManualViews(unittest.TestCase):
+    def test_the_fixture_and_the_real_releases_view_pass(self):
+        self.assertEqual(check_model.manual_views(MODEL), [])
+        real = exchange.read(REAL_MODEL.read_bytes())
+        self.assertIn(("id-view-releases", "Layout", "manual"), real.properties)
+        self.assertEqual(check_model.manual_views(real), [])
+
+    def test_a_missing_connection_is_reported(self):
+        real = exchange.read(REAL_MODEL.read_text(encoding="utf-8").replace(
+            'xsi:type="Relationship" relationshipRef="id-rel-140"', 'xsi:type="Line"', 1).encode())
+        self.assertEqual(check_model.manual_views(real), [
+            "view 'id-view-releases' (Layout = manual): relationship id-rel-140 joins "
+            "'id-impl-plat-v0-1-0' and 'id-impl-plat-v0-2-0', both drawn, but it has no connection"])
+
+    def test_an_extra_connection_is_reported(self):
+        model = exchange.read(CANONICAL)
+        model.relationships = [r for r in model.relationships if r["ID"] != "id-rel-005"]
+        self.assertEqual(check_model.manual_views(model), [
+            "view 'id-view-hand' (Layout = manual): the connection of relationship id-rel-005 is "
+            "drawn, but the model has no such relationship between two members of the view"])
+
+    def test_a_box_outside_its_band_is_reported(self):
+        text = REAL_MODEL.read_text(encoding="utf-8")
+        old = 'elementRef="id-impl-plat-v0-2-1" x="920" y="219"'
+        self.assertIn(old, text)
+        model = exchange.read(text.replace(old, 'elementRef="id-impl-plat-v0-2-1" x="1500" y="400"').encode())
+        self.assertEqual(check_model.manual_views(model), [
+            "view 'id-view-releases' (Layout = manual): node 'id-view-releases-n-id-impl-plat-v0-2-1'"
+            " (1500,400 160x55) is not inside its parent 'id-view-releases-band-1' (20,177 1080x117)"])
+
+    def test_an_automatic_view_is_not_checked(self):
+        model = exchange.read(CANONICAL)
+        model.properties = [p for p in model.properties if p[1:] != ("Layout", "manual")]
+        model.connections = []
+        self.assertEqual(check_model.manual_views(model), [])
+
+
 class Viewpoints(unittest.TestCase):
     KNOWN = {"Layered", "Motivation"}
 
@@ -215,7 +255,7 @@ class CommandLine(unittest.TestCase):
     def test_all_checks_pass_with_one_line_each(self):
         code, out, _ = self.run_main("`id-app-comp-web`")
         self.assertEqual(code, 0)
-        self.assertEqual(len(out.splitlines()), 4)
+        self.assertEqual(len(out.splitlines()), 5)
 
     def test_a_problem_fails_and_is_listed(self):
         code, _, err = self.run_main("`id-app-comp-gone`")

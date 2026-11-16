@@ -690,7 +690,7 @@ Issue: #27 (bug) / task #39. This supersedes the "Bad" bullet above that says re
 - Also considered: *Realization* from the agent component to the business process it carries out (allowed by the rules, e.g. the workers realizing `id-bus-proc-implement`). Not chosen here because bug #27 is about the agent-to-role links and those IDs must keep their ends; it can be added later as additional relationships, not as a replacement.
 
 ## Note 2026-11-16: superseded by ADR 0009
-Issue: #41 (change request) / task #42. This ADR is superseded by [ADR 0009](0009-archimate-exchange-model-as-source.md): the Open Group exchange XML becomes the single edited source of the architecture, the ADRs and TOGAF documents move into the model, and the CSV files are removed. The text above stays as it was accepted; it describes the setup until the cutover (step 2 of #41).</documentation>
+Issue: #41 (change request) / task #42. This ADR is superseded by ADR 0009 (`id-mot-adr-0009`): the Open Group exchange XML becomes the single edited source of the architecture, the ADRs and TOGAF documents move into the model, and the CSV files are removed. The text above stays as it was accepted; it describes the setup until the cutover (step 2 of #41).</documentation>
       <properties>
         <property propertyDefinitionRef="propid-status">
           <value xml:lang="en">Superseded by 0009</value>
@@ -941,7 +941,7 @@ Chosen: **option 1**, because it is what the domain already does (`Schedule::can
 - Follow-up: implementation in the task issues under stories #18 and #19.
 
 ## Notes
-- 2026-11-15: the known risk above (bug #26) is resolved by [ADR 0008](0008-atomic-schedule-update-through-the-port.md): every change to the schedule now goes through one atomic `update` operation on the repository port.</documentation>
+- 2026-11-15: the known risk above (bug #26) is resolved by ADR 0008 (`id-mot-adr-0008`): every change to the schedule now goes through one atomic `update` operation on the repository port.</documentation>
       <properties>
         <property propertyDefinitionRef="propid-status">
           <value xml:lang="en">Accepted</value>
