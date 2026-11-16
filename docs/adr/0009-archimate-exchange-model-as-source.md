@@ -19,7 +19,7 @@ one, and no diagram leads to the decisions or documents behind its boxes.
 The human's requirement (2026-11-16, change request #41): the maintained form must be a standard,
 self-describing ArchiMate format that other software can read, and reading must work both ways: a
 document shows its diagrams, and a diagram leads to the decisions, documents and releases behind
-each box (`id-mot-req-togaf`).
+each box ([`id-mot-req-togaf`](../togaf/00-preliminary.md#id-mot-req-togaf)).
 
 ## Decision drivers
 The five requirements the human confirmed on 2026-11-16:
@@ -238,13 +238,16 @@ Throwaway work in a temporary directory, nothing of it committed. Input: today's
 for ADR 0002 (has a table), ADR 0008 (has a Rust code block with `Result<T, E>`, lists, emphasis)
 and a stub ADR 0009; a Deliverable holding the full text of
 `docs/togaf/C-information-systems-architecture.md`; a Plateau `Release v0.2.1`; a Realization from
-`id-app-comp-application` to the ADR 0008 Constraint; an Influence from `id-mot-req-togaf` to the
-ADR 0002 Constraint; a directed Association `supersedes` from ADR 0009 to ADR 0002; Aggregations
-from the Plateau to `id-app-comp-application` and to the ADR 0008 Constraint; eight new property
-definitions (`propid-status`, `propid-file`, `propid-view`, `propid-layout`, …), a repeated `View`
-property, properties on the existing view `id-view-motivation`, a new hand-placed view showing all
-of the above, and `xsi:schemaLocation`. Result: 58 elements, 74 relationships, 5 views, 84,394
-bytes, 1,148 lines.
+[`id-app-comp-application`](../togaf/A-architecture-vision.md#id-app-comp-application) to the ADR
+0008 Constraint; an Influence from [`id-mot-req-togaf`](../togaf/00-preliminary.md#id-mot-req-togaf)
+to the ADR 0002 Constraint; a directed Association `supersedes` from ADR 0009 to ADR 0002;
+Aggregations from the Plateau to
+[`id-app-comp-application`](../togaf/A-architecture-vision.md#id-app-comp-application) and to the
+ADR 0008 Constraint; eight new property definitions (`propid-status`, `propid-file`, `propid-view`,
+`propid-layout`, …), a repeated `View` property, properties on the existing view
+[`id-view-motivation`](../togaf/00-preliminary.md#id-view-motivation), a new hand-placed view
+showing all of the above, and `xsi:schemaLocation`. Result: 58 elements, 74 relationships, 5 views,
+84,394 bytes, 1,148 lines.
 
 ### 1. Archi imports the hand-maintained file: yes
 - Imported with the exact command line of `scripts/archimate/build.sh` (`--abortOnException
@@ -263,7 +266,8 @@ bytes, 1,148 lines.
   show ragged lines (open question under Consequences).
 - The view image map links every box to its element page (`<area … href="../elements/<id>.html">`, 7
   of 7 boxes on the spike view). An element page lists its relationships, so
-  `id-app-comp-application` links to the ADR 0008 Constraint and to the Plateau.
+  [`id-app-comp-application`](../togaf/A-architecture-vision.md#id-app-comp-application) links to
+  the ADR 0008 Constraint and to the Plateau.
 - All 74 relationships are allowed by Archi's `relationships.xml` (checked with the rules loader of
   `check_relationships.py`). Rules that shape the mapping: Realization to a Constraint is allowed
   from every core structure and behaviour element, but not from motivation elements; Influence to a
@@ -345,8 +349,12 @@ property naming a view that does not exist (properties are plain strings).
 - Same machine, real display versus Xvfb: **bytes differ**, dimensions equal. 0.6–1.8 % of the
   pixels differ, all inside text (anti-aliasing). So bytes depend on the display, not only on the
   machine: `just model` should always render under `xvfb-run` for a stable local result (step 4).
-- Dimensions (both modes): `id-view-layered` 1299×1028, `id-view-lifecycle` 1010×432,
-  `id-view-motivation` 833×387, `id-view-reservation-cancel` 1423×1246, spike view 620×375.
+- Dimensions (both modes):
+  [`id-view-layered`](../togaf/C-information-systems-architecture.md#id-view-layered) 1299×1028,
+  [`id-view-lifecycle`](../togaf/B-business-architecture.md#id-view-lifecycle) 1010×432,
+  [`id-view-motivation`](../togaf/00-preliminary.md#id-view-motivation) 833×387,
+  [`id-view-reservation-cancel`](../togaf/A-architecture-vision.md#id-view-reservation-cancel)
+  1423×1246, spike view 620×375.
 - Not established here: whether CI (Ubuntu 24.04, Xvfb, other fonts) gives the same dimensions; step
   4 compares a CI run with the lock.
 - The HTML report itself is not byte-reproducible: the folder identifiers in `model.html` are random
@@ -502,15 +510,19 @@ decision:
   anything under `docs/architecture/views/`, then runs `just model-dims`, which compares the size of
   each PNG rendered on CI with `views.lock` (bytes are not compared) and fails when it compared
   nothing. On CI (Ubuntu 24.04 under Xvfb, PR #51) all four views had the sizes rendered on the dev
-  machine (Arch Linux under Xvfb): `id-view-layered` 1494×1028, `id-view-lifecycle` 1010×432,
-  `id-view-motivation` 980×387, `id-view-reservation-cancel` 1367×1246; the PNG bytes differed for
-  all four, as expected. No font pinning is needed for now. A future difference fails CI, and how to
-  handle it is the human's decision.
+  machine (Arch Linux under Xvfb):
+  [`id-view-layered`](../togaf/C-information-systems-architecture.md#id-view-layered) 1494×1028,
+  [`id-view-lifecycle`](../togaf/B-business-architecture.md#id-view-lifecycle) 1010×432,
+  [`id-view-motivation`](../togaf/00-preliminary.md#id-view-motivation) 980×387,
+  [`id-view-reservation-cancel`](../togaf/A-architecture-vision.md#id-view-reservation-cancel)
+  1367×1246; the PNG bytes differed for all four, as expected. No font pinning is needed for now. A
+  future difference fails CI, and how to handle it is the human's decision.
 ## Amendment 2026-11-16: as built in step 5 (TOGAF documents in the model)
 Step 5 (#52) moved the ten TOGAF documents into the model. As with the amendments above, these
 points refine the decision:
 - **Document elements:** one `Deliverable` per document, identifier `id-impl-del-<slug>` (the file
-  name without its phase prefix, e.g. `id-impl-del-architecture-vision`), name = the document's
+  name without its phase prefix, e.g.
+  [`id-impl-del-architecture-vision`](../togaf/A-architecture-vision.md)), name = the document's
   title, properties `File` (`docs/togaf/<name>.md`; the file names did not change) and `Phase` (one
   of `Preliminary`, `A`–`H`, `Requirements Management`), once each, optionally `Viewpoints` (the
   ArchiMate viewpoints suggested for the phase) and `Artifacts` (the factory artifacts of the
@@ -565,31 +577,59 @@ points refine the decision:
 ## Amendment 2026-11-16: as built in step 6 (releases as Plateaus)
 Step 6 (#54) recorded the three releases as `Plateau` elements. As with the amendments above, these
 points refine the decision:
-- **Elements:** `id-impl-plat-v0-1-0`, `id-impl-plat-v0-2-0` and `id-impl-plat-v0-2-1`, named
-  `Release vX.Y.Z`, with the properties `Date` (2026-11-15 for all three) and `Tag` (the git tag),
-  and a one-line documentation. A Triggering relationship leads from each release to the next.
+- **Elements:** [`id-impl-plat-v0-1-0`](../togaf/F-migration-planning.md#id-impl-plat-v0-1-0),
+  [`id-impl-plat-v0-2-0`](../togaf/F-migration-planning.md#id-impl-plat-v0-2-0) and
+  [`id-impl-plat-v0-2-1`](../togaf/F-migration-planning.md#id-impl-plat-v0-2-1), named `Release
+  vX.Y.Z`, with the properties `Date` (2026-11-15 for all three) and `Tag` (the git tag), and a
+  one-line documentation. A Triggering relationship leads from each release to the next.
 - **Links:** from each Plateau, an Aggregation to every element the release delivered; `just
   model-check` allowed Aggregation for every pair, so no Association was needed. Recorded contents:
-  `id-impl-plat-v0-1-0` delivers `id-app-comp-reservation-svc`, `id-app-comp-domain`,
-  `id-app-comp-application`, `id-app-comp-db`, `id-app-comp-http`, `id-app-intf-reservation-api`,
-  `id-app-svc-book`, `id-app-data-schedule`, `id-bus-proc-reserve`, `id-bus-obj-reservation`,
-  `id-mot-adr-0003` and `id-mot-adr-0005`. `id-impl-plat-v0-2-0` delivers `id-app-svc-cancel`,
-  `id-bus-proc-cancel`, `id-mot-req-cancel`, `id-mot-req-cancel-refused`, `id-mot-out-rebook`,
-  `id-mot-goal-free-slots`, `id-app-comp-application`, `id-app-comp-http`,
-  `id-app-intf-reservation-api`, `id-mot-adr-0006` (pilot and rollout landed before v0.2.0, the
-  first release deployed that way) and `id-mot-adr-0007`. `id-impl-plat-v0-2-1` delivers
-  `id-app-comp-application`, `id-app-comp-db`, `id-app-comp-http` (#37 changed the HTTP adapter),
-  `id-app-data-schedule` and `id-mot-adr-0008`.
-- **View:** `id-view-releases` (viewpoint Implementation and Migration, documentation: "The releases
-  in order and the decisions each one delivered; the Release column of the other catalogs shows what
-  else each release delivered.") shows the three releases and the five ADRs they deliver (eight
-  boxes: `id-mot-adr-0003`, `id-mot-adr-0005`, `id-mot-adr-0006`, `id-mot-adr-0007`,
-  `id-mot-adr-0008`), with an Aggregation per ADR and the two Triggering links; the other delivered
-  elements stay linked in the model and appear in the Release column of the catalogs. It is
-  hand-arranged (view property `Layout = manual`, as this ADR allows): the automatic layout bent two
-  links over the same segment, so that v0.2.1 seemed to deliver ADR 0007. Each release box stands
-  under the ADRs it delivers and every link is a straight line. It is a `View` of the phase F
-  document.
+  [`id-impl-plat-v0-1-0`](../togaf/F-migration-planning.md#id-impl-plat-v0-1-0) delivers
+  [`id-app-comp-reservation-svc`](../togaf/A-architecture-vision.md#id-app-comp-reservation-svc),
+  [`id-app-comp-domain`](../togaf/A-architecture-vision.md#id-app-comp-domain),
+  [`id-app-comp-application`](../togaf/A-architecture-vision.md#id-app-comp-application),
+  [`id-app-comp-db`](../togaf/A-architecture-vision.md#id-app-comp-db),
+  [`id-app-comp-http`](../togaf/A-architecture-vision.md#id-app-comp-http),
+  [`id-app-intf-reservation-api`](../togaf/A-architecture-vision.md#id-app-intf-reservation-api),
+  [`id-app-svc-book`](../togaf/A-architecture-vision.md#id-app-svc-book),
+  [`id-app-data-schedule`](../togaf/A-architecture-vision.md#id-app-data-schedule),
+  [`id-bus-proc-reserve`](../togaf/A-architecture-vision.md#id-bus-proc-reserve),
+  [`id-bus-obj-reservation`](../togaf/A-architecture-vision.md#id-bus-obj-reservation),
+  [`id-mot-adr-0003`](0003-layered-cargo-workspace.md) and
+  [`id-mot-adr-0005`](0005-release-image-and-acceptance.md).
+  [`id-impl-plat-v0-2-0`](../togaf/F-migration-planning.md#id-impl-plat-v0-2-0) delivers
+  [`id-app-svc-cancel`](../togaf/A-architecture-vision.md#id-app-svc-cancel),
+  [`id-bus-proc-cancel`](../togaf/A-architecture-vision.md#id-bus-proc-cancel),
+  [`id-mot-req-cancel`](../togaf/A-architecture-vision.md#id-mot-req-cancel),
+  [`id-mot-req-cancel-refused`](../togaf/A-architecture-vision.md#id-mot-req-cancel-refused),
+  [`id-mot-out-rebook`](../togaf/A-architecture-vision.md#id-mot-out-rebook),
+  [`id-mot-goal-free-slots`](../togaf/A-architecture-vision.md#id-mot-goal-free-slots),
+  [`id-app-comp-application`](../togaf/A-architecture-vision.md#id-app-comp-application),
+  [`id-app-comp-http`](../togaf/A-architecture-vision.md#id-app-comp-http),
+  [`id-app-intf-reservation-api`](../togaf/A-architecture-vision.md#id-app-intf-reservation-api),
+  [`id-mot-adr-0006`](0006-pilot-and-rollout-with-quadlet.md) (pilot and rollout landed before
+  v0.2.0, the first release deployed that way) and
+  [`id-mot-adr-0007`](0007-cancel-reservation-by-delete.md).
+  [`id-impl-plat-v0-2-1`](../togaf/F-migration-planning.md#id-impl-plat-v0-2-1) delivers
+  [`id-app-comp-application`](../togaf/A-architecture-vision.md#id-app-comp-application),
+  [`id-app-comp-db`](../togaf/A-architecture-vision.md#id-app-comp-db),
+  [`id-app-comp-http`](../togaf/A-architecture-vision.md#id-app-comp-http) (#37 changed the HTTP
+  adapter), [`id-app-data-schedule`](../togaf/A-architecture-vision.md#id-app-data-schedule) and
+  [`id-mot-adr-0008`](0008-atomic-schedule-update-through-the-port.md).
+- **View:** [`id-view-releases`](../togaf/F-migration-planning.md#id-view-releases) (viewpoint
+  Implementation and Migration, documentation: "The releases in order and the decisions each one
+  delivered; the Release column of the other catalogs shows what else each release delivered.")
+  shows the three releases and the five ADRs they deliver (eight boxes:
+  [`id-mot-adr-0003`](0003-layered-cargo-workspace.md),
+  [`id-mot-adr-0005`](0005-release-image-and-acceptance.md),
+  [`id-mot-adr-0006`](0006-pilot-and-rollout-with-quadlet.md),
+  [`id-mot-adr-0007`](0007-cancel-reservation-by-delete.md),
+  [`id-mot-adr-0008`](0008-atomic-schedule-update-through-the-port.md)), with an Aggregation per ADR
+  and the two Triggering links; the other delivered elements stay linked in the model and appear in
+  the Release column of the catalogs. It is hand-arranged (view property `Layout = manual`, as this
+  ADR allows): the automatic layout bent two links over the same segment, so that v0.2.1 seemed to
+  deliver ADR 0007. Each release box stands under the ADRs it delivers and every link is a straight
+  line. It is a `View` of the phase F document.
 - **Generator:** the catalogs' Release column lists each Plateau once per element, in version order
   (`v0-10-0` after `v0-2-1`), counting an Association in either direction; an ADR page's header
   gains `Released in: <tags>` when a Plateau links to the ADR; `--check` applies the one-line rule
@@ -638,8 +678,10 @@ decision:
 - **No relative links to Markdown files:** `gen_docs.py --check` fails when the text of an ADR or a
   document links to a `.md` file by a relative path, which is broken inside Archi's report; the text
   names the target and its element id in backticks instead (ADR 0009 (`id-mot-adr-0009`)), and the
-  generator makes the id a link on the page. ADR 0002 and ADR 0007 were changed accordingly.
-  `mdwrap.wrap` also keeps a link whole when its text holds a closing bracket inside a code span.
+  generator makes the id a link on the page: ADR pages now link identifiers in backticks by the same
+  rules as TOGAF pages (an ADR does not link itself; the other ADR pages whose text cites
+  identifiers changed with it). ADR 0002 and ADR 0007 were changed accordingly. `mdwrap.wrap` also
+  keeps a link whole when its text holds a closing bracket inside a code span.
 - **One shared area for `/implement`:** `docs/architecture/model.xml`, the generated pages and
   `docs/architecture/views/` are one area: two tasks that change the model never run in the same
   wave, and a model task is held while a pull request that changes the model is open.

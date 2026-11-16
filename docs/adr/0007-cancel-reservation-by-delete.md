@@ -10,11 +10,15 @@
 - Released in: v0.2.0
 
 ## Context and problem
-Customers who can no longer come have no way to free their slot (`id-mot-drv-blocked-slots`). Epic
-#17 asks that a customer can cancel a reservation by its id, and measures success as "a cancelled
-slot can be booked again immediately" (`id-mot-out-rebook`). We must decide what "cancel" means for
-the stored data and what the HTTP API looks like, both for success (story #18, `id-mot-req-cancel`)
-and for an id that does not exist or was already cancelled (story #19, `id-mot-req-cancel-refused`).
+Customers who can no longer come have no way to free their slot
+([`id-mot-drv-blocked-slots`](../togaf/A-architecture-vision.md#id-mot-drv-blocked-slots)). Epic #17
+asks that a customer can cancel a reservation by its id, and measures success as "a cancelled slot
+can be booked again immediately"
+([`id-mot-out-rebook`](../togaf/A-architecture-vision.md#id-mot-out-rebook)). We must decide what
+"cancel" means for the stored data and what the HTTP API looks like, both for success (story #18,
+[`id-mot-req-cancel`](../togaf/A-architecture-vision.md#id-mot-req-cancel)) and for an id that does
+not exist or was already cancelled (story #19,
+[`id-mot-req-cancel-refused`](../togaf/A-architecture-vision.md#id-mot-req-cancel-refused)).
 Refunds, notifications and cancellation deadlines are out of scope.
 
 ## Decision drivers
@@ -46,12 +50,16 @@ Chosen: **option 1**, because it is what the domain already does (`Schedule::can
 slot with no change to the overlap rule, it fits the REST resource that `POST /reservations`
 creates, and it gives a clear refusal for ids that do not exist.
 
-- `DELETE /reservations/{id}` on the reservation API (`id-app-intf-reservation-api`), realised by a
-  new cancel use case in `crates/application` (`id-app-svc-cancel`).
+- `DELETE /reservations/{id}` on the reservation API
+  ([`id-app-intf-reservation-api`](../togaf/A-architecture-vision.md#id-app-intf-reservation-api)),
+  realised by a new cancel use case in `crates/application`
+  ([`id-app-svc-cancel`](../togaf/A-architecture-vision.md#id-app-svc-cancel)).
 - Success: `204 No Content`, no body.
 - Unknown id, or an id that was already cancelled: `404 Not Found` with the existing `{"error":
   "..."}` body. Cancelling twice therefore gives `404` the second time.
-- Cancelling removes the reservation from the schedule (`id-app-data-schedule`). No history is kept.
+- Cancelling removes the reservation from the schedule
+  ([`id-app-data-schedule`](../togaf/A-architecture-vision.md#id-app-data-schedule)). No history is
+  kept.
 - Storage failures map to `503 Service Unavailable` with `{error}`, reusing the mapping `POST
   /reservations` already has. *Beyond the plan approved at gate 1; needs the human's sign-off on
   this ADR.*
@@ -75,8 +83,9 @@ creates, and it gives a clear refusal for ids that do not exist.
 - Bad: error bodies are not uniform: rule, not-found and storage errors carry `{error}`, while
   requests the framework rejects (a non-numeric id, malformed JSON) get a plain-text body.
 - Bad: reservation ids are unique only within one running instance. Storage is in memory
-  (`id-app-comp-db`), so ids start again from 1 after a restart, redeploy or rollback, and an old id
-  held by a client may then name a different reservation.
+  ([`id-app-comp-db`](../togaf/A-architecture-vision.md#id-app-comp-db)), so ids start again from 1
+  after a restart, redeploy or rollback, and an old id held by a client may then name a different
+  reservation.
 - Known risk: concurrent requests can lose or duplicate reservations, because the use cases load the
   schedule, change it and save it without atomicity. Cancel adds a second writer: a concurrent book
   and cancel can bring a cancelled reservation back or lose a booking. Tracked as bug #26; not fixed
@@ -84,5 +93,6 @@ creates, and it gives a clear refusal for ids that do not exist.
 - Follow-up: implementation in the task issues under stories #18 and #19.
 
 ## Notes
-- 2026-11-15: the known risk above (bug #26) is resolved by ADR 0008 (`id-mot-adr-0008`): every
-  change to the schedule now goes through one atomic `update` operation on the repository port.
+- 2026-11-15: the known risk above (bug #26) is resolved by ADR 0008
+  ([`id-mot-adr-0008`](0008-atomic-schedule-update-through-the-port.md)): every change to the
+  schedule now goes through one atomic `update` operation on the repository port.

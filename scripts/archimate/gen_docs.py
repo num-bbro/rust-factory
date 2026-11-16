@@ -29,7 +29,8 @@ an ordinary element): identifier `id-impl-del-<slug>`, the document's title as n
 properties File (`docs/togaf/<name>.md`) and Phase (one of PHASES), once each, optionally
 Viewpoints and Artifacts (Markdown, shown in the index), and an ordered, repeated `View` naming
 the views that belong to the document. Its documentation is the narrative, one line per paragraph
-and list item as for the ADRs. The page is the narrative, in which an identifier that is the whole
+and list item as for the ADRs. The page is the narrative (an ADR page's body links identifiers
+in the same way, except its own), in which an identifier that is the whole
 content of a single-backtick code span becomes a link when it has a target (an ADR or a document
 → its page; a view → its section here, else in the first other document showing it; an element →
 its catalog row here, else in the first other document whose views draw it); code blocks, longer
@@ -259,8 +260,10 @@ def _number(ident: str) -> str:
     return m.group(1) if m else ident
 
 
-def page(adr: Adr, model: exchange.Model, released_in: dict[str, list[str]]) -> str:
-    """One ADR page: generated note, title, header list, body; wrapped at mdwrap.WIDTH."""
+def page(adr: Adr, model: exchange.Model, released_in: dict[str, list[str]],
+         togaf: "Togaf") -> str:
+    """One ADR page: generated note, title, header list, body; wrapped at mdwrap.WIDTH. Identifiers
+    in backticks in the body are linked as on TOGAF pages (but an ADR does not link itself)."""
     linked = sorted({r["Source"] for r in model.relationships
                      if r["Target"] == adr.ident and r["Type"] in LINKS})
     supersedes = [r for r in model.relationships
@@ -276,8 +279,10 @@ def page(adr: Adr, model: exchange.Model, released_in: dict[str, list[str]]) -> 
                for r in sorted(supersedes, key=lambda r: r["Target"]) if r["Source"] == adr.ident]
     header += [f"- Superseded by: ADR {_number(r['Source'])}"
                for r in sorted(supersedes, key=lambda r: r["Source"]) if r["Target"] == adr.ident]
+    here = Document(adr.ident, adr.title, adr.props["File"], "", [], adr.text)
+    body = togaf.link_ids(adr.text, here, skip=adr.ident)
     text = "\n".join([generated_note(adr.ident), f"# {adr.number}. {adr.title}", "", *header, "",
-                      adr.text])
+                      body])
     return mdwrap.wrap(text) + "\n"
 
 
@@ -514,7 +519,7 @@ class Togaf:
             return href(here.file, here.file, ident)
         return href(here.file, shown[0].file, ident) if shown else None
 
-    def link_ids(self, text: str, here: Document) -> str:
+    def link_ids(self, text: str, here: Document, skip: str = "") -> str:
         """`text` with each identifier that has a target made a link. Only a code span of single
         backticks whose whole content is the identifier counts, and not inside a link's text;
         fenced and indented code, and spans of two or more backticks, are left as they are."""
@@ -526,7 +531,7 @@ class Togaf:
             for start, end, run, in_link in reversed(_spans(line)):
                 ident = line[start + run:end - run]
                 to = None
-                if run == 1 and not in_link and CODE_ID.fullmatch(ident):
+                if run == 1 and not in_link and ident != skip and CODE_ID.fullmatch(ident):
                     to = self.target(ident, here)
                 if to is not None:
                     line = f"{line[:start]}[{line[start:end]}]({to}){line[end:]}"
@@ -608,13 +613,13 @@ def render(model: exchange.Model) -> tuple[dict[str, str], list[str]]:
     """{repository-relative path: content} for every generated page, and the model's problems."""
     found, problems = adrs(model)
     released_in = releases(model)
-    pages = {a.props["File"]: page(a, model, released_in) for a in found
-             if a.props.get("File")}
     site = site_of(model)
-    pages[INDEX] = index(found, site)
     docs, doc_problems = documents(model)
     doc_problems += line_breaks(model) + view_problems(model, docs) + site_problems(model)
     togaf = Togaf(model, docs, found, released_in, site)
+    pages = {a.props["File"]: page(a, model, released_in, togaf) for a in found
+             if a.props.get("File")}
+    pages[INDEX] = index(found, site)
     pages.update({d.file: togaf.page(d) for d in togaf.docs})
     pages[TOGAF_INDEX] = togaf.index()
     return dict(sorted(pages.items())), problems + doc_problems

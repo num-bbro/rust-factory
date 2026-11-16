@@ -780,6 +780,31 @@ class TogafProblems(unittest.TestCase):
                                     "</documentation>", ""))
 
 
+class AdrLinks(unittest.TestCase):
+    def body(self, text: str) -> str:
+        xml = togaf_model().replace("One line per paragraph.", text, 1)
+        pages, problems = togaf(xml)
+        self.assertEqual(problems, [])
+        return mdwrap.unwrap(pages["docs/adr/0001-first.md"].split("\n\n", 3)[-1])
+
+    def test_ids_in_an_adr_link_as_on_togaf_pages(self):
+        body = self.body("See `id-mot-adr-0002`, `id-app-comp-a`, `id-view-one`, "
+                         "`id-impl-del-second`, `id-app-comp-gone`, `id-mot-adr-0001` and "
+                         "`id-app-comp-a`.")
+        self.assertIn("[`id-mot-adr-0002`](0002-second.md)", body)
+        self.assertIn("[`id-app-comp-a`](../togaf/A-first.md#id-app-comp-a)", body)
+        self.assertIn("[`id-view-one`](../togaf/A-first.md#id-view-one)", body)
+        self.assertIn("[`id-impl-del-second`](../togaf/B-second.md)", body)
+        self.assertIn(" `id-app-comp-gone`,", body)
+        self.assertIn("`id-mot-adr-0001` and", body)
+        self.assertNotIn("[`id-mot-adr-0001`]", body)
+
+    def test_code_blocks_and_links_are_left_alone(self):
+        body = self.body("In [`id-mot-adr-0002`](x.html) and\n\n```\n`id-mot-adr-0002`\n```")
+        self.assertNotIn("[`id-mot-adr-0002`](0002", body)
+        self.assertIn("\n`id-mot-adr-0002`\n", body)
+
+
 class TogafCheck(unittest.TestCase):
     run_main = Check.run_main
     tearDown = Check.tearDown
