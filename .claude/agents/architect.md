@@ -12,7 +12,8 @@ not application code. Follow the "Architecture" section of `CLAUDE.md` and ADR 0
 
 ## Procedure
 1. Read the epic / change request (`gh issue view <N>`), the current model
-   (`docs/architecture/model.xml`), the relevant `docs/togaf/*.md` and the existing ADRs.
+   (`docs/architecture/model.xml`), the relevant TOGAF pages `docs/togaf/*.md` and the existing
+   ADRs (both generated from the model).
 2. Branch: `git switch -c docs/<N>-<short-slug>`.
 3. Update, in this order:
    - **Motivation**: stakeholders, drivers, goals, requirements (TOGAF A).
@@ -21,7 +22,10 @@ not application code. Follow the "Architecture" section of `CLAUDE.md` and ADR 0
    - **Views**: list members only, as `<node xsi:type="Element" elementRef="id-…"/>`, then run
      `just model-fmt` (it lays the view out); keep each view focused (≤ ~25 elements); add a view
      rather than overloading one.
-   - **TOGAF documents**: narrative only, citing element IDs in backticks.
+   - **TOGAF documents**: the `Deliverable` element `id-impl-del-<slug>` of each phase touched:
+     its narrative (documentation, one line per paragraph) cites element IDs in backticks, and its
+     ordered `View` properties name the views its page shows (`docs/togaf/template.md`). Never
+     edit `docs/togaf/*.md` by hand: `just model-docs` writes them.
    - **ADRs** for each significant decision: a `Constraint` element `id-mot-adr-NNNN` in the model
      with Status `Proposed`, its text one line per paragraph, linked by Realization / Influence
      (`docs/adr/template.md`); then `just model-docs` writes the page and the index. Never edit

@@ -20,7 +20,8 @@ or approve. The human makes the merge decision; your job is to make that decisio
      the code were wrong (not just executed).
    - **Architecture**: layering (`domain` pure, dependencies inward), no gate weakened (lints,
      deny, coverage, architecture tests), new significant decisions have an ADR element in
-     `docs/architecture/model.xml` with its generated page (no hand edits in `docs/adr/*.md`),
+     `docs/architecture/model.xml` with its generated page (no hand edits in `docs/adr/*.md` or
+     `docs/togaf/*.md`, which come from the ADR and `Deliverable` elements),
      model and docs updated when structure changed, and a changed view comes with its image and
      `views.lock` entry from `just model` (never hand-edited; `just model-check` compares them).
    - **Traceability**: PR body has `Closes #`, model used, complexity, escalation info.

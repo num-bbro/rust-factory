@@ -149,11 +149,11 @@ project repo="num-bbro/rust-factory" title="":
 model:
     scripts/archimate/build.sh
 
-# Check docs/architecture/model.xml: canonical form, official schema, relationship rules, IDs, views, doc references, generated ADR pages and view images current (fast; reads the rules and schema from the pinned Archi install, does not start Archi).
+# Check docs/architecture/model.xml: canonical form, official schema, relationship rules, IDs, views, doc references, generated ADR and TOGAF pages and view images current (fast; reads the rules and schema from the pinned Archi install, does not start Archi).
 model-check:
     scripts/archimate/build.sh --check
 
-# Write the ADR pages docs/adr/NNNN-*.md and docs/adr/README.md from the model (ADR 0009). Never edit them by hand.
+# Write the ADR pages docs/adr/NNNN-*.md and docs/adr/README.md and the TOGAF pages docs/togaf/*.md (with their diagrams and catalogs) and docs/togaf/README.md from the model (ADR 0009). Never edit them by hand.
 model-docs:
     python3 -I scripts/archimate/gen_docs.py
 

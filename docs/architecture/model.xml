@@ -206,6 +206,359 @@
       <name xml:lang="en">Worker</name>
       <documentation xml:lang="en">Carries out one task in its own git worktree and delivers it as a PR.</documentation>
     </element>
+    <element identifier="id-impl-del-architecture-change-management" xsi:type="Deliverable">
+      <name xml:lang="en">H. Architecture Change Management</name>
+      <documentation xml:lang="en">**Purpose:** Handle changes to an approved architecture in a controlled way.
+
+## Outputs
+- Change requests and their drivers
+- Impact assessment
+- Decision: update now, later, or reject
+
+## Content
+Business changes arrive as **Change request** issues (labelled `needs-human`). The architect agent assesses impact on the model and ADRs and updates them in a PR **before** any code changes; the human approves by merging.
+
+## Open questions
+- _none yet_</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/togaf/H-architecture-change-management.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-phase">
+          <value xml:lang="en">H</value>
+        </property>
+        <property propertyDefinitionRef="propid-artifacts">
+          <value xml:lang="en">Change-request issues</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-impl-del-architecture-vision" xsi:type="Deliverable">
+      <name xml:lang="en">A. Architecture Vision</name>
+      <documentation xml:lang="en">**Purpose:** Agree the business goal, scope, stakeholders and success measures before design starts.
+
+## Outputs
+- Stakeholders and concerns
+- Drivers and goals
+- Scope (in / out)
+- Success measures
+
+## Content
+Vision for the factory: a business need becomes healthy, rolled-out Rust software, with every change traceable and AI cost under control.
+
+- Stakeholder: product owner (`id-mot-sh-product-owner`)
+- Driver: business needs change often (`id-mot-drv-change`)
+- Goals: healthy software (`id-mot-goal-healthy`), traceability (`id-mot-goal-traceable`), cost control (`id-mot-goal-cost`)
+
+For a project, the vision is captured first as an **Epic** issue, then reflected here and in the Motivation view.
+
+### Sample domain: reservations (epic #17)
+The factory's sample product is a reservation service for time slots. Epic #17, "Customers can cancel a reservation", is its first change after booking:
+
+- Stakeholders: customers (`id-mot-sh-customer`), who use it, and the front-desk manager (`id-mot-sh-front-desk`), who decides.
+- Driver: unused slots stay blocked (`id-mot-drv-blocked-slots`).
+- Goal: customers can free slots they no longer need (`id-mot-goal-free-slots`), measured by the outcome "a cancelled slot can be booked again immediately" (`id-mot-out-rebook`).
+- Out of scope: refunds, notifications, cancellation deadlines.
+
+## Open questions
+- _none yet_</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/togaf/A-architecture-vision.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-phase">
+          <value xml:lang="en">A</value>
+        </property>
+        <property propertyDefinitionRef="propid-viewpoints">
+          <value xml:lang="en">Motivation</value>
+        </property>
+        <property propertyDefinitionRef="propid-artifacts">
+          <value xml:lang="en">Epic issues</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-motivation</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-reservation-cancel</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-impl-del-business-architecture" xsi:type="Deliverable">
+      <name xml:lang="en">B. Business Architecture</name>
+      <documentation xml:lang="en">**Purpose:** Describe how the business works: actors, roles, processes, information they use.
+
+## Outputs
+- Actors and roles
+- Business processes
+- Business objects
+- Gaps between current and target
+
+## Content
+The factory's delivery lifecycle (`id-bus-proc-lifecycle`) consists of plan and design, implement task, review and merge, accept build, and pilot and roll out. The human approver (`id-bus-act-human`) holds the review and deploy gates; the conductor and worker roles are filled by AI agents.
+
+For a project, each **user story** maps to business behaviour here; business rules become domain-layer code.
+
+### Sample domain: reservations
+A customer (`id-bus-act-customer`) reserves a slot (`id-bus-proc-reserve`) and, since epic #17, can cancel it again (`id-bus-proc-cancel`); both work on a reservation (`id-bus-obj-reservation`). Business rules for cancelling (stories #18, #19): only the named reservation is removed, its slot is free at once, no history is kept, and cancelling a reservation that does not exist (or no longer exists) is refused and changes nothing. Decision and alternatives: ADR 0007.
+
+## Open questions
+- _none yet_</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/togaf/B-business-architecture.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-phase">
+          <value xml:lang="en">B</value>
+        </property>
+        <property propertyDefinitionRef="propid-viewpoints">
+          <value xml:lang="en">Business Process Cooperation, Organization</value>
+        </property>
+        <property propertyDefinitionRef="propid-artifacts">
+          <value xml:lang="en">User stories</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-lifecycle</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-reservation-cancel</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-impl-del-implementation-governance" xsi:type="Deliverable">
+      <name xml:lang="en">G. Implementation Governance</name>
+      <documentation xml:lang="en">**Purpose:** Make sure what is built matches the architecture.
+
+## Outputs
+- Architecture compliance checks
+- Review process
+- Quality gates
+
+## Content
+Governance runs on every PR: the PR template links the issue, ADR and ArchiMate elements; automated gates (format, lint, tests, architecture test, model build) must pass; the reviewer agent checks architecture compliance; a human merges.
+
+## Open questions
+- _none yet_</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/togaf/G-implementation-governance.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-phase">
+          <value xml:lang="en">G</value>
+        </property>
+        <property propertyDefinitionRef="propid-artifacts">
+          <value xml:lang="en">PR gates, reviews</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-lifecycle</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-impl-del-information-systems-architecture" xsi:type="Deliverable">
+      <name xml:lang="en">C. Information Systems Architecture</name>
+      <documentation xml:lang="en">**Purpose:** Describe the applications and data that support the business: components, interfaces, data objects.
+
+## Outputs
+- Application components and their interfaces
+- Data objects and ownership
+- Mapping to Rust crates
+
+## Content
+Applications in the factory: conductor agent, hard / simple workers, scout, and GitHub (issues, PRs). Data objects: issue (`id-app-data-issue`) and pull request (`id-app-data-pr`).
+
+For a project, each application component maps to a crate in the Cargo workspace (domain, application, adapters, app), and each data object to a domain type or table.
+
+### Sample domain: reservations
+The reservation service (`id-app-comp-reservation-svc`, crate `app`) is composed of one component per crate, following ADR 0003: domain (`id-app-comp-domain`), use cases (`id-app-comp-application`), HTTP adapter (`id-app-comp-http`) and persistence adapter (`id-app-comp-db`). The Serving relationships between these crate components show the run-time call direction, not the Cargo dependency direction, which ADR 0003 governs. So `id-rel-068` (the persistence adapter serves the use cases) is not a layering violation: at run time the use cases call the adapter through their `ScheduleRepository` port, while in Cargo `adapters-db` depends on `application` (dependency inversion).
+
+Customers use the service through the reservations HTTP API (`id-app-intf-reservation-api`), which is part of the HTTP adapter. The API offers two application services: book a slot (`id-app-svc-book`) and, from epic #17, cancel a reservation (`id-app-svc-cancel`). The data is the day's schedule (`id-app-data-schedule`), which realises the reservation business object.
+
+Cancelling is `DELETE /reservations/{id}`: `204 No Content` on success, `404 Not Found` with the usual `{error}` body for an unknown or already cancelled id; a non-numeric id gets the framework's plain-text `400`. The reservation is removed, not marked; see ADR 0007 for the options considered. The domain rule already exists (`Schedule::cancel`); the change adds a use case and an HTTP route.
+
+Every change to the schedule goes through one atomic `update` operation on the `ScheduleRepository` port: reading, changing and storing the schedule happen as one step, and a change refused by a business rule stores nothing. Concurrent requests therefore cannot lose, duplicate or bring back reservations (bug #26, fixed by ADR 0008). Each host still keeps its own in-memory schedule.
+
+## Open questions
+- _none yet_</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/togaf/C-information-systems-architecture.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-phase">
+          <value xml:lang="en">C</value>
+        </property>
+        <property propertyDefinitionRef="propid-viewpoints">
+          <value xml:lang="en">Application Cooperation, Information Structure</value>
+        </property>
+        <property propertyDefinitionRef="propid-artifacts">
+          <value xml:lang="en">Crates, data model</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-layered</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-reservation-cancel</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-impl-del-migration-planning" xsi:type="Deliverable">
+      <name xml:lang="en">F. Migration Planning</name>
+      <documentation xml:lang="en">**Purpose:** Plan the sequence of releases from current to target state, and how each is rolled out.
+
+## Outputs
+- Release plan (milestones)
+- Pilot plan and success criteria
+- Rollback plan
+
+## Content
+Each release is built once as a container image, accepted, deployed to the pilot host, and rolled out to production after human approval. Rollback means redeploying the previous image tag.
+
+## Open questions
+- _none yet_</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/togaf/F-migration-planning.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-phase">
+          <value xml:lang="en">F</value>
+        </property>
+        <property propertyDefinitionRef="propid-viewpoints">
+          <value xml:lang="en">Migration</value>
+        </property>
+        <property propertyDefinitionRef="propid-artifacts">
+          <value xml:lang="en">Releases, pilot plan</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-impl-del-opportunities-and-solutions" xsi:type="Deliverable">
+      <name xml:lang="en">E. Opportunities &amp; Solutions</name>
+      <documentation xml:lang="en">**Purpose:** Decide how to deliver the target architecture: work packages, build vs. buy, dependencies.
+
+## Outputs
+- Work packages (epics, milestones)
+- Build / reuse decisions (as ADRs)
+- Dependencies between tasks
+
+## Content
+In the factory, the conductor splits approved stories into **task** issues, each with a complexity label and "blocked by" links. Larger build-vs-buy choices become ADRs.
+
+## Open questions
+- _none yet_</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/togaf/E-opportunities-and-solutions.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-phase">
+          <value xml:lang="en">E</value>
+        </property>
+        <property propertyDefinitionRef="propid-viewpoints">
+          <value xml:lang="en">Project</value>
+        </property>
+        <property propertyDefinitionRef="propid-artifacts">
+          <value xml:lang="en">Milestones, task split</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-impl-del-preliminary" xsi:type="Deliverable">
+      <name xml:lang="en">Preliminary</name>
+      <documentation xml:lang="en">**Purpose:** Set up how architecture work is done: principles, governance, tools.
+
+## Outputs
+- Architecture principles (see Motivation view: `id-mot-pr-pr-only`)
+- Who approves what (human gates in `CLAUDE.md`)
+- Tools and repositories (`bootstrap.sh`, GitHub, Archi)
+
+## Content
+Principles for this factory:
+
+1. **Every change through a reviewed PR** (`id-mot-pr-pr-only`): `main` is protected.
+2. **Architecture as code**: the ArchiMate model and these documents live in git and change through PRs.
+3. **Decisions are recorded**: every significant decision gets an ADR in `docs/adr/`.
+4. **Right model for the job**: work is routed to AI models by difficulty (`id-mot-req-routing`).
+5. **Business logic stays pure**: domain code has no IO, so business rules can change safely.
+
+## Open questions
+- _none yet_</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/togaf/00-preliminary.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-phase">
+          <value xml:lang="en">Preliminary</value>
+        </property>
+        <property propertyDefinitionRef="propid-artifacts">
+          <value xml:lang="en">`CLAUDE.md`, `CONTRIBUTING.md`</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-motivation</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-impl-del-requirements-management" xsi:type="Deliverable">
+      <name xml:lang="en">Requirements Management</name>
+      <documentation xml:lang="en">**Purpose:** Keep requirements visible, prioritised and traceable through every phase.
+
+## Outputs
+- Requirement and story issues
+- Priorities (MoSCoW)
+- Traceability links
+
+## Content
+Requirements live as GitHub issues (forms in `.github/ISSUE_TEMPLATE/`), prioritised with MoSCoW labels and tracked on the Project board through Backlog → Released. Important requirements are also ArchiMate Requirement elements, linked to the elements that realise them.
+
+Sample domain: the stories of epic #17 are requirements in the model, so the chain story → requirement → application service is visible in `id-view-reservation-cancel`: #18 is `id-mot-req-cancel`, #19 is `id-mot-req-cancel-refused`, both realised by `id-app-svc-cancel`.
+
+## Open questions
+- _none yet_</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/togaf/requirements-management.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-phase">
+          <value xml:lang="en">Requirements Management</value>
+        </property>
+        <property propertyDefinitionRef="propid-viewpoints">
+          <value xml:lang="en">Requirements Realization</value>
+        </property>
+        <property propertyDefinitionRef="propid-artifacts">
+          <value xml:lang="en">Requirement issues, board</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-reservation-cancel</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-impl-del-technology-architecture" xsi:type="Deliverable">
+      <name xml:lang="en">D. Technology Architecture</name>
+      <documentation xml:lang="en">**Purpose:** Describe the platforms the applications run on: nodes, system software, networks, services.
+
+## Outputs
+- Nodes and environments (dev, pilot, production)
+- System software
+- Technology services
+
+## Content
+Factory technology: developer workstations (Arch / Ubuntu-WSL, `id-tech-node-workstation`) with the pinned Rust toolchain and Archi; release images in GHCR (`id-tech-svc-ghcr`); Podman on pilot and production hosts.
+
+The sample reservation service (`id-app-comp-reservation-svc`) runs as a container under Podman (`id-tech-sw-podman`) on the pilot host (`id-tech-node-pilot`) and production hosts. Epic #17 needs no technology change.
+
+## Open questions
+- _none yet_</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/togaf/D-technology-architecture.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-phase">
+          <value xml:lang="en">D</value>
+        </property>
+        <property propertyDefinitionRef="propid-viewpoints">
+          <value xml:lang="en">Technology, Implementation and Deployment</value>
+        </property>
+        <property propertyDefinitionRef="propid-artifacts">
+          <value xml:lang="en">`deploy/`, CI</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-layered</value>
+        </property>
+      </properties>
+    </element>
     <element identifier="id-mot-adr-0001" xsi:type="Constraint">
       <name xml:lang="en">ADR 0001: Record architecture decisions as ADRs</name>
       <documentation xml:lang="en">## Context and problem
@@ -855,7 +1208,16 @@ Step 4 (#50) committed the view images. As with the amendments above, these poin
 - **Only what is out of date is rewritten:** a view keeps its committed image when its lock entry has the current input hash and the file has the locked sha256 and size; otherwise the fresh render replaces it, so `just model` also repairs an edited, deleted or foreign image, not only a changed view. The image and lock entry of a view that left the model are removed. Any other file in the folder is reported and fails the build, but is never deleted: as with orphan ADR pages, deleting it is the author's step. With nothing changed, a re-run leaves the working tree untouched.
 - **Always Xvfb, and X11:** `build.sh` always runs Archi under `xvfb-run`, with `WAYLAND_DISPLAY` removed and `GDK_BACKEND=x11`: in a Wayland session GTK otherwise draws on the session's display despite `xvfb-run`, and the PNG bytes then differed from a build without a session. With this, repeated local builds give byte-identical PNGs.
 - **The image check** (`views.py --check`) is the last check of `just model-check`. `just model` skips it before the build (the build is what brings the images up to date) and runs it after updating them. It fails, naming the view and saying "run `just model` and commit `docs/architecture/views/`", for a view without a lock entry or with another input hash, a missing PNG, a PNG whose sha256 or size differs from the lock (also a file that is not a PNG or is truncated), a lock entry without a view or the image of such a view, and a lock that is malformed, unreadable or not in its generated form. Any other file or folder there is reported with "delete it", since `just model` leaves it. It never renders and never compares pixels.
-- **CI dimensions: equal.** The `architecture model` job runs `just model`, fails if that changed anything under `docs/architecture/views/`, then runs `just model-dims`, which compares the size of each PNG rendered on CI with `views.lock` (bytes are not compared) and fails when it compared nothing. On CI (Ubuntu 24.04 under Xvfb, PR #51) all four views had the sizes rendered on the dev machine (Arch Linux under Xvfb): `id-view-layered` 1494×1028, `id-view-lifecycle` 1010×432, `id-view-motivation` 980×387, `id-view-reservation-cancel` 1367×1246; the PNG bytes differed for all four, as expected. No font pinning is needed for now. A future difference fails CI, and how to handle it is the human's decision.</documentation>
+- **CI dimensions: equal.** The `architecture model` job runs `just model`, fails if that changed anything under `docs/architecture/views/`, then runs `just model-dims`, which compares the size of each PNG rendered on CI with `views.lock` (bytes are not compared) and fails when it compared nothing. On CI (Ubuntu 24.04 under Xvfb, PR #51) all four views had the sizes rendered on the dev machine (Arch Linux under Xvfb): `id-view-layered` 1494×1028, `id-view-lifecycle` 1010×432, `id-view-motivation` 980×387, `id-view-reservation-cancel` 1367×1246; the PNG bytes differed for all four, as expected. No font pinning is needed for now. A future difference fails CI, and how to handle it is the human's decision.
+## Amendment 2026-11-16: as built in step 5 (TOGAF documents in the model)
+Step 5 (#52) moved the ten TOGAF documents into the model. As with the amendments above, these points refine the decision:
+- **Document elements:** one `Deliverable` per document, identifier `id-impl-del-&lt;slug&gt;` (the file name without its phase prefix, e.g. `id-impl-del-architecture-vision`), name = the document's title, properties `File` (`docs/togaf/&lt;name&gt;.md`; the file names did not change) and `Phase` (one of `Preliminary`, `A`–`H`, `Requirements Management`), once each, optionally `Viewpoints` (the ArchiMate viewpoints suggested for the phase) and `Artifacts` (the factory artifacts of the phase), both Markdown and shown in the index, and `View`, repeated and ordered. The documentation is the narrative, one line per paragraph and list item (option A). **A `Deliverable` is a document when it has a `File` property**; one without `File` is an ordinary element, which the generator leaves alone, so phases E and F can model other deliverables. For documents, `gen_docs.py` checks the identifier, the two properties and the `Phase` value, `Viewpoints` and `Artifacts` at most once, the `File` form (not `README.md` or `template.md`, and no two documents with one `File`), each `View` (an existing view, named once) and the text rules of the ADRs. Which views belong to which document is the human's decision; step 5 proposes the mapping in its PR.
+- **The page:** generated note, title, the narrative wrapped at 100 characters, then one section per `View`, in order: the view's name as an `##` heading carrying the anchor `id-view-…`, the view's documentation, its committed image `../architecture/views/&lt;view-id&gt;.png` (alt text: the view's name), and a **catalog table** of the elements the view draws, sorted by identifier: ID, Name, Type, Decisions (the ADRs the element realizes or influences, linked to their pages), Issues (`Issue`), Crate / code (`Crate`, `Code`), Release, Other documents (the other pages whose views draw the element, linked to its row there). The release column appears only when the model has `Plateau` elements (step 6); it lists the Plateaus with an Aggregation or Association to the element. The first catalog row of an element on a page carries the anchor of its identifier, so anchors are stable and unique per page; GitHub keeps `&lt;a id&gt;` anchors (prefixed `user-content-`, which its links resolve).
+- **Identifier links:** in a document's narrative and in a view's documentation shown on its page, an identifier that is the whole content of a code span of single backticks becomes a link when it has a target: an ADR or a document → its page; a view → its section on this page, else on the first other page (in `File` order) that shows it; an element → its row on this page, else on the first other page whose views draw it. Anything else (a relationship, an element no document's view draws, an unknown id) stays plain code. Fenced and indented code, spans of two or more backticks, and identifiers inside a link's text are never linked, so no link syntax ever shows as text. The link to an element's page on the site (step 7) is not there yet; every link is made by one function (`href`), where the site's base URL will plug in.
+- **Names in tables and headings** show as written: the characters that Markdown or GitHub would turn into emphasis, code, links, HTML, strikethrough, a cell break or an entity are escaped, and line breaks in property values become spaces. A name with a line break is refused by `gen_docs.py --check`, since a name is one line in a heading, a link and a table row.
+- **The index** `docs/togaf/README.md` is generated and keeps the hand-written one's content and layout: the introduction, then the table, then "How the phases run in practice" and the closing paragraph, all text in `gen_docs.py`. Its columns: ADM phase (the phase's name, from `Phase`, e.g. `Requirements Management (centre)`), document, views (linked to their sections), suggested viewpoints (`Viewpoints`; the old "Main ArchiMate views" column, which named viewpoints, not views of the model) and factory artifacts (`Artifacts`). `docs/togaf/template.md` is the hand-written guide, exempt from the orphan check like `docs/adr/template.md`.
+- **Checks:** `gen_docs.py --check` also fails for a stale, missing or orphan page under `docs/togaf/` and for a `View` whose image `docs/architecture/views/&lt;view-id&gt;.png` is not committed. Since that image comes from `just model`, `build.sh` skips the image part (`--no-images`) before the build and runs the full check after it; `just model-docs` writes the pages even when an image is missing, then fails naming it. The unknown-ID check of `check_model.py` covers the documents' text as before.
+- **Not changed:** the ADR pages (an ADR's header still lists only its linked elements), the views and their images.</documentation>
       <properties>
         <property propertyDefinitionRef="propid-status">
           <value xml:lang="en">Accepted</value>
@@ -1096,6 +1458,9 @@ Step 4 (#50) committed the view images. As with the amendments above, these poin
     </relationship>
   </relationships>
   <propertyDefinitions>
+    <propertyDefinition identifier="propid-artifacts" type="string">
+      <name xml:lang="en">Artifacts</name>
+    </propertyDefinition>
     <propertyDefinition identifier="propid-code" type="string">
       <name xml:lang="en">Code</name>
     </propertyDefinition>
@@ -1117,11 +1482,20 @@ Step 4 (#50) committed the view images. As with the amendments above, these poin
     <propertyDefinition identifier="propid-model" type="string">
       <name xml:lang="en">Model</name>
     </propertyDefinition>
+    <propertyDefinition identifier="propid-phase" type="string">
+      <name xml:lang="en">Phase</name>
+    </propertyDefinition>
     <propertyDefinition identifier="propid-source" type="string">
       <name xml:lang="en">Source</name>
     </propertyDefinition>
     <propertyDefinition identifier="propid-status" type="string">
       <name xml:lang="en">Status</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-view" type="string">
+      <name xml:lang="en">View</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-viewpoints" type="string">
+      <name xml:lang="en">Viewpoints</name>
     </propertyDefinition>
   </propertyDefinitions>
   <views>

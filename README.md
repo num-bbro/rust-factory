@@ -50,8 +50,8 @@ gh auth login              # once per machine
 | `.github/dependabot.yml` | Weekly grouped dependency update PRs |
 | `scripts/issue-link.sh` | Sub-issues and "blocked by" links between issues |
 | `scripts/cost-report.py`, `tools/model-prices.toml` | `just cost`: agent spend per model, agent and task |
-| `docs/togaf/` | One document per TOGAF ADM phase (narrative) |
-| `docs/architecture/model.xml` | ArchiMate model (Open Group exchange format), built with `just model` |
+| `docs/togaf/` | One document per TOGAF ADM phase, with its diagrams and catalogs, generated from the model (`just model-docs`); [template.md](docs/togaf/template.md) says how to add or change one |
+| `docs/architecture/model.xml` | ArchiMate model (Open Group exchange format), the single source of the architecture: elements, views, TOGAF documents, ADRs; built with `just model` |
 | `docs/architecture/views/` | Archi's image of every view and `views.lock`, written by `just model` (never edit them) |
 | `docs/adr/` | Architecture Decision Records, generated from the model (`just model-docs`); [template.md](docs/adr/template.md) says how to add one |
 | `scripts/archimate/` | Model formatter, checks and builder: exchange XML → Archi model + HTML report |
@@ -84,9 +84,10 @@ just cost            what it cost, per model and per task
 
 ```bash
 just model-fmt      # sort, lay out the views and normalise docs/architecture/model.xml
-just model-check    # fast: validate the model, the element IDs mentioned in docs, the ADR pages,
-                    # the view images against views.lock
-just model-docs     # write the ADR pages docs/adr/*.md from the model (never edit them)
+just model-check    # fast: validate the model, the element IDs mentioned in docs, the ADR and
+                    # TOGAF pages, the view images against views.lock
+just model-docs     # write the ADR and TOGAF pages docs/adr/*.md, docs/togaf/*.md from the model
+                    # (never edit them)
 just model          # build build/architecture/model.archimate and report/index.html (Archi,
                     # under Xvfb); update docs/architecture/views/ for the views that changed
 just model-dims     # compare the last build's image sizes with views.lock (CI runs it)

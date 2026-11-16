@@ -63,12 +63,14 @@ def _delimiter_row(line: str) -> bool:
     return "|" in line and "-" in line and re.fullmatch(r"[\s|:-]+", line) is not None
 
 
-def _classify(text: str) -> tuple[list[tuple[str, str]], list[str]]:
+def _classify(text: str) -> tuple[list[tuple[str, str]], list[str], set[int]]:
     """Each line with its kind: "raw", "list" (starts an item), "para" (starts a paragraph) or
-    "cont" (continues the item or paragraph above); and what is not supported, by line."""
+    "cont" (continues the item or paragraph above); what is not supported, by line; and the
+    numbers (from 0) of the lines that are code: fences, fenced and indented code."""
     lines = text.split("\n")
     out: list[tuple[str, str]] = []
     problems: list[str] = []
+    code: set[int] = set()
     items: list[int] = []                # content indents of the open list items
     fence: tuple[str, int, int, int] | None = None  # fence character, length, indent, item indent
     html: re.Pattern[str] | None = None  # what ends the open HTML block
@@ -85,6 +87,7 @@ def _classify(text: str) -> tuple[list[tuple[str, str]], list[str]]:
                                     "the indent it was opened")
                 fence = None
             out.append((line, "raw"))
+            code.add(i)
             continue
         if html:
             if html.search(line):
@@ -113,11 +116,14 @@ def _classify(text: str) -> tuple[list[tuple[str, str]], list[str]]:
         if fenced and not (fenced.group(2)[0] == "`" and "`" in fenced.group(3)):
             fence = (fenced.group(2)[0], len(fenced.group(2)), ind, base)
             kind = "raw"
+            code.add(i)
         elif table or line.lstrip().startswith("|") or _delimiter_row(nxt):
             table = True
             kind = "raw"
         elif ind >= base + 4:
             kind = "cont" if unit and not listed else "raw"
+            if kind == "raw":
+                code.add(i)
         elif _RAW.match(rel):
             if rel.lstrip().startswith("<"):
                 end = _html_end(rel)
@@ -132,7 +138,13 @@ def _classify(text: str) -> tuple[list[tuple[str, str]], list[str]]:
             kind = "cont" if unit else "para"
         unit = kind != "raw" and not line.endswith("\\")   # a hard break ends the unit
         out.append((line, kind))
-    return out, problems
+    return out, problems, code
+
+
+def code_lines(text: str) -> set[int]:
+    """The numbers (from 0) of the lines of `text` that are code: fence lines, the lines inside a
+    fenced code block, and indented code."""
+    return _classify(text)[2]
 
 
 def problems(text: str) -> list[str]:
