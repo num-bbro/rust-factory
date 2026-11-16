@@ -117,14 +117,14 @@ delivered, and a Triggering from the previous release; nothing else changes:
   not lay it out, and `just model-check` checks that it draws exactly the relationships between its
   boxes and that every box lies inside its band). Edit its `<view>` in `docs/architecture/model.xml`
   by copying the existing nodes and connections:
-  - the new Plateau's box goes in the Implementation & Migration band (`id-view-releases-band-1`),
+  - the new Plateau's box goes in the Implementation & Migration band (the lower container),
     to the right of the last one (its `x` is the last Plateau box's plus 220; `y` and size are the
     same as the others);
-  - each ADR the release delivers gets a box in the Motivation band (`id-view-releases-band-0`),
+  - each ADR the release delivers gets a box in the Motivation band (the upper container),
     with the same `x` as the Plateau box, so the connection is vertical; an ADR already drawn keeps
     its box, and a release that delivers an ADR drawn elsewhere gets a connection to it as it is;
   - widen both bands by the width of one column (220) for each column you added: raise `w` of
-    `id-view-releases-band-0` and `id-view-releases-band-1` by 220;
+    both containers by 220;
   - name each node `id-view-releases-n-<element id>` and each connection
     `id-view-releases-c-<relationship id>`, with `source` and `target` the node names; draw one
     connection for every new relationship between two boxes of the view (the Triggering from the
