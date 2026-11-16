@@ -203,7 +203,7 @@ def _link_spaces(line: str, begin: int) -> set[int]:
                 last = _closing(line, end + 1, "(", ")")
                 if last > 0:
                     locked.update(k for k in range(i, last) if line[k] == " ")
-                    i = last
+                    i = max(i, last)               # the scan always moves forward
         i += 1
     return locked
 

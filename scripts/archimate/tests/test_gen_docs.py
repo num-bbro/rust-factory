@@ -6,6 +6,7 @@ from __future__ import annotations
 import contextlib
 import io
 import sys
+import signal
 import tempfile
 import unittest
 from pathlib import Path
@@ -884,7 +885,16 @@ REPORT = f"{SITE}report/id-model-t/views/"
 
 
 class WrapLinks(unittest.TestCase):
-    """A link `[text](target)` or image is one unit: wrap never breaks inside it."""
+    """A link `[text](target)` or image is one unit: wrap never breaks inside it. Every test runs
+    under a 5 second watchdog, so a scan that does not move forward fails instead of hanging."""
+
+    def setUp(self):
+        def timeout(*_):
+            raise AssertionError("mdwrap.wrap did not return within 5 seconds: the link scan "
+                                 "does not move forward")
+        self.addCleanup(signal.signal, signal.SIGALRM, signal.signal(signal.SIGALRM, timeout))
+        self.addCleanup(signal.alarm, 0)
+        signal.alarm(5)
 
     def wrapped(self, text: str, width: int = 40) -> list[str]:
         out = mdwrap.wrap(text, width)
@@ -927,6 +937,11 @@ class WrapLinks(unittest.TestCase):
         lines = self.wrapped("Some words before [text [nested] more words](a.md) and after.")
         self.assertTrue(any("[text [nested] more words](a.md)" in ln for ln in lines))
         self.assertGreater(len(lines), 1)
+
+    def test_unclosed_parenthesis_never_hangs(self):
+        for text in ("A [text of it](a.md and then more words after it.",
+                     "[text](", "[a](b) and [c](", "[x]( [y](z"):
+            self.assertEqual(mdwrap.unwrap(mdwrap.wrap(text, 20)), text)
 
     def test_an_escaped_bracket_is_not_a_link(self):
         lines = self.wrapped("Some words before \\[not a link at all and more](x) and after.")
