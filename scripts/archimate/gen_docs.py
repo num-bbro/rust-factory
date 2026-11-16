@@ -132,6 +132,28 @@ def _text_problems(where: str, text: str, what: str) -> list[str]:
     return []
 
 
+def _version(ident: str) -> tuple[tuple[int, ...], str]:
+    """Sort key of a Plateau: the numbers of its identifier (`v0-10-0` after `v0-2-1`)."""
+    return tuple(int(n) for n in re.findall(r"\d+", ident)), ident
+
+
+def releases(model: exchange.Model) -> dict[str, list[str]]:
+    """{element: its Plateaus sorted by version, each once}: a Plateau's Aggregation to the
+    element, or an Association between them in either direction."""
+    plateaus = {i for i, kind in model.elements.items() if kind == "Plateau"}
+    found: dict[str, set[str]] = {}
+    for r in model.relationships:
+        source, target = r["Source"], r["Target"]
+        if r["Type"] == "Aggregation" and source in plateaus:
+            found.setdefault(target, set()).add(source)
+        elif r["Type"] == "Association":
+            if source in plateaus:
+                found.setdefault(target, set()).add(source)
+            if target in plateaus:
+                found.setdefault(source, set()).add(target)
+    return {e: sorted(p, key=_version) for e, p in found.items()}
+
+
 def _props(model: exchange.Model, ident: str) -> list[tuple[str, str]]:
     """(name, value) of the properties of `ident`, in the model's order."""
     return [(key, value) for owner, key, value in model.properties if owner == ident]
@@ -213,6 +235,10 @@ def page(adr: Adr, model: exchange.Model) -> str:
     header = [f"- {key}: {adr.props.get(key, '')}" for key in HEADER_PROPS]
     if linked:
         header.append("- ArchiMate elements: " + ", ".join(f"`{i}`" for i in linked))
+    released = [dict(_props(model, p)).get("Tag") or model.names.get(p, p)
+                for p in releases(model).get(adr.ident, [])]
+    if released:
+        header.append("- Released in: " + ", ".join(released))
     header += [f"- Supersedes: ADR {_number(r['Target'])}"
                for r in sorted(supersedes, key=lambda r: r["Target"]) if r["Source"] == adr.ident]
     header += [f"- Superseded by: ADR {_number(r['Source'])}"
@@ -303,6 +329,17 @@ def documents(model: exchange.Model) -> tuple[list[Document], list[str]]:
     return sorted(found, key=lambda d: (d.file, d.ident)), problems
 
 
+def view_problems(model: exchange.Model, docs: list[Document]) -> list[str]:
+    """The line rules of the documentation of every view a document shows: it appears on the
+    page, where a code span over two lines would get a link inside it."""
+    problems = []
+    for view in sorted({v for d in docs for v in d.views}):
+        text = model.documentation.get(view, "")
+        if text:
+            problems += _text_problems(f"view '{view}'", text, "the view's text")
+    return problems
+
+
 def line_breaks(model: exchange.Model) -> list[str]:
     """Names with a line break: a name is one line in a heading, a link or a table row."""
     return [f"'{ident}': the name has a line break; write it on one line"
@@ -388,13 +425,9 @@ class Togaf:
         self.doc_files = {d.ident: d.file for d in self.docs}
         self.drawn: dict[str, set[str]] = {d.file: {e for v in d.views for e in model.views[v]}
                                            for d in self.docs}
-        self.releases: dict[str, list[str]] = {}
-        plateaus = sorted(i for i, kind in model.elements.items() if kind == "Plateau")
-        self.has_releases = bool(plateaus)
-        for p in plateaus:
-            for r in model.relationships:
-                if r["Source"] == p and r["Type"] in RELEASE_LINKS:
-                    self.releases.setdefault(r["Target"], []).append(model.names.get(p, p))
+        self.releases = {e: [model.names.get(p, p) for p in found]
+                         for e, found in releases(model).items()}
+        self.has_releases = any(kind == "Plateau" for kind in model.elements.values())
 
     def target(self, ident: str, here: Document) -> str | None:
         """Where `ident`, written in `here`'s text, links to; None when it has no target."""
@@ -503,7 +536,7 @@ def render(model: exchange.Model) -> tuple[dict[str, str], list[str]]:
     pages = {a.props["File"]: page(a, model) for a in found if a.props.get("File")}
     pages[INDEX] = index(found)
     docs, doc_problems = documents(model)
-    doc_problems += line_breaks(model)
+    doc_problems += line_breaks(model) + view_problems(model, docs)
     togaf = Togaf(model, docs, found)
     pages.update({d.file: togaf.page(d) for d in togaf.docs})
     pages[TOGAF_INDEX] = togaf.index()

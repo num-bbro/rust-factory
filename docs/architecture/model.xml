@@ -425,6 +425,9 @@ Each release is built once as a container image, accepted, deployed to the pilot
         <property propertyDefinitionRef="propid-artifacts">
           <value xml:lang="en">Releases, pilot plan</value>
         </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-releases</value>
+        </property>
       </properties>
     </element>
     <element identifier="id-impl-del-opportunities-and-solutions" xsi:type="Deliverable">
@@ -556,6 +559,42 @@ The sample reservation service (`id-app-comp-reservation-svc`) runs as a contain
         </property>
         <property propertyDefinitionRef="propid-view">
           <value xml:lang="en">id-view-layered</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-impl-plat-v0-1-0" xsi:type="Plateau">
+      <name xml:lang="en">Release vv0.1.0</name>
+      <documentation xml:lang="en">First released image: the reservation service books a slot.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-date">
+          <value xml:lang="en">2026-11-15</value>
+        </property>
+        <property propertyDefinitionRef="propid-tag">
+          <value xml:lang="en">vv0.1.0</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-impl-plat-v0-2-0" xsi:type="Plateau">
+      <name xml:lang="en">Release vv0.2.0</name>
+      <documentation xml:lang="en">Customers can cancel a reservation (epic #17).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-date">
+          <value xml:lang="en">2026-11-15</value>
+        </property>
+        <property propertyDefinitionRef="propid-tag">
+          <value xml:lang="en">vv0.2.0</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-impl-plat-v0-2-1" xsi:type="Plateau">
+      <name xml:lang="en">Release vv0.2.1</name>
+      <documentation xml:lang="en">Schedule changes are atomic (bug #26).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-date">
+          <value xml:lang="en">2026-11-15</value>
+        </property>
+        <property propertyDefinitionRef="propid-tag">
+          <value xml:lang="en">vv0.2.1</value>
         </property>
       </properties>
     </element>
@@ -1217,7 +1256,15 @@ Step 5 (#52) moved the ten TOGAF documents into the model. As with the amendment
 - **Names in tables and headings** show as written: the characters that Markdown or GitHub would turn into emphasis, code, links, HTML, strikethrough, a cell break or an entity are escaped, and line breaks in property values become spaces. A name with a line break is refused by `gen_docs.py --check`, since a name is one line in a heading, a link and a table row.
 - **The index** `docs/togaf/README.md` is generated and keeps the hand-written one's content and layout: the introduction, then the table, then "How the phases run in practice" and the closing paragraph, all text in `gen_docs.py`. Its columns: ADM phase (the phase's name, from `Phase`, e.g. `Requirements Management (centre)`), document, views (linked to their sections), suggested viewpoints (`Viewpoints`; the old "Main ArchiMate views" column, which named viewpoints, not views of the model) and factory artifacts (`Artifacts`). `docs/togaf/template.md` is the hand-written guide, exempt from the orphan check like `docs/adr/template.md`.
 - **Checks:** `gen_docs.py --check` also fails for a stale, missing or orphan page under `docs/togaf/` and for a `View` whose image `docs/architecture/views/&lt;view-id&gt;.png` is not committed. Since that image comes from `just model`, `build.sh` skips the image part (`--no-images`) before the build and runs the full check after it; `just model-docs` writes the pages even when an image is missing, then fails naming it. The unknown-ID check of `check_model.py` covers the documents' text as before.
-- **Not changed:** the ADR pages (an ADR's header still lists only its linked elements), the views and their images.</documentation>
+- **Not changed:** the ADR pages (an ADR's header still lists only its linked elements), the views and their images.
+
+## Amendment 2026-11-16: as built in step 6 (releases as Plateaus)
+Step 6 (#54) recorded the three releases as `Plateau` elements. As with the amendments above, these points refine the decision:
+- **Elements:** `id-impl-plat-v0-1-0`, `id-impl-plat-v0-2-0` and `id-impl-plat-v0-2-1`, named `Release vX.Y.Z`, with the properties `Date` (2026-11-15 for all three) and `Tag` (the git tag), and a one-line documentation. A Triggering relationship leads from each release to the next.
+- **Links:** from each Plateau, an Aggregation to every element the release delivered; `just model-check` allowed Aggregation for every pair, so no Association was needed. Recorded contents: `id-impl-plat-v0-1-0` delivers `id-app-comp-reservation-svc`, `id-app-comp-domain`, `id-app-comp-application`, `id-app-comp-db`, `id-app-comp-http`, `id-app-intf-reservation-api`, `id-app-svc-book`, `id-app-data-schedule`, `id-bus-proc-reserve`, `id-bus-obj-reservation`, `id-mot-adr-0003` and `id-mot-adr-0005`. `id-impl-plat-v0-2-0` delivers `id-app-svc-cancel`, `id-bus-proc-cancel`, `id-mot-req-cancel`, `id-mot-req-cancel-refused`, `id-mot-out-rebook`, `id-mot-goal-free-slots`, `id-app-comp-application`, `id-app-comp-http`, `id-app-intf-reservation-api` and `id-mot-adr-0007`. `id-impl-plat-v0-2-1` delivers `id-app-comp-application`, `id-app-comp-db`, `id-app-data-schedule` and `id-mot-adr-0008`.
+- **View:** `id-view-releases` (viewpoint Implementation and Migration) shows the three releases, four ADRs and the application elements they deliver; it is a `View` of the phase F document.
+- **Generator:** the catalogs' Release column lists each Plateau once per element, in version order (`v0-10-0` after `v0-2-1`), counting an Association in either direction; an ADR page's header gains `Released in: &lt;tags&gt;` when a Plateau links to the ADR; `--check` applies the one-line rule to the documentation of every view a document shows.
+- **Rule:** after a release, a task adds its Plateau (`docs/togaf/template.md`, "Recording a release").</documentation>
       <properties>
         <property propertyDefinitionRef="propid-status">
           <value xml:lang="en">Accepted</value>
@@ -1456,6 +1503,34 @@ Step 5 (#52) moved the ten TOGAF documents into the model. As with the amendment
     <relationship identifier="id-rel-113" xsi:type="Association" source="id-mot-adr-0009" target="id-mot-adr-0002" isDirected="true">
       <name xml:lang="en">supersedes</name>
     </relationship>
+    <relationship identifier="id-rel-114" xsi:type="Aggregation" source="id-impl-plat-v0-1-0" target="id-app-comp-reservation-svc"/>
+    <relationship identifier="id-rel-115" xsi:type="Aggregation" source="id-impl-plat-v0-1-0" target="id-app-comp-domain"/>
+    <relationship identifier="id-rel-116" xsi:type="Aggregation" source="id-impl-plat-v0-1-0" target="id-app-comp-application"/>
+    <relationship identifier="id-rel-117" xsi:type="Aggregation" source="id-impl-plat-v0-1-0" target="id-app-comp-db"/>
+    <relationship identifier="id-rel-118" xsi:type="Aggregation" source="id-impl-plat-v0-1-0" target="id-app-comp-http"/>
+    <relationship identifier="id-rel-119" xsi:type="Aggregation" source="id-impl-plat-v0-1-0" target="id-app-intf-reservation-api"/>
+    <relationship identifier="id-rel-120" xsi:type="Aggregation" source="id-impl-plat-v0-1-0" target="id-app-svc-book"/>
+    <relationship identifier="id-rel-121" xsi:type="Aggregation" source="id-impl-plat-v0-1-0" target="id-app-data-schedule"/>
+    <relationship identifier="id-rel-122" xsi:type="Aggregation" source="id-impl-plat-v0-1-0" target="id-bus-proc-reserve"/>
+    <relationship identifier="id-rel-123" xsi:type="Aggregation" source="id-impl-plat-v0-1-0" target="id-bus-obj-reservation"/>
+    <relationship identifier="id-rel-124" xsi:type="Aggregation" source="id-impl-plat-v0-1-0" target="id-mot-adr-0003"/>
+    <relationship identifier="id-rel-125" xsi:type="Aggregation" source="id-impl-plat-v0-1-0" target="id-mot-adr-0005"/>
+    <relationship identifier="id-rel-126" xsi:type="Aggregation" source="id-impl-plat-v0-2-0" target="id-app-svc-cancel"/>
+    <relationship identifier="id-rel-127" xsi:type="Aggregation" source="id-impl-plat-v0-2-0" target="id-bus-proc-cancel"/>
+    <relationship identifier="id-rel-128" xsi:type="Aggregation" source="id-impl-plat-v0-2-0" target="id-mot-req-cancel"/>
+    <relationship identifier="id-rel-129" xsi:type="Aggregation" source="id-impl-plat-v0-2-0" target="id-mot-req-cancel-refused"/>
+    <relationship identifier="id-rel-130" xsi:type="Aggregation" source="id-impl-plat-v0-2-0" target="id-mot-out-rebook"/>
+    <relationship identifier="id-rel-131" xsi:type="Aggregation" source="id-impl-plat-v0-2-0" target="id-mot-goal-free-slots"/>
+    <relationship identifier="id-rel-132" xsi:type="Aggregation" source="id-impl-plat-v0-2-0" target="id-app-comp-application"/>
+    <relationship identifier="id-rel-133" xsi:type="Aggregation" source="id-impl-plat-v0-2-0" target="id-app-comp-http"/>
+    <relationship identifier="id-rel-134" xsi:type="Aggregation" source="id-impl-plat-v0-2-0" target="id-app-intf-reservation-api"/>
+    <relationship identifier="id-rel-135" xsi:type="Aggregation" source="id-impl-plat-v0-2-0" target="id-mot-adr-0007"/>
+    <relationship identifier="id-rel-136" xsi:type="Aggregation" source="id-impl-plat-v0-2-1" target="id-app-comp-application"/>
+    <relationship identifier="id-rel-137" xsi:type="Aggregation" source="id-impl-plat-v0-2-1" target="id-app-comp-db"/>
+    <relationship identifier="id-rel-138" xsi:type="Aggregation" source="id-impl-plat-v0-2-1" target="id-app-data-schedule"/>
+    <relationship identifier="id-rel-139" xsi:type="Aggregation" source="id-impl-plat-v0-2-1" target="id-mot-adr-0008"/>
+    <relationship identifier="id-rel-140" xsi:type="Triggering" source="id-impl-plat-v0-1-0" target="id-impl-plat-v0-2-0"/>
+    <relationship identifier="id-rel-141" xsi:type="Triggering" source="id-impl-plat-v0-2-0" target="id-impl-plat-v0-2-1"/>
   </relationships>
   <propertyDefinitions>
     <propertyDefinition identifier="propid-artifacts" type="string">
@@ -1490,6 +1565,9 @@ Step 5 (#52) moved the ten TOGAF documents into the model. As with the amendment
     </propertyDefinition>
     <propertyDefinition identifier="propid-status" type="string">
       <name xml:lang="en">Status</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-tag" type="string">
+      <name xml:lang="en">Tag</name>
     </propertyDefinition>
     <propertyDefinition identifier="propid-view" type="string">
       <name xml:lang="en">View</name>
@@ -1698,6 +1776,217 @@ Step 5 (#52) moved the ten TOGAF documents into the model. As with the amendment
           <bendpoint x="454" y="269"/>
           <bendpoint x="300" y="269"/>
         </connection>
+      </view>
+      <view identifier="id-view-releases" xsi:type="Diagram" viewpoint="Implementation and Migration">
+        <name xml:lang="en">Releases</name>
+        <documentation xml:lang="en">What each release delivered.</documentation>
+        <node identifier="id-view-releases-band-0" xsi:type="Container" x="20" y="20" w="1020" h="117">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-releases-n-id-mot-adr-0005" xsi:type="Element" elementRef="id-mot-adr-0005" x="184" y="62" w="160" h="55"/>
+          <node identifier="id-view-releases-n-id-mot-adr-0003" xsi:type="Element" elementRef="id-mot-adr-0003" x="404" y="62" w="160" h="55"/>
+          <node identifier="id-view-releases-n-id-mot-adr-0008" xsi:type="Element" elementRef="id-mot-adr-0008" x="624" y="62" w="160" h="55"/>
+          <node identifier="id-view-releases-n-id-mot-adr-0007" xsi:type="Element" elementRef="id-mot-adr-0007" x="844" y="62" w="160" h="55"/>
+        </node>
+        <node identifier="id-view-releases-band-1" xsi:type="Container" x="20" y="177" w="1020" h="412">
+          <label xml:lang="en">Application</label>
+          <node identifier="id-view-releases-n-id-app-comp-reservation-svc" xsi:type="Element" elementRef="id-app-comp-reservation-svc" x="40" y="219" w="760" h="100">
+            <node identifier="id-view-releases-n-id-app-comp-application" xsi:type="Element" elementRef="id-app-comp-application" x="55" y="249" w="160" h="55"/>
+            <node identifier="id-view-releases-n-id-app-comp-db" xsi:type="Element" elementRef="id-app-comp-db" x="245" y="249" w="160" h="55"/>
+            <node identifier="id-view-releases-n-id-app-comp-domain" xsi:type="Element" elementRef="id-app-comp-domain" x="435" y="249" w="160" h="55"/>
+            <node identifier="id-view-releases-n-id-app-comp-http" xsi:type="Element" elementRef="id-app-comp-http" x="625" y="249" w="160" h="55"/>
+          </node>
+          <node identifier="id-view-releases-n-id-app-intf-reservation-api" xsi:type="Element" elementRef="id-app-intf-reservation-api" x="860" y="219" w="160" h="55"/>
+          <node identifier="id-view-releases-n-id-app-svc-book" xsi:type="Element" elementRef="id-app-svc-book" x="222" y="389" w="160" h="55"/>
+          <node identifier="id-view-releases-n-id-app-svc-cancel" xsi:type="Element" elementRef="id-app-svc-cancel" x="442" y="389" w="160" h="55"/>
+          <node identifier="id-view-releases-n-id-app-data-schedule" xsi:type="Element" elementRef="id-app-data-schedule" x="348" y="514" w="160" h="55"/>
+        </node>
+        <node identifier="id-view-releases-band-2" xsi:type="Container" x="20" y="629" w="1020" h="117">
+          <label xml:lang="en">Implementation &amp; Migration</label>
+          <node identifier="id-view-releases-n-id-impl-plat-v0-1-0" xsi:type="Element" elementRef="id-impl-plat-v0-1-0" x="184" y="671" w="160" h="55"/>
+          <node identifier="id-view-releases-n-id-impl-plat-v0-2-0" xsi:type="Element" elementRef="id-impl-plat-v0-2-0" x="404" y="671" w="160" h="55"/>
+          <node identifier="id-view-releases-n-id-impl-plat-v0-2-1" xsi:type="Element" elementRef="id-impl-plat-v0-2-1" x="624" y="671" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-releases-c-id-rel-065" xsi:type="Relationship" relationshipRef="id-rel-065" source="id-view-releases-n-id-app-comp-http" target="id-view-releases-n-id-app-intf-reservation-api">
+          <bendpoint x="705" y="168"/>
+          <bendpoint x="940" y="168"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-066" xsi:type="Relationship" relationshipRef="id-rel-066" source="id-view-releases-n-id-app-comp-domain" target="id-view-releases-n-id-app-comp-application">
+          <bendpoint x="515" y="176"/>
+          <bendpoint x="135" y="176"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-067" xsi:type="Relationship" relationshipRef="id-rel-067" source="id-view-releases-n-id-app-comp-application" target="id-view-releases-n-id-app-comp-http">
+          <bendpoint x="149" y="160"/>
+          <bendpoint x="719" y="160"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-068" xsi:type="Relationship" relationshipRef="id-rel-068" source="id-view-releases-n-id-app-comp-db" target="id-view-releases-n-id-app-comp-application"/>
+        <connection identifier="id-view-releases-c-id-rel-069" xsi:type="Relationship" relationshipRef="id-rel-069" source="id-view-releases-n-id-app-comp-application" target="id-view-releases-n-id-app-svc-book">
+          <bendpoint x="135" y="354"/>
+          <bendpoint x="302" y="354"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-070" xsi:type="Relationship" relationshipRef="id-rel-070" source="id-view-releases-n-id-app-comp-application" target="id-view-releases-n-id-app-svc-cancel">
+          <bendpoint x="149" y="362"/>
+          <bendpoint x="522" y="362"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-071" xsi:type="Relationship" relationshipRef="id-rel-071" source="id-view-releases-n-id-app-intf-reservation-api" target="id-view-releases-n-id-app-svc-book">
+          <bendpoint x="940" y="346"/>
+          <bendpoint x="316" y="346"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-072" xsi:type="Relationship" relationshipRef="id-rel-072" source="id-view-releases-n-id-app-intf-reservation-api" target="id-view-releases-n-id-app-svc-cancel">
+          <bendpoint x="954" y="370"/>
+          <bendpoint x="536" y="370"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-078" xsi:type="Relationship" relationshipRef="id-rel-078" source="id-view-releases-n-id-app-comp-db" target="id-view-releases-n-id-app-data-schedule">
+          <bendpoint x="325" y="338"/>
+          <bendpoint x="393" y="338"/>
+          <bendpoint x="393" y="479"/>
+          <bendpoint x="428" y="479"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-085" xsi:type="Relationship" relationshipRef="id-rel-085" source="id-view-releases-n-id-app-comp-reservation-svc" target="id-view-releases-n-id-mot-adr-0003">
+          <bendpoint x="420" y="184"/>
+          <bendpoint x="484" y="184"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-101" xsi:type="Relationship" relationshipRef="id-rel-101" source="id-view-releases-n-id-app-data-schedule" target="id-view-releases-n-id-mot-adr-0007">
+          <bendpoint x="442" y="487"/>
+          <bendpoint x="811" y="487"/>
+          <bendpoint x="811" y="152"/>
+          <bendpoint x="924" y="152"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-102" xsi:type="Relationship" relationshipRef="id-rel-102" source="id-view-releases-n-id-app-intf-reservation-api" target="id-view-releases-n-id-mot-adr-0007">
+          <bendpoint x="954" y="192"/>
+          <bendpoint x="938" y="192"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-103" xsi:type="Relationship" relationshipRef="id-rel-103" source="id-view-releases-n-id-app-svc-cancel" target="id-view-releases-n-id-mot-adr-0007">
+          <bendpoint x="508" y="378"/>
+          <bendpoint x="813" y="378"/>
+          <bendpoint x="813" y="144"/>
+          <bendpoint x="910" y="144"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-108" xsi:type="Relationship" relationshipRef="id-rel-108" source="id-view-releases-n-id-app-comp-application" target="id-view-releases-n-id-mot-adr-0008">
+          <bendpoint x="121" y="200"/>
+          <bendpoint x="704" y="200"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-109" xsi:type="Relationship" relationshipRef="id-rel-109" source="id-view-releases-n-id-app-comp-db" target="id-view-releases-n-id-mot-adr-0008">
+          <bendpoint x="325" y="136"/>
+          <bendpoint x="718" y="136"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-110" xsi:type="Relationship" relationshipRef="id-rel-110" source="id-view-releases-n-id-app-data-schedule" target="id-view-releases-n-id-mot-adr-0008">
+          <bendpoint x="414" y="471"/>
+          <bendpoint x="812" y="471"/>
+          <bendpoint x="812" y="208"/>
+          <bendpoint x="690" y="208"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-114" xsi:type="Relationship" relationshipRef="id-rel-114" source="id-view-releases-n-id-impl-plat-v0-1-0" target="id-view-releases-n-id-app-comp-reservation-svc">
+          <bendpoint x="264" y="620"/>
+          <bendpoint x="210" y="620"/>
+          <bendpoint x="210" y="330"/>
+          <bendpoint x="420" y="330"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-115" xsi:type="Relationship" relationshipRef="id-rel-115" source="id-view-releases-n-id-impl-plat-v0-1-0" target="id-view-releases-n-id-app-comp-domain">
+          <bendpoint x="278" y="628"/>
+          <bendpoint x="209" y="628"/>
+          <bendpoint x="209" y="386"/>
+          <bendpoint x="515" y="386"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-116" xsi:type="Relationship" relationshipRef="id-rel-116" source="id-view-releases-n-id-impl-plat-v0-1-0" target="id-view-releases-n-id-app-comp-application">
+          <bendpoint x="250" y="612"/>
+          <bendpoint x="186" y="612"/>
+          <bendpoint x="186" y="322"/>
+          <bendpoint x="121" y="322"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-117" xsi:type="Relationship" relationshipRef="id-rel-117" source="id-view-releases-n-id-impl-plat-v0-1-0" target="id-view-releases-n-id-app-comp-db">
+          <bendpoint x="292" y="636"/>
+          <bendpoint x="212" y="636"/>
+          <bendpoint x="212" y="394"/>
+          <bendpoint x="339" y="394"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-118" xsi:type="Relationship" relationshipRef="id-rel-118" source="id-view-releases-n-id-impl-plat-v0-1-0" target="id-view-releases-n-id-app-comp-http">
+          <bendpoint x="236" y="604"/>
+          <bendpoint x="615" y="604"/>
+          <bendpoint x="615" y="314"/>
+          <bendpoint x="705" y="314"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-119" xsi:type="Relationship" relationshipRef="id-rel-119" source="id-view-releases-n-id-impl-plat-v0-1-0" target="id-view-releases-n-id-app-intf-reservation-api">
+          <bendpoint x="306" y="644"/>
+          <bendpoint x="616" y="644"/>
+          <bendpoint x="616" y="402"/>
+          <bendpoint x="926" y="402"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-120" xsi:type="Relationship" relationshipRef="id-rel-120" source="id-view-releases-n-id-impl-plat-v0-1-0" target="id-view-releases-n-id-app-svc-book">
+          <bendpoint x="222" y="596"/>
+          <bendpoint x="262" y="596"/>
+          <bendpoint x="262" y="495"/>
+          <bendpoint x="302" y="495"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-121" xsi:type="Relationship" relationshipRef="id-rel-121" source="id-view-releases-n-id-impl-plat-v0-1-0" target="id-view-releases-n-id-app-data-schedule">
+          <bendpoint x="320" y="652"/>
+          <bendpoint x="428" y="652"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-124" xsi:type="Relationship" relationshipRef="id-rel-124" source="id-view-releases-n-id-impl-plat-v0-1-0" target="id-view-releases-n-id-mot-adr-0003">
+          <bendpoint x="208" y="588"/>
+          <bendpoint x="29" y="588"/>
+          <bendpoint x="29" y="128"/>
+          <bendpoint x="498" y="128"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-125" xsi:type="Relationship" relationshipRef="id-rel-125" source="id-view-releases-n-id-impl-plat-v0-1-0" target="id-view-releases-n-id-mot-adr-0005">
+          <bendpoint x="332" y="660"/>
+          <bendpoint x="26" y="660"/>
+          <bendpoint x="26" y="216"/>
+          <bendpoint x="264" y="216"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-126" xsi:type="Relationship" relationshipRef="id-rel-126" source="id-view-releases-n-id-impl-plat-v0-2-0" target="id-view-releases-n-id-app-svc-cancel">
+          <bendpoint x="484" y="580"/>
+          <bendpoint x="519" y="580"/>
+          <bendpoint x="519" y="463"/>
+          <bendpoint x="522" y="463"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-132" xsi:type="Relationship" relationshipRef="id-rel-132" source="id-view-releases-n-id-impl-plat-v0-2-0" target="id-view-releases-n-id-app-comp-application">
+          <bendpoint x="498" y="668"/>
+          <bendpoint x="211" y="668"/>
+          <bendpoint x="211" y="306"/>
+          <bendpoint x="163" y="306"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-133" xsi:type="Relationship" relationshipRef="id-rel-133" source="id-view-releases-n-id-impl-plat-v0-2-0" target="id-view-releases-n-id-app-comp-http">
+          <bendpoint x="470" y="572"/>
+          <bendpoint x="623" y="572"/>
+          <bendpoint x="623" y="410"/>
+          <bendpoint x="719" y="410"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-134" xsi:type="Relationship" relationshipRef="id-rel-134" source="id-view-releases-n-id-impl-plat-v0-2-0" target="id-view-releases-n-id-app-intf-reservation-api">
+          <bendpoint x="512" y="676"/>
+          <bendpoint x="740" y="676"/>
+          <bendpoint x="740" y="298"/>
+          <bendpoint x="968" y="298"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-135" xsi:type="Relationship" relationshipRef="id-rel-135" source="id-view-releases-n-id-impl-plat-v0-2-0" target="id-view-releases-n-id-mot-adr-0007">
+          <bendpoint x="456" y="564"/>
+          <bendpoint x="820" y="564"/>
+          <bendpoint x="820" y="120"/>
+          <bendpoint x="952" y="120"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-136" xsi:type="Relationship" relationshipRef="id-rel-136" source="id-view-releases-n-id-impl-plat-v0-2-1" target="id-view-releases-n-id-app-comp-application">
+          <bendpoint x="704" y="684"/>
+          <bendpoint x="218" y="684"/>
+          <bendpoint x="218" y="418"/>
+          <bendpoint x="107" y="418"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-137" xsi:type="Relationship" relationshipRef="id-rel-137" source="id-view-releases-n-id-impl-plat-v0-2-1" target="id-view-releases-n-id-app-comp-db">
+          <bendpoint x="718" y="556"/>
+          <bendpoint x="607" y="556"/>
+          <bendpoint x="607" y="290"/>
+          <bendpoint x="311" y="290"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-138" xsi:type="Relationship" relationshipRef="id-rel-138" source="id-view-releases-n-id-impl-plat-v0-2-1" target="id-view-releases-n-id-app-data-schedule">
+          <bendpoint x="690" y="692"/>
+          <bendpoint x="442" y="692"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-139" xsi:type="Relationship" relationshipRef="id-rel-139" source="id-view-releases-n-id-impl-plat-v0-2-1" target="id-view-releases-n-id-mot-adr-0008">
+          <bendpoint x="732" y="548"/>
+          <bendpoint x="804" y="548"/>
+          <bendpoint x="804" y="224"/>
+          <bendpoint x="732" y="224"/>
+        </connection>
+        <connection identifier="id-view-releases-c-id-rel-140" xsi:type="Relationship" relationshipRef="id-rel-140" source="id-view-releases-n-id-impl-plat-v0-1-0" target="id-view-releases-n-id-impl-plat-v0-2-0"/>
+        <connection identifier="id-view-releases-c-id-rel-141" xsi:type="Relationship" relationshipRef="id-rel-141" source="id-view-releases-n-id-impl-plat-v0-2-0" target="id-view-releases-n-id-impl-plat-v0-2-1"/>
       </view>
       <view identifier="id-view-reservation-cancel" xsi:type="Diagram" viewpoint="Layered">
         <name xml:lang="en">Reservations: cancel a reservation</name>

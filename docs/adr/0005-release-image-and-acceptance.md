@@ -6,6 +6,7 @@
 - Issue: #12
 - Deciders: product owner, conductor
 - ArchiMate elements: `id-bus-proc-accept`, `id-tech-svc-ghcr`, `id-tech-sw-podman`
+- Released in: vv0.1.0
 
 ## Context and problem
 Unit and HTTP tests prove the code; they do not prove the thing we deploy: the binary's startup,

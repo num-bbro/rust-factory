@@ -6,6 +6,7 @@
 - Issue: #26 (bug), #37 (task)
 - Deciders: human approver (option A approved at gate 1 on 2026-11-15), hard worker agent
 - ArchiMate elements: `id-app-comp-application`, `id-app-comp-db`, `id-app-data-schedule`
+- Released in: vv0.2.1
 
 ## Context and problem
 Both use cases (`BookSlot`, `CancelReservation`) loaded the schedule through the

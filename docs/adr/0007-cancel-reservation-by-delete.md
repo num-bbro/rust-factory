@@ -7,6 +7,7 @@
 - Deciders: human approver (plan approved at gate 1 on 2026-11-15), architect agent
 - ArchiMate elements: `id-app-data-schedule`, `id-app-intf-reservation-api`, `id-app-svc-cancel`,
   `id-bus-proc-cancel`, `id-mot-out-rebook`, `id-mot-req-cancel`, `id-mot-req-cancel-refused`
+- Released in: vv0.2.0
 
 ## Context and problem
 Customers who can no longer come have no way to free their slot (`id-mot-drv-blocked-slots`). Epic
