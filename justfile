@@ -210,6 +210,8 @@ doctor:
     check cargo-deny     cargo deny --version
     check cargo-llvm-cov cargo llvm-cov --version
     check cargo-mutants  cargo mutants --version
+    check uv             uv --version
+    check schemathesis   st --version
     echo "Platform"
     check git            git --version
     check gh             gh --version
