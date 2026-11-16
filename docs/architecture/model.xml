@@ -15,9 +15,6 @@
         <property propertyDefinitionRef="propid-crate">
           <value xml:lang="en">crates/application</value>
         </property>
-        <property propertyDefinitionRef="propid-adr">
-          <value xml:lang="en">docs/adr/0008-atomic-schedule-update-through-the-port.md</value>
-        </property>
       </properties>
     </element>
     <element identifier="id-app-comp-conductor" xsi:type="ApplicationComponent">
@@ -35,9 +32,6 @@
       <properties>
         <property propertyDefinitionRef="propid-crate">
           <value xml:lang="en">crates/adapters-db</value>
-        </property>
-        <property propertyDefinitionRef="propid-adr">
-          <value xml:lang="en">docs/adr/0008-atomic-schedule-update-through-the-port.md</value>
         </property>
       </properties>
     </element>
@@ -79,9 +73,6 @@
         <property propertyDefinitionRef="propid-crate">
           <value xml:lang="en">crates/app</value>
         </property>
-        <property propertyDefinitionRef="propid-adr">
-          <value xml:lang="en">docs/adr/0003-layered-cargo-workspace.md</value>
-        </property>
       </properties>
     </element>
     <element identifier="id-app-comp-scout" xsi:type="ApplicationComponent">
@@ -120,9 +111,6 @@
         <property propertyDefinitionRef="propid-code">
           <value xml:lang="en">Schedule</value>
         </property>
-        <property propertyDefinitionRef="propid-adr">
-          <value xml:lang="en">docs/adr/0008-atomic-schedule-update-through-the-port.md</value>
-        </property>
         <property propertyDefinitionRef="propid-issue">
           <value xml:lang="en">#26</value>
         </property>
@@ -131,11 +119,6 @@
     <element identifier="id-app-intf-reservation-api" xsi:type="ApplicationInterface">
       <name xml:lang="en">Reservations HTTP API</name>
       <documentation xml:lang="en">JSON over HTTP: POST /reservations books a slot, DELETE /reservations/{id} cancels one, GET /health answers probes. Rule, not-found and storage errors carry an {error} JSON body; requests the framework rejects (a non-numeric id, malformed JSON) get a plain-text body (ADR 0007).</documentation>
-      <properties>
-        <property propertyDefinitionRef="propid-adr">
-          <value xml:lang="en">docs/adr/0007-cancel-reservation-by-delete.md</value>
-        </property>
-      </properties>
     </element>
     <element identifier="id-app-svc-book" xsi:type="ApplicationService">
       <name xml:lang="en">Book a slot</name>
@@ -153,9 +136,6 @@
       <name xml:lang="en">Cancel a reservation</name>
       <documentation xml:lang="en">DELETE /reservations/{id}: 204 No Content when removed; 404 Not Found with {error} when the id is unknown or already cancelled (ADR 0007).</documentation>
       <properties>
-        <property propertyDefinitionRef="propid-adr">
-          <value xml:lang="en">docs/adr/0007-cancel-reservation-by-delete.md</value>
-        </property>
         <property propertyDefinitionRef="propid-issue">
           <value xml:lang="en">#17</value>
         </property>
@@ -226,6 +206,655 @@
       <name xml:lang="en">Worker</name>
       <documentation xml:lang="en">Carries out one task in its own git worktree and delivers it as a PR.</documentation>
     </element>
+    <element identifier="id-mot-adr-0001" xsi:type="Constraint">
+      <name xml:lang="en">ADR 0001: Record architecture decisions as ADRs</name>
+      <documentation xml:lang="en">## Context and problem
+In past projects, the reasons behind design choices were lost. Later changes broke assumptions nobody remembered. With AI agents writing much of the code, the reasoning would be lost even faster unless it is written down where agents and humans both look.
+
+## Decision drivers
+- Decisions must survive staff and agent turnover.
+- Agents must be able to read and write them as plain text in the repo.
+- Business-side reviewers must be able to follow them.
+
+## Options considered
+1. **ADRs in the repo** (Markdown, MADR format), reviewed in PRs.
+2. **Wiki pages**, separate from code.
+3. **Nothing formal**, only PR descriptions.
+
+## Decision
+Chosen: **ADRs in the repo**, because they are versioned with the code, reviewed through the same PR gate, and readable by agents without extra tools.
+
+## Consequences
+- Good: every significant decision has a findable, linked record.
+- Bad: writing an ADR takes a few minutes per decision.
+- Follow-up: the conductor writes an ADR whenever a task needs a new design decision; the "Architecture decision" issue form starts the process.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-status">
+          <value xml:lang="en">Accepted</value>
+        </property>
+        <property propertyDefinitionRef="propid-date">
+          <value xml:lang="en">2026-11-15</value>
+        </property>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#3</value>
+        </property>
+        <property propertyDefinitionRef="propid-deciders">
+          <value xml:lang="en">product owner, conductor</value>
+        </property>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/adr/0001-record-architecture-decisions.md</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-adr-0002" xsi:type="Constraint">
+      <name xml:lang="en">ADR 0002: ArchiMate model as text, built into Archi in CI</name>
+      <documentation xml:lang="en">## Context and problem
+The architecture must be documented in ArchiMate (requirement `id-mot-req-togaf`). Agents write the changes and the product owner reviews them in Archi. Archi's native `.archimate` file is a large XML document with layout coordinates, which is hard for agents to edit and hard to review as a diff.
+
+## Decision drivers
+- Agents can edit the model reliably, with small diffs reviewable in a PR.
+- The product owner can open the result in Archi, the tool they already use.
+- Builds work without a person present (CI).
+- Thai text must work.
+
+## Options considered
+1. **Text source in Archi's CSV format + generated views**, built by Archi's command line.
+2. **Agents edit `.archimate` directly**: one huge XML file with coordinates; error-prone, noisy diffs.
+3. **coArchi (git plugin) with both humans and agents editing**: merge conflicts in model XML; agents can't use the GUI.
+4. **jArchi scripts generate the model**: needs an extra plugin and JavaScript.
+
+## Decision
+Chosen: **option 1**.
+- Source: `docs/architecture/model/{elements,relations,properties}.csv` in Archi's own CSV format, plus `views.csv` listing which elements appear on each view.
+- `scripts/archimate/build_exchange.py` validates the model (unique IDs, valid types, existing ends) and writes Open Group **Exchange XML**, with diagrams laid out automatically in one band per ArchiMate layer.
+- Archi's command line validates that XML against the Open Group schema and produces `model.archimate` plus an HTML report (`just model`).
+
+## Consequences
+- Good: small, readable diffs; agents edit CSV rows; Archi stays the review tool; tool-neutral Exchange XML is a by-product.
+- Good: elements/relations round-trip with Archi's File › Export › CSV if the owner wants to model in the GUI and hand the result back.
+- Diagram layout is automatic (`scripts/archimate/layout.py`), following hand-drawing conventions: one band per layer, one row per aspect (active structure / behaviour / passive), composition and aggregation inside a layer shown by nesting, elements ordered so related ones line up, triggering/flow chains kept left to right, lines routed at right angles around boxes.
+- Bad: hand-tuned layouts made in Archi are not preserved, and very dense views can still have long detours. If a presentation-quality view is needed, a later ADR can add optional fixed coordinates per view.
+- Bad: ArchiMate relationship-validity rules (which relationships are allowed between which types) are not checked yet; Archi's importer checks only the XML schema.
+- Follow-up: CI needs a virtual display (Xvfb). Archi's command line exits with "Cannot open display" without one.
+
+## Spike results (2026-11-15, Archi 5.11.0 on Arch Linux)
+| Test | Result |
+|---|---|
+| Exchange XML import → `.archimate` → HTML report, with a display | works, view images rendered |
+| Thai names and documentation | stored and rendered correctly |
+| Same run with no display | fails: `Cannot open display` → needs `xvfb-run` |
+| Archi CSV import of our `elements.csv` into a loaded model | works: our files are in Archi's CSV format |
+| CSV import into `--createEmptyModel` | hung until killed after 3 min; not investigated, not needed |
+| Diagrams | Archi's CSV format has no diagram data → views must come from Exchange XML |
+
+## Amendment 2026-11-15: relationship validity is checked
+Issue: #27 (bug) / task #39. This supersedes the "Bad" bullet above that says relationship validity is not checked.
+
+- **The check.** `just model-check` (and so `just check` and the CI `gates` job) now runs `scripts/archimate/check_relationships.py`. For every row of `relations.csv` it reports, with the relationship ID, an unknown source or target, an unknown relationship type, and a type that ArchiMate does not allow between the two element types (listing the types that are allowed). The rules are read from `relationships.xml` of the pinned Archi install, not copied into the repo: they are Archi's own copy of the ArchiMate 3.2 specification, they move together with the pinned version in `tools/archi.env`, and a copy would be a second source of truth that could drift. If the install is missing the check fails and points to `./bootstrap.sh`; it never passes silently.
+- **Agents and roles.** The check found `id-rel-030`..`032`: Assignment from an `ApplicationComponent` to a `BusinessRole`, which ArchiMate does not allow (only Flow, Association, Triggering, Serving). They are now `ServingRelationship`, with documentation that the agent performs the work of the role. Alternatives rejected: *Association* is always valid but says nothing about the direction or meaning of the link; *an extra `BusinessActor` per agent* (actor assigned to role, component realizing the actor) adds three elements and three relationships for no new information and crowds the views.
+- Also considered: *Realization* from the agent component to the business process it carries out (allowed by the rules, e.g. the workers realizing `id-bus-proc-implement`). Not chosen here because bug #27 is about the agent-to-role links and those IDs must keep their ends; it can be added later as additional relationships, not as a replacement.
+
+## Note 2026-11-16: superseded by ADR 0009
+Issue: #41 (change request) / task #42. This ADR is superseded by [ADR 0009](0009-archimate-exchange-model-as-source.md): the Open Group exchange XML becomes the single edited source of the architecture, the ADRs and TOGAF documents move into the model, and the CSV files are removed. The text above stays as it was accepted; it describes the setup until the cutover (step 2 of #41).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-status">
+          <value xml:lang="en">Superseded by 0009</value>
+        </property>
+        <property propertyDefinitionRef="propid-date">
+          <value xml:lang="en">2026-11-15</value>
+        </property>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#3</value>
+        </property>
+        <property propertyDefinitionRef="propid-deciders">
+          <value xml:lang="en">product owner, conductor</value>
+        </property>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/adr/0002-archimate-model-as-text.md</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-adr-0003" xsi:type="Constraint">
+      <name xml:lang="en">ADR 0003: Layered Cargo workspace with enforced dependency direction</name>
+      <documentation xml:lang="en">## Context and problem
+The product owner's experience: in long-lived projects, business logic mixed with database and HTTP code made every change ripple everywhere, weak tests made people afraid to change code, and nobody remembered why things were built as they were. AI workers write code fast, so structure decays fast unless something enforces it automatically.
+
+## Decision drivers
+- Business rules must be changeable without touching infrastructure (and vice versa).
+- Violations must fail the build, not rely on reviewers noticing.
+- The same structure in every project made from this template.
+- Simple enough for a worker agent to follow from `CLAUDE.md` alone.
+
+## Options considered
+1. **Layered ("hexagonal") Cargo workspace, one crate per layer, with an architecture test.**
+2. **Single crate with modules per layer**: Rust's module privacy can't stop `domain` from importing `axum`; the rule lives only in reviews.
+3. **No prescribed structure**: fastest start, the decay we have seen before.
+
+## Decision
+Chosen: **option 1**.
+- Crates: `domain` (pure business rules: no IO, no async, no frameworks) → `application` (use cases and the ports/traits they need) → `adapters-db`, `adapters-http` (implement ports) → `app` (binary: wiring, config, server).
+- `crates/architecture-tests` reads `cargo metadata` and fails if a dependency points outward, an adapter depends on another adapter, the domain uses any external crate except `thiserror`, or `domain`/`application` depend on infrastructure crates. A new crate must be given a layer.
+- The workspace sits at the **repo root** (not in a `template/` folder): the whole repository is the template, so CI, hooks and docs use the same paths in every project.
+
+## Consequences
+- Good: a business-rule change is a `domain` change plus its tests; adapters can be swapped.
+- Good: the layering is proven, not promised: a deliberately added `domain → tokio` and `adapters-db → adapters-http` both failed the architecture tests with clear messages.
+- Bad: more crates and some boilerplate (ports and test doubles) for small features.
+- Follow-up: projects decide their database in an ADR; it goes in `adapters-db`.
+
+## Quality gates that go with it (`just check`)
+| Gate | Tool | Fails when |
+|---|---|---|
+| Format | rustfmt | any file not formatted |
+| Lint | clippy (workspace lints, pedantic + `unwrap_used` and others) | any warning |
+| Tests | cargo-nextest | any test fails (unit, property, HTTP, architecture) |
+| Dependencies | cargo-deny | known vulnerability, disallowed license, unknown source |
+| Coverage | cargo-llvm-cov | lines covered &lt; 85% (excluding `app/src/main.rs`) |
+| Model | `scripts/archimate` | ArchiMate model or doc references broken |
+
+Mutation testing (`just mutants`, `just mutants-diff`) is available on demand; CI runs it on changed code (Stage 6). It earned its place on day one: with 95% line coverage, 8 of 25 mutants in `domain` still survived, including `&lt;` → `&lt;=` in `TimeSlot::overlaps`, which would have rejected back-to-back bookings without any test failing. After adding the missing tests, all 22 viable mutants are caught.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-status">
+          <value xml:lang="en">Accepted</value>
+        </property>
+        <property propertyDefinitionRef="propid-date">
+          <value xml:lang="en">2026-11-15</value>
+        </property>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#5</value>
+        </property>
+        <property propertyDefinitionRef="propid-deciders">
+          <value xml:lang="en">product owner, conductor</value>
+        </property>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/adr/0003-layered-cargo-workspace.md</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-adr-0004" xsi:type="Constraint">
+      <name xml:lang="en">ADR 0004: Agent team with cost-aware model routing</name>
+      <documentation xml:lang="en">## Context and problem
+The product owner wants a conductor that plans and designs, and hands each task to its own worker, while keeping development cost under control: expensive models only where their reasoning pays off. Per million tokens, Fable 5.2 costs 2× Opus 5.5, 4× Sonnet 5.5 and 80× Haiku 5.5 (tools/model-prices.toml).
+
+## Decision drivers
+- Cost per *completed* task, not per request: a cheap worker that fails and retries is not cheap.
+- Routing must be explicit and auditable (who decided, why), not a hidden heuristic.
+- Spend must be measurable per task and per model, so the routing rule can be tuned with data.
+
+## Decision
+- **Roles and pinned models** (exact IDs, never aliases): conductor `claude-fable-5-2` (main session, `.claude/settings.json`); `scout` Haiku 5.5 (read-only search); `implementer-simple` Sonnet 5.5; `implementer-hard` Opus 5.5; `architect` Opus 5.5; `reviewer` Sonnet 5.5, Opus for hard PRs. Implementers and the architect work in isolated git worktrees.
+- **Routing rule**: `complexity:simple` only if the task has clear acceptance criteria, touches one crate and needs no design decision; else `complexity:hard`. The reason is written on the issue. When in doubt: hard.
+- **Escalation**: the simple worker stops after its second failed `just check` (or on finding the task mislabelled) and reports `ESCALATE`; the conductor labels the issue `escalated`, comments the reason and hands the branch to the hard worker.
+- **Lifecycle skills**: `/plan-epic`, `/split-tasks`, `/implement`, `/review`, with the human gates built in (plan approval, merge).
+- **Cost measurement** (`just cost`): parse Claude Code's local transcripts, de-duplicated per API response, priced from `tools/model-prices.toml`. Tasks are identified by the worker launch description, which must start with `#&lt;issue&gt;`.
+
+## Consequences
+- Good: the conductor's expensive context is spent on planning and judgement; reading goes to Haiku (a scout answer cost $0.003 in testing) and routine code to Sonnet.
+- Good: validated against Claude Code's own accounting: the report matched its per-model cost figures to the cent.
+- Bad: a new conductor session costs about $1 to start (≈57K tokens of context written to the cache on Fable); keep conductor sessions long-lived rather than starting many.
+- Bad: the transcript format is documented as internal and may change. The report stops with an error if required fields disappear. Upgrade path: Claude Code's OpenTelemetry metrics (`claude_code.cost.usage`, `claude_code.token.usage`).
+- Lesson recorded: the `fable` alias resolved to Fable 5.1 (25% more expensive than 5.2) in testing. Pin exact model IDs.
+- Follow-up: verify the sub-issue / blocked-by write calls of `scripts/issue-link.sh` on the first real `/split-tasks` run (only the read path was exercised in this stage).
+
+## Amendment 2026-11-15: parallel workers
+- **What changed**: `/implement` now runs ready tasks in waves of up to 3 concurrent workers, one git worktree each, instead of sequentially.
+- **Why it is safe**: every worker already has its own worktree and branch; a task joins a wave only if it has no open "blocked by" link and shares no crate or file with another task of the wave (`/split-tasks` links tasks that edit the same files) or with any task whose PR is still open and unmerged. PRs are still reviewed and merged one by one by the human, and each later PR is brought up to date with `gh pr update-branch` and re-checked by CI before the merge request.
+- **Why a cap of 3**: it limits the cost burst and the number of PRs the human has to review at once.
+- **Cost effect**: the same total tokens, a shorter wall-clock time, and larger spending bursts.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-status">
+          <value xml:lang="en">Accepted</value>
+        </property>
+        <property propertyDefinitionRef="propid-date">
+          <value xml:lang="en">2026-11-15</value>
+        </property>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#7</value>
+        </property>
+        <property propertyDefinitionRef="propid-deciders">
+          <value xml:lang="en">product owner, conductor</value>
+        </property>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/adr/0004-agent-team-and-cost-routing.md</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-adr-0005" xsi:type="Constraint">
+      <name xml:lang="en">ADR 0005: Release image built once, accepted, then promoted unchanged</name>
+      <documentation xml:lang="en">## Context and problem
+Unit and HTTP tests prove the code; they do not prove the thing we deploy: the binary's startup, configuration, packaging and runtime behaviour. Pilot and production must run exactly what was tested, not a rebuild of it.
+
+## Decision drivers
+- What is accepted is what is deployed, byte for byte.
+- Acceptance criteria readable by the business (the user-story form already uses Gherkin).
+- Small, low-attack-surface runtime; runs as non-root; works with Podman on the VMs.
+
+## Decision
+- **Image**: multi-stage `Dockerfile`. Rust 1.99 builder, runtime `distroless/cc-debian13:nonroot` (no shell, no package manager, uid 65532), both pinned by digest; Dependabot updates them. Built in Docker format so the `HEALTHCHECK` (`/app healthcheck`, a std-only probe built into the binary) is kept. About 31 MB.
+- **Acceptance tests**: `crates/acceptance-tests`, Gherkin features run with cucumber over HTTP against a running container. Black-box by rule: the architecture tests forbid any dependency on workspace crates. `just acceptance` also checks the container health check and graceful shutdown on SIGTERM. Without `ACCEPTANCE_BASE_URL` the suite skips (so plain `cargo test` and mutation testing work); with `ACCEPTANCE_REQUIRED` set, as in CI, a missing service fails.
+- **CI**: an `acceptance` job on every PR, required on `main`.
+- **Release**: `just release X.Y.Z` tags a clean, current `main` whose `Cargo.toml` version matches. The Release workflow builds the image once, runs the acceptance tests against that image, pushes it to `ghcr.io/&lt;owner&gt;/&lt;repo&gt;` as `X.Y.Z` and `sha-&lt;commit&gt;`, and creates a GitHub Release with generated notes and the image digest. Deploy by digest.
+
+## Consequences
+- Good: `main.rs` (excluded from unit coverage and mutation testing) is exercised end to end: `PORT`, the health-check mode, graceful shutdown.
+- Good: one artifact flows from acceptance to pilot to production (Stage 8).
+- Bad: scenarios share one running service with in-memory state, so each scenario uses its own hours of the day. A project with a real database would reset state per scenario instead.
+- Bad: no `latest` tag on purpose: deployments must name a version or digest.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-status">
+          <value xml:lang="en">Accepted</value>
+        </property>
+        <property propertyDefinitionRef="propid-date">
+          <value xml:lang="en">2026-11-15</value>
+        </property>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#12</value>
+        </property>
+        <property propertyDefinitionRef="propid-deciders">
+          <value xml:lang="en">product owner, conductor</value>
+        </property>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/adr/0005-release-image-and-acceptance.md</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-adr-0006" xsi:type="Constraint">
+      <name xml:lang="en">ADR 0006: Pilot and rollout with Podman Quadlet, health checks and automatic rollback</name>
+      <documentation xml:lang="en">## Context and problem
+A released image (ADR 0005) must reach users safely: first one pilot host, then production after a human decision, never leaving a host broken. There are no servers yet, and GitHub's cloud runners cannot reach hosts on a desktop.
+
+## Decision drivers
+- Run exactly the accepted bytes (digest), with automatic recovery when a release is bad.
+- Human approval before production (gate 3), and an audit trail.
+- The same scripts for simulated hosts today and real VMs later.
+
+## Decision
+- **Runtime**: each host runs the image as a systemd user service generated by **Podman Quadlet** (`deploy/rust-factory.container.in`): restart on failure, `Notify=healthy` (the unit is "active" only after the image's own health check passes), unhealthy containers are killed and restarted.
+- **Hosts as data**: `deploy/hosts/&lt;env&gt;.txt` with a transport per host: `local` (simulated host on this machine, own port) or `ssh:user@host` (real VM). Only the transport differs.
+- **Deploy** (`scripts/deploy.sh`, `just deploy`): resolve version → digest; per host write the unit, blocking restart, then healthy = *container runs the expected image* AND *unit active* AND `/health` answers, within 30 s; on failure roll back to the previous image and verify it. Production is rolled host by host and stops at the first failure.
+- **Promote** (`just promote X.Y.Z`): only a version the pilot is running healthily. This is human gate 3: agents never run it.
+- **Audit**: every deploy is recorded as a GitHub Deployment (environments `pilot`, `production`, success/failure); board items in the release move to **Piloted** / **Released**.
+
+## Consequences
+- Good: a bad release on the pilot rolls itself back (drill: crashing image → rolled back, exit 1, pilot kept serving); a bad production rollout stops at the first host.
+- Bad: deployments run from the developer machine, not from GitHub Actions. The audit trail is in GitHub, but the approval is "the human ran promote", not an Environment reviewer. With real VMs, the same steps can move into a workflow with Environment protection.
+- Bad: the SSH transport is untested until the first VM exists.
+
+## What the drills found (and why they matter)
+1. **`HealthCmd=/app healthcheck` in the Quadlet unit** is passed to Podman as a *shell* command; the distroless image has no shell, so the check could never pass → restart loop. Fixed by using the image's exec-form HEALTHCHECK.
+2. **The first deploy "succeeded" during that loop**: the app answered `/health` between restarts. Fixed: healthy also requires systemd to report the unit active.
+3. **A non-blocking restart let the old container answer the health check**: the broken image "deployed successfully" and the pilot went down. Fixed: blocking restart, and the check verifies the running container's image. Re-run drill: rolled back automatically. Lesson: deployment safety code must itself be tested by deliberately failing deploys.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-status">
+          <value xml:lang="en">Accepted</value>
+        </property>
+        <property propertyDefinitionRef="propid-date">
+          <value xml:lang="en">2026-11-15</value>
+        </property>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#15</value>
+        </property>
+        <property propertyDefinitionRef="propid-deciders">
+          <value xml:lang="en">product owner, conductor</value>
+        </property>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/adr/0006-pilot-and-rollout-with-quadlet.md</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-adr-0007" xsi:type="Constraint">
+      <name xml:lang="en">ADR 0007: Cancel a reservation by deleting it: `DELETE /reservations/{id}`</name>
+      <documentation xml:lang="en">## Context and problem
+Customers who can no longer come have no way to free their slot (`id-mot-drv-blocked-slots`). Epic #17 asks that a customer can cancel a reservation by its id, and measures success as "a cancelled slot can be booked again immediately" (`id-mot-out-rebook`). We must decide what "cancel" means for the stored data and what the HTTP API looks like, both for success (story #18, `id-mot-req-cancel`) and for an id that does not exist or was already cancelled (story #19, `id-mot-req-cancel-refused`). Refunds, notifications and cancellation deadlines are out of scope.
+
+## Decision drivers
+- The freed slot must be bookable at once, with no extra rule in the overlap check.
+- Smallest change that meets the stories: the domain already has `Schedule::cancel`, which removes the reservation and answers `NotFound` for an unknown id.
+- The API stays consistent with the existing `POST /reservations` resource and its `{error}` body for failures.
+- A customer must be told clearly when nothing was cancelled (story #19).
+
+## Options considered
+1. **Remove the reservation; `DELETE /reservations/{id}` → `204 No Content`; unknown id → `404 Not Found` with `{error}`.**
+2. **Soft delete: keep the reservation with status "cancelled" (history)**: the overlap check and every later query must skip cancelled reservations; storage grows; nobody asked for the history.
+3. **Return `200 OK` with a body** (the cancelled reservation or its slot): more to specify and test; the client already knows what it cancelled.
+4. **Idempotent delete: `204` also for an unknown or already-cancelled id**: simple for retrying clients, but a typo in the id would look like success, which contradicts story #19.
+
+For an id that is not a number at all (e.g. `/reservations/abc`), a separate choice:
+
+- **A. `400 Bad Request` from the framework's typed path extractor**, plain-text body, no custom handling.
+- **B. `404 Not Found` with `{error}`**, consistent with "unknown id → 404".
+
+## Decision
+Chosen: **option 1**, because it is what the domain already does (`Schedule::cancel`), it frees the slot with no change to the overlap rule, it fits the REST resource that `POST /reservations` creates, and it gives a clear refusal for ids that do not exist.
+
+- `DELETE /reservations/{id}` on the reservation API (`id-app-intf-reservation-api`), realised by a new cancel use case in `crates/application` (`id-app-svc-cancel`).
+- Success: `204 No Content`, no body.
+- Unknown id, or an id that was already cancelled: `404 Not Found` with the existing `{"error": "..."}` body. Cancelling twice therefore gives `404` the second time.
+- Cancelling removes the reservation from the schedule (`id-app-data-schedule`). No history is kept.
+- Storage failures map to `503 Service Unavailable` with `{error}`, reusing the mapping `POST /reservations` already has. *Beyond the plan approved at gate 1; needs the human's sign-off on this ADR.*
+- A non-numeric id: **option A**. A non-numeric id is answered `400 Bad Request` by the framework's typed path extractor, with a plain-text body (not `{error}`); no custom handling. Option B was rejected because a malformed id is a client error distinct from a well-formed id that does not exist, and custom handling adds code for no user value. *Beyond the plan approved at gate 1; needs the human's sign-off on this ADR.*
+
+## Consequences
+- Good: no domain change; the use case and the HTTP handler are thin; the acceptance scenarios of #18 and #19 map one to one onto status codes.
+- Good: the overlap check stays the only rule for booking, so a cancelled slot is free at once.
+- Bad: no record that a reservation ever existed once it is cancelled: no audit trail, no "no-show" statistics, and no way to undo a cancellation. If such a need appears, a new ADR supersedes this one (likely option 2).
+- Bad: a client that retries a successful `DELETE` (e.g. after a timeout) sees `404`; it must treat `404` after its own earlier attempt as "already cancelled".
+- Bad: anyone who knows a reservation id can cancel it; there is no authentication in the sample domain yet. Out of scope of #17.
+- Bad: error bodies are not uniform: rule, not-found and storage errors carry `{error}`, while requests the framework rejects (a non-numeric id, malformed JSON) get a plain-text body.
+- Bad: reservation ids are unique only within one running instance. Storage is in memory (`id-app-comp-db`), so ids start again from 1 after a restart, redeploy or rollback, and an old id held by a client may then name a different reservation.
+- Known risk: concurrent requests can lose or duplicate reservations, because the use cases load the schedule, change it and save it without atomicity. Cancel adds a second writer: a concurrent book and cancel can bring a cancelled reservation back or lose a booking. Tracked as bug #26; not fixed by this epic.
+- Follow-up: implementation in the task issues under stories #18 and #19.
+
+## Notes
+- 2026-11-15: the known risk above (bug #26) is resolved by [ADR 0008](0008-atomic-schedule-update-through-the-port.md): every change to the schedule now goes through one atomic `update` operation on the repository port.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-status">
+          <value xml:lang="en">Accepted</value>
+        </property>
+        <property propertyDefinitionRef="propid-date">
+          <value xml:lang="en">2026-11-15</value>
+        </property>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#17 (stories #18, #19)</value>
+        </property>
+        <property propertyDefinitionRef="propid-deciders">
+          <value xml:lang="en">human approver (plan approved at gate 1 on 2026-11-15), architect agent</value>
+        </property>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/adr/0007-cancel-reservation-by-delete.md</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-adr-0008" xsi:type="Constraint">
+      <name xml:lang="en">ADR 0008: Atomic schedule changes through one `update` operation on the repository port</name>
+      <documentation xml:lang="en">## Context and problem
+Both use cases (`BookSlot`, `CancelReservation`) loaded the schedule through the `ScheduleRepository` port, changed the copy, and saved it back. The in-memory adapter locked its mutex separately for `load` and for `save`, so two concurrent requests could load the same schedule and the second `save` overwrote the first. Bug #26 lists the effects: a booking that answered `201` disappears, two bookings get the same id, the same slot is accepted twice, and a cancelled reservation comes back. The fix must make each change atomic without putting infrastructure into `application` (ADR 0003) and without changing the HTTP behaviour (ADR 0007).
+
+## Decision drivers
+- Correct under concurrency: no lost, duplicated or resurrected reservation, whatever the timing.
+- The rule stays in one place: the port's contract, so every adapter (in memory today, a database later) must provide atomicity, and no use case can forget it.
+- `application` stays free of infrastructure crates and of locking policy.
+- Smallest change: use-case `execute` signatures, `BookingError` behaviour and the HTTP API stay as they are; `crates/app` does not change.
+
+## Options considered
+1. **(A) One atomic update operation on the port**: the port runs a caller-supplied change on the current schedule and stores the result as one step; `load` and `save` are removed.
+2. **(B) Optimistic concurrency**: `load` returns a version, `save` fails if the version changed, and the use cases retry.
+3. **(C) A shared lock inside the use cases**: the use cases hold a mutex across load, change and save.
+4. **(D) A lock in the HTTP adapter**: handlers serialise all requests that touch the schedule.
+
+## Decision
+Chosen: **option A**, because it puts atomicity in the port's contract, where every adapter must honour it and no caller can bypass it, and it is the least code: one method replaces two. `load` and `save` are removed rather than kept alongside, since nothing reads the schedule without writing it, so load–change–save cannot be written again by accident.
+
+The operation, in `crates/application`:
+
+```rust
+fn update&lt;T, E, F&gt;(&amp;self, change: F) -&gt; Result&lt;T, E&gt;
+where
+    F: FnOnce(&amp;mut Schedule) -&gt; Result&lt;T, E&gt;,
+    E: From&lt;RepositoryError&gt;;
+```
+
+- **Generic closure, returning `T`**: each use case returns what its change produces (the new `ReservationId`, or `()`), with no captured out-variables.
+- **The caller's error type `E`, with `E: From&lt;RepositoryError&gt;`**: a rule error passes through unchanged and a storage failure is converted into the same type, so the use cases keep returning `BookingError::Rule` / `BookingError::Storage` exactly as before, with no nested `Result&lt;Result&lt;…&gt;&gt;` and no new error enum.
+- **Commit only on success**: if the change returns `Err`, nothing is stored, *even if the change modified the schedule before failing*. The in-memory adapter (`id-app-comp-db`) holds its mutex for the whole operation, applies the change to a copy and swaps the copy in only on `Ok`. The copy costs one clone per change (the old `load` cloned too) and also leaves the stored schedule intact if a change panics.
+- **A poisoned mutex is a `RepositoryError`** (answered `503` by the HTTP adapter), never a panic.
+
+## Consequences
+- Good: concurrent books and cancels on one host are serialised by the store; the concurrency test in `crates/adapters-db/tests/concurrency.rs` checks the final state of many threads booking, cancelling and racing for the same slots, and fails on the old load–change–save code.
+- Good: a database adapter maps `update` onto one transaction (read, change, write, commit; roll back on `Err`), and the contract tells it so.
+- Bad: the trait is no longer object-safe (`dyn ScheduleRepository` is impossible) because `update` is generic. Nothing uses it as a trait object; the HTTP adapter and `crates/app` are generic over the repository.
+- Bad: if a change panics, the stored schedule stays intact (the change ran on a copy), but the mutex is poisoned: every later `update` returns `RepositoryError` and every request is answered `503` until the process restarts. This cannot happen with today's domain code, which returns errors and does not panic. Option not taken: recovering the lock with `PoisonError::into_inner` would be safe, because the stored data is always consistent; it is not done here, so that a panic stays visible as a failure instead of being silently passed over. A future ADR can change this.
+- Bad: the change closure is synchronous and runs while the store is locked; it must stay short and must not call the repository again (the mutex is not re-entrant, so that would deadlock). An async database driver would need a new port shape and a new ADR.
+- Bad: every change clones the whole schedule. Fine for one day's reservations; revisit if the schedule grows large.
+- Out of scope: each host keeps its own in-memory schedule, so hosts do not share reservations and a restart empties them (ADR 0007); the HTTP handlers run the synchronous use case on the async worker thread, which briefly blocks that thread while the store is locked.
+
+## Option details
+- **(B) Optimistic version check with retry**: needs a version in the port and a retry loop (with a limit, and an error when it is reached) in every use case; under contention requests spin and can still fail. More code and more behaviour to test, for a store that can simply lock.
+- **(C) A shared lock inside the use cases**: puts locking policy into `application`, protects only callers that share that lock (two `BookSlot` values, or another process, would not), and leaves load–change–save in the port for the next caller to misuse.
+- **(D) A lock in the HTTP adapter**: protects only HTTP callers; any other driving adapter (a CLI, a queue consumer) would bring the bug back, and correctness would depend on how the binary is wired rather than on the port.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-status">
+          <value xml:lang="en">Accepted</value>
+        </property>
+        <property propertyDefinitionRef="propid-date">
+          <value xml:lang="en">2026-11-15</value>
+        </property>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#26 (bug), #37 (task)</value>
+        </property>
+        <property propertyDefinitionRef="propid-deciders">
+          <value xml:lang="en">human approver (option A approved at gate 1 on 2026-11-15), hard worker agent</value>
+        </property>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/adr/0008-atomic-schedule-update-through-the-port.md</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-adr-0009" xsi:type="Constraint">
+      <name xml:lang="en">ADR 0009: ArchiMate exchange model as the single source of the architecture documentation</name>
+      <documentation xml:lang="en">## Context and problem
+Today the architecture documentation has three hand-edited sources: the model in `docs/architecture/model/*.csv` (Archi's CSV layout plus a `views.csv` this repo invented, see ADR 0002), the TOGAF narrative in `docs/togaf/*.md`, and the ADRs in `docs/adr/*.md`. No tool other than this repo's scripts can read that set, and diagrams exist only as build output: no document shows one, and no diagram leads to the decisions or documents behind its boxes.
+
+The human's requirement (2026-11-16, change request #41): the maintained form must be a standard, self-describing ArchiMate format that other software can read, and reading must work both ways: a document shows its diagrams, and a diagram leads to the decisions, documents and releases behind each box (`id-mot-req-togaf`).
+
+## Decision drivers
+The five requirements the human confirmed on 2026-11-16:
+1. **One edited source**: the Open Group *ArchiMate Model Exchange File Format* (XML); the CSV files are removed.
+2. **ADR and TOGAF text live in the model**; Markdown pages are generated (with diagrams and catalog tables), never hand-edited.
+3. **Any standard tool** can read it: validated against the official schema on every change; nothing Archi-specific.
+4. **Read it in both places**: generated Markdown and images committed to the repo, and a public GitHub Pages site with clickable diagrams.
+5. **Archi is view-only for now**; agents edit the XML in PRs. A round trip through Archi must stay possible later.
+
+Also, as before: agents edit it reliably with reviewable diffs, builds run unattended in CI, and Thai text works.
+
+## Options considered
+1. **Exchange XML as the single source, with ADRs, TOGAF documents and releases as model elements, and generated Markdown** (chosen).
+2. **Keep the CSV source; generate the exchange XML and commit it.** Other tools could read the committed file, but it would be a copy of a tool-specific source: two files to keep in step, and the edited form would still carry no meaning outside this repo. Fails requirement 1.
+3. **Archi's native `.archimate` file as the source.** Readable only by Archi (and jArchi/coArchi), not a standard; noisy diffs with Archi's random folder IDs and style data. Fails requirement 3.
+4. **Exchange XML for the model, Markdown for ADRs and TOGAF kept outside it.** Smallest change, but the link from a box to its decisions and documents would exist only as text conventions that no ArchiMate tool understands. Fails requirements 2 and 4 (the "both ways" part).
+
+How to represent a decision (ArchiMate has no "decision" element type):
+- **`Constraint`** (chosen): "a factor that limits the realization of goals", which is what an accepted ADR is; visibly different from `Requirement`; every core structure or behaviour element may *realize* it and every element may *influence* it (checked against Archi's `relationships.xml`, see the spike).
+- *Requirement*: already used for user stories and business requirements; decisions would be indistinguishable from them in views and catalogs.
+- *Principle*: too general. A principle applies to any system in a context; a decision is specific to one problem and one choice. (The relationship rules would allow it: Realization from an ApplicationComponent to a Principle is allowed.)
+- *Assessment*: an assessment is the *outcome of analysing* a driver, not the choice made; core elements may only associate with it or influence it (no Realization), so "this component implements ADR N" cannot be said.
+
+## Decision
+Chosen: **option 1**, because it is the only option that meets all five requirements, and the spike (below) shows that the pinned Archi 5.11.0 and the official schema accept everything it needs without leaving the standard.
+
+### The source file and its canonical form
+- One file, `docs/architecture/model.xml`, in namespace `http://www.opengroup.org/xsd/archimate/3.0/` with `xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Diagram.xsd"`. The format has no include mechanism, so a split source would not be importable by other tools.
+- **Canonical form** = what `just model-fmt` writes: UTF-8, LF, 2-space indent, fixed attribute order, sections in schema order, items sorted by identifier (parallel additions land in different places). `just model-fmt --check` parses, serialises and byte-compares. The spike fixed these rules of the form (each is either required by the schema or avoids a difference between the schema and Archi):
+  - every name, label, documentation and value carries `xml:lang="en"`;
+  - an empty `documentation` is omitted, not written empty;
+  - `documentation` text has no trailing newline (Archi's export strips it; the generator adds one when it writes a page);
+  - text is XML-escaped; no CDATA sections and no comments (a comment would not survive a parse-and-serialise round);
+  - `Access` relationships always state `accessType` (Archi reads a missing one as `Write`, the schema's default is `Access`);
+  - property definitions have stable identifiers `propid-&lt;slug&gt;`, and every definition is used.
+- Identifiers stay our `id-&lt;layer&gt;-&lt;kind&gt;-&lt;slug&gt;` IDs: they are valid `xs:ID`s, and Archi keeps every one of them on import.
+
+### Views: agents list members, the formatter lays out
+- **Agents never place boxes.** In a view they add only `&lt;node xsi:type="Element" elementRef="id-…"/&gt;`; `just model-fmt` computes the node identifiers, bands, nesting, coordinates and connections, reusing `scripts/archimate/layout.py` and the view emission of `build_exchange.py`. The schema requires `identifier`, `x`, `y`, `w` and `h` on every node, so the bare form is formatter input only: the committed (formatted) file always has them, and schema validation runs on it.
+- A view property `Layout = manual` tells the formatter to leave a hand-arranged view alone (for later, when Archi editing is allowed).
+
+### Validation, in `just model-check` (no Archi start, so it stays in the CI `gates` job)
+- **Official schema** with `xmllint --noout --nonet --schema archimate3_Diagram.xsd`, the XSDs read from the pinned Archi install (`plugins/org.opengroup.archimate.xmlexchange_*.jar`, `xsd/`), with an XML catalog that maps the `xml.xsd` import to the copy in the same jar. Their sha256 values are pinned in `tools/archi.env`; they are byte-identical to the Open Group's published 3.1 schemas. Same principle as `relationships.xml` (ADR 0002 amendment): no second copy in the repo.
+- `bootstrap.sh` installs `libxml2-utils` (Ubuntu) / `libxml2` (Arch); `just doctor` reports it.
+- Kept and pointed at the XML: `check_relationships.py` (relationship rules from Archi's `relationships.xml`), the ID convention, document references.
+- New: canonical form, generated pages are current, image lock (below), every `View` property names an existing view, and every diagram connection joins nodes of its relationship's ends (neither the schema nor Archi checks the last two).
+- `build.sh` validates with `xmllint` before starting Archi and runs Archi under a timeout: Archi's importer hangs instead of exiting when its own schema check fails.
+
+### ADRs → one `Constraint` element each
+- Identifier `id-mot-adr-NNNN`, name `ADR NNNN: &lt;title&gt;`; properties `Status`, `Date`, `Issue`, `Deciders`, `File` (the generated page). The full text, as Markdown, is the `documentation` (Archi's report renders it, other tools show plain text).
+- Links replace today's `ADR` property rows and the "ArchiMate elements" header lines: **Realization** from the core elements that implement the decision, **Influence** from motivation elements that shaped it. "Supersedes" is a **directed Association named `supersedes`** from the new ADR to the old one, plus `Status = Superseded by NNNN` on the old one. Amendments stay appended, dated sections of the text, as now.
+
+### TOGAF documents → one `Deliverable` element each
+- Identifier `id-impl-del-&lt;slug&gt;` (e.g. one per ADM phase); the narrative is the `documentation`; properties `File`, `Phase`, and an ordered, repeated `View` naming the views that belong to the document (the exchange format has no relationship from an element to a view; Archi keeps repeated properties in order).
+- The generated page is the narrative (IDs become links) plus, for each view: the image, the view's documentation, a link to its clickable page on the site, and a **catalog table** (id, name, type, decisions, issues, crate/code, release, other documents). These are TOGAF's artifacts (catalogs and diagrams) inside the deliverable.
+
+### Releases → one `Plateau` element each
+- Identifier `id-impl-plat-vX-Y-Z`, **Aggregation** to the elements and ADR Constraints it delivered, so a release is a box in a diagram and a column in catalogs. ArchiMate does not allow a Plateau to aggregate a Deliverable, Driver, Principle, Stakeholder, Assessment, Value, Meaning, Work Package, Gap or Implementation Event; for those, a release uses Association.
+
+### Generated output
+- One standard-library generator, `scripts/archimate/gen_docs.py`, writes `docs/adr/*.md`, `docs/adr/README.md` and `docs/togaf/*.md`, each with a "generated, do not edit" header; `--check` re-renders and diffs (fails on stale or orphan files).
+- **Images:** Archi's PNGs are committed to `docs/architecture/views/` with a `views.lock` holding, per view, a hash of the view's rendering inputs and of the PNG, and its dimensions. `just model` writes both; `model-check` fails with "run `just model`" when a view changed without its image. PNG bytes are not reproducible across displays (spike item 4), so checks compare the lock, never re-rendered bytes.
+- **Site:** `.github/workflows/pages.yml` on push to `main` publishes the rendered documents and Archi's HTML report (boxes are clickable there) with the official Pages actions. PRs get the same site as a downloadable artifact.
+
+### Archi is view-only for now
+The human opens `docs/architecture/model.xml` in Archi (File › Import › Open Exchange File) to look, not to edit. A later "edit in Archi" feature would export, then normalise with `just model-fmt`; spike item 5 lists what it would have to undo.
+
+### Refinements to the approved plan found by the spike
+Rules that go beyond the plan in #41, collected here (details in the sections above and in the spike):
+- `xml:lang="en"` on every name, label, documentation and value.
+- An empty `documentation` is omitted.
+- No trailing newline in `documentation` text.
+- No XML comments (and no CDATA).
+- `Access` relationships always state `accessType`.
+- Every property definition is used.
+- `xsi:schemaLocation` is always written.
+- The formatter generates node identifiers (as well as coordinates and connections).
+- Two extra checks: every `View` property names an existing view; every diagram connection's ends match its relationship's ends.
+- `build.sh` runs `xmllint` before Archi, and Archi under a timeout.
+- A Plateau uses Association where ArchiMate does not allow Aggregation.
+- The "ArchiMate elements" header lines of the ADRs are replaced by relationships, as the `ADR` property rows are.
+- `views.lock` also stores each view's dimensions; checks never compare re-rendered bytes, and `just model` always renders under Xvfb.
+- Archi's HTML report is not reproducible and is never compared.
+- Size estimate: about 125–150 KB / 2,000–2,200 lines (plan: 110 KB / 1,700 lines).
+- "PNG dimensions equal on dev and CI" moves from step 0 to step 4.
+
+## Consequences
+- Good: one standard file holds the whole architecture; any conformant tool can import it, and the schema check on every PR keeps it conformant.
+- Good: reading works both ways: a document page shows its diagrams and catalogs; on the site and in Archi, a box leads to its decisions (Constraints), documents (Deliverables) and releases (Plateaus).
+- Good: no ADR text, TOGAF text and model can drift apart any more: there is one copy.
+- Trade-offs the human accepted by approving the plan:
+  1. **Prose is written inside XML.** PRs show each text change twice: in `model.xml` and in the generated page (the readable one).
+  2. **Model changes are serialised.** With one source file, architecture tasks run one after another, not in parallel (`/implement` treats `model.xml` as one shared area).
+  3. **On GitHub itself, diagrams are pictures;** the catalog table under each diagram gives the links. Clicking boxes works on the Pages site and in Archi.
+  4. **One-time re-layout** of the four existing diagrams (sorted order changes box positions).
+  5. **Size and effort:** `model.xml` grows to about 110 KB / 1,700 lines by the plan's estimate (the spike measures about 125–150 KB / 2,000–2,200 lines, see item 6); about 8 PRs, mostly hard (Opus) tasks; roughly USD 30–40 at list price.
+- Bad: agents must write Markdown as escaped XML text (`&amp;lt;`, `&amp;amp;`); the formatter and the generated page make mistakes visible, but diffs of long text are less pleasant than in a `.md` file.
+- **Open question for the human, to decide before step 3: line breaks inside paragraphs.** Archi's HTML report renders every single line break in a documentation text as a `&lt;br/&gt;` (spike item 1), and the ADRs and TOGAF files are hard-wrapped at about 100 characters. Two options:
+  - **(A) Unwrap each paragraph to one line at migration.** The text then reads well in Archi's report, on the site and in other tools. The lossless proof of step 3 and 5 then compares whitespace-normalised text, not the sha256 of the bytes.
+  - **(B) Keep the text byte-identical.** The sha256 proof planned in #41 holds as written, and the report (and so the site's element pages) shows ragged paragraphs.
+- Follow-up (each one task issue under #41, one PR each; `main` stays green after each):
+  1. Canonical reader/writer and `just model-fmt`, schema validation, xmllint in bootstrap and doctor, tests on fixtures.
+  2. Cutover: `model.xml` replaces the CSV; `build.sh` and `check_relationships.py` read XML; the CSV files and `build_exchange.py` are deleted; lossless proof; rules updated. `build.sh` validates with `xmllint` before starting Archi and runs Archi under a timeout. The intended access type (Read / Write / ReadWrite / Access) of each of the 7 `Access` relationships is stated explicitly; the choice per relationship is put to the human in that PR.
+  3. ADRs into the model (including this one); generator and check; templates.
+  4. Committed view images and `views.lock`; check that PNG dimensions are equal on the dev machine and on CI (moved here from step 0, see spike item 4).
+  5. TOGAF documents into the model; pages with diagrams and catalogs.
+  6. Release Plateaus (v0.1.0, v0.2.0, v0.2.1).
+  7. Pages workflow and site (human step: Settings › Pages › Source = "GitHub Actions").
+  8. Sweep: skills, reviewer rules, CONTRIBUTING, memory.
+
+## Spike (2026-11-16, Archi 5.11.0, libxml2 2.15.4, Arch Linux)
+Throwaway work in a temporary directory, nothing of it committed. Input: today's generated `build/architecture/model.xml` (53 elements, 69 relationships, 4 views) plus, by hand: Constraints for ADR 0002 (has a table), ADR 0008 (has a Rust code block with `Result&lt;T, E&gt;`, lists, emphasis) and a stub ADR 0009; a Deliverable holding the full text of `docs/togaf/C-information-systems-architecture.md`; a Plateau `Release v0.2.1`; a Realization from `id-app-comp-application` to the ADR 0008 Constraint; an Influence from `id-mot-req-togaf` to the ADR 0002 Constraint; a directed Association `supersedes` from ADR 0009 to ADR 0002; Aggregations from the Plateau to `id-app-comp-application` and to the ADR 0008 Constraint; eight new property definitions (`propid-status`, `propid-file`, `propid-view`, `propid-layout`, …), a repeated `View` property, properties on the existing view `id-view-motivation`, a new hand-placed view showing all of the above, and `xsi:schemaLocation`. Result: 58 elements, 74 relationships, 5 views, 84,394 bytes, 1,148 lines.
+
+### 1. Archi imports the hand-maintained file: yes
+- Imported with the exact command line of `scripts/archimate/build.sh` (`--abortOnException --xmlexchange.import … --saveModel … --html.createReport …`): "Validated!", "XML Imported!", "Report generated!", exit 0, in 3.5 s.
+- Every element, relationship, view, node and connection identifier is kept in `model.archimate` (296 identifiers in, all present). Property *definition* identifiers are not kept: the native format stores properties as key/value pairs. The repeated `View` property keeps its order; properties on views are kept and shown on the view's report page; `supersedes` is stored as a named, directed Association.
+- Documentation is kept byte for byte (sha256 of the text equal before and after import).
+- The report page of a Constraint **renders the Markdown**: headings, lists, emphasis, inline code, the fenced Rust block (as `&lt;pre&gt;&lt;code class="language-rust"&gt;`, with `&lt;`, `&gt;` and `&amp;` correct) and the ADR 0002 table (as an HTML `&lt;table&gt;`). All 62 element pages with documentation are rendered the same way. Each single line break in the source becomes a `&lt;br/&gt;`, so hard-wrapped paragraphs show ragged lines (open question under Consequences).
+- The view image map links every box to its element page (`&lt;area … href="../elements/&lt;id&gt;.html"&gt;`, 7 of 7 boxes on the spike view). An element page lists its relationships, so `id-app-comp-application` links to the ADR 0008 Constraint and to the Plateau.
+- All 74 relationships are allowed by Archi's `relationships.xml` (checked with the rules loader of `check_relationships.py`). Rules that shape the mapping: Realization to a Constraint is allowed from every core structure and behaviour element, but not from motivation elements; Influence to a Constraint is allowed from every element; Constraint to Constraint allows Association, Aggregation, Composition, Influence and Specialization; a Plateau may not aggregate a Deliverable, Driver, Principle, Stakeholder, Assessment, Value, Meaning, Work Package, Gap or Implementation Event.
+- Adding the Constraint, Deliverable and Plateau, and properties on a view, did not change the images of the four existing views (PNG bytes equal to the plain `just model` build).
+
+### 2. Official schema, offline: yes, on libxml2 2.15.4 and 2.9.14
+- Command (catalog file with one entry, `&lt;system systemId="http://www.w3.org/2001/xml.xsd" uri="file:///…/xsd/xml.xsd"/&gt;`, in the OASIS catalog namespace): `XML_CATALOG_FILES=catalog.xml xmllint --noout --nonet --schema xsd/archimate3_Diagram.xsd model.xml` → "validates", exit 0, for both today's generated file and the spike file. Without the catalog the schema does not compile (`archimate3_Model.xsd` imports `http://www.w3.org/2001/xml.xsd`, and `--nonet` forbids fetching it), so the catalog is required, not optional.
+- Source: `~/.local/opt/archi-5.11.0/plugins/org.opengroup.archimate.xmlexchange_5.11.0.202610161626.jar`, directory `xsd/`. sha256:
+  - `archimate3_Diagram.xsd` 6419080f4c4bc43b4a7b8acf870146a7bae6c3487a3ce08d3c521c028ea6056e
+  - `archimate3_View.xsd` d708ce176403034b1229b892712cfd69660aefe17da4cc54acea1ac35e4a9854
+  - `archimate3_Model.xsd` dd451abe3e3193f91dd9544b279af9bbbf17e75ff1ef86f65ad52b3f8cd29794
+  - `xml.xsd` (W3C, same jar) f0fa306f2951fb1a477220eb7bdeaa35959c8d0224258f2104d3c4724ba746f7
+
+  The three `archimate3_*.xsd` files are byte-identical to the ones published at https://www.opengroup.org/xsd/archimate/3.1/ (same sha256, empty `diff`, fetched 2026-11-16).
+- libxml2: `xmllint` 2.15.4 here (Arch). Ubuntu 24.04, the CI runner, ships libxml2 2.9.14. No Ubuntu image was available offline, so the same validation was run with libxml2 2.9.14+dfsg-1.3~deb12u6 (Debian 12, a local builder image, no network) through a 25-line C program making the same library calls as `xmllint --nonet --schema` (catalog, no-network entity loader, schema parse, validate): the spike file validates; a bare view node, wrong child order and an unknown relationship target are rejected; without the catalog the schema does not compile. Neither `.github/actions/setup` nor `bootstrap.sh` installs `xmllint` today (`libxml2-utils` is not in the Ubuntu package list); step 1 adds it. Whether the runner image happens to have it preinstalled was not checked and should not be relied on.
+
+### 3. Strict schema versus Archi
+One deviation per file, each validated with the command of item 2 and imported with Archi's command line (Archi validates with its own Xerces copy of the same XSDs before importing):
+
+| Deviation | xmllint | Archi | Rule for the canonical form / our checks |
+|---|---|---|---|
+| `documentation` before `name` in an element | rejects | rejects | children in schema order: name, documentation, properties |
+| `propertyDefinitions` before `relationships` | rejects | rejects | sections in schema order |
+| view `properties` after the nodes | rejects | rejects | view: name, documentation, properties, then nodes and connections |
+| element without `name` | rejects | rejects | every element, view and property definition has a name |
+| bare view node (no `identifier`, `x`, `y`, `w`, `h`) | rejects | rejects | formatter input only; the committed file is formatted |
+| node with identifier but no coordinates | rejects | rejects | same |
+| node `elementRef` pointing at a relationship | rejects | rejects | — (schema key/keyref) |
+| property referring to an unknown definition | rejects | rejects | — |
+| property referring to an element instead of a definition | rejects | rejects | — |
+| empty `&lt;properties/&gt;` | rejects | rejects | omit `properties` when there are none |
+| relationship to an unknown element | rejects | rejects | — |
+| duplicate identifier | rejects | rejects | — |
+| identifier with `:` and a space | rejects | rejects | ID convention check gives the clearer message |
+| unknown element type (`Decision`) | rejects | rejects | decisions are `Constraint` |
+| no `xml:lang` | accepts | accepts | always write `xml:lang="en"` (one form, matches Archi's export) |
+| `xml:lang="th"` on documentation | accepts | accepts | Thai text needs no language tag; keep `en` |
+| empty `&lt;documentation&gt;` (either spelling) | accepts | accepts, stores nothing | omit it |
+| two `documentation` entries, same language | accepts | keeps only the first | at most one per language |
+| unused property definition | accepts | accepts | our check: every definition is used |
+| CDATA section | accepts | accepts | escape instead, one form |
+| XML comment | accepts | accepts | none (lost by the formatter) |
+| no `xsi:schemaLocation` | accepts | accepts | always write it (self-describing file) |
+| Assignment from a component to a Constraint (not allowed by ArchiMate) | accepts | accepts, stores it | `check_relationships.py` |
+| diagram connection whose ends are not the relationship's ends | accepts | accepts, stores it | our check (the formatter generates connections) |
+
+Archi never accepted a file the schema rejects. When its own validation fails, Archi prints the error and then **hangs** instead of exiting (killed after 60 s), with or without a display. Hence the rules: validate with `xmllint` first, start Archi only on a valid file, and under a timeout. Things both accept that our own checks must catch: a relationship type ArchiMate does not allow, a diagram connection whose ends are not the relationship's ends (Archi stores it as is), and a `View` property naming a view that does not exist (properties are plain strings).
+
+### 4. Diagram images
+- Same machine, same display mode: **byte-identical**. Two runs under Xvfb gave identical PNGs, and two runs on the real display gave identical PNGs (also identical to `just model`).
+- Same machine, real display versus Xvfb: **bytes differ**, dimensions equal. 0.6–1.8 % of the pixels differ, all inside text (anti-aliasing). So bytes depend on the display, not only on the machine: `just model` should always render under `xvfb-run` for a stable local result (step 4).
+- Dimensions (both modes): `id-view-layered` 1299×1028, `id-view-lifecycle` 1010×432, `id-view-motivation` 833×387, `id-view-reservation-cancel` 1423×1246, spike view 620×375.
+- Not established here: whether CI (Ubuntu 24.04, Xvfb, other fonts) gives the same dimensions; step 4 compares a CI run with the lock.
+- The HTML report itself is not byte-reproducible: the folder identifiers in `model.html` are random on every run. Adding `&lt;organizations&gt;` with fixed identifiers does not help (Archi still generates new folder identifiers, and the order of "used in views" rows on element pages then varies too). The site is therefore a build artifact and is never compared.
+
+### 5. Round trip through Archi's export
+`--xmlexchange.import spike.xml --xmlexchange.export out.xml --xmlexchange.exportLang en`; the output validates, and exporting it again gives a byte-identical file (one normalising pass, then a fixed point). Compared with the input (84 KB → 121 KB, 1,148 → 2,173 lines):
+- Kept: every element, relationship, view, node and connection identifier; names, documentation text (apart from the trailing newline), property values and their order, view properties, node coordinates and sizes, relationship order, section order.
+- Changed: elements are reordered (by Archi folder and then type, no longer by our order); property definitions are renumbered `propid-1`… in alphabetical order of their names; every node and connection gains a `&lt;style&gt;` block (fill and line colours and the machine's font, here `Sans`, 144 blocks); attribute order on nodes changes; the trailing newline of each documentation is removed; `accessType="Write"` is added to every `Access` relationship that had none (7 today), which changes their meaning under the standard's default.
+- So a later "edit in Archi" normaliser must: re-sort, map `propid-N` back to `propid-&lt;slug&gt;` by name, drop `&lt;style&gt;` unless the view is `Layout = manual`, and keep the explicit `accessType`. Nothing is lost that cannot be restored.
+- Already true today: Archi shows the 7 `Access` relationships of the current model as *write* access, because the generated XML omits `accessType`; the cutover (step 2) should state the intended access type of each one.
+
+### 6. Size
+The 8 ADRs and 11 TOGAF files hold 43,761 bytes of text once XML-escaped (764 lines). Today's generated file is 62,014 bytes / 783 lines. Adding the text, about 1 KB of element and property markup per ADR, document and release, the relationships that replace today's ADR rows and header lists, and the view nodes for the new elements gives about **125–150 KB and 2,000–2,200 lines** (the upper end includes ADR 0009 itself, about 16 KB). This is somewhat above the plan's 110 KB / 1,700 lines and does not change the decision: the file stays far below what editors, `xmllint` and Archi handle comfortably (the 84 KB spike file imports in 3.5 s).
+
+### Requirements check
+Every confirmed requirement can be met inside the standard. Nothing in the spike needed an Archi-specific construct; the differences found are rules of our canonical form and our own checks, listed above.
+
+## Amendment 2026-11-16: as built in steps 1 and 2
+Steps 1 (#44) and 2 (#46) built the tooling and the cutover. This amendment records the points below, where the tooling as built refines the decision above; each is part of the decision from now on. Anything not listed here is still decided by the text above, not by the code:
+- **XML comments, processing instructions and a DOCTYPE are rejected** with a message naming them, not dropped. CDATA is accepted on input and written escaped.
+- **Unused property definitions are dropped** by the formatter, with a note on stderr ("every definition is used" holds for the written file).
+- **A missing `accessType` is written as `Access`** by the formatter (the schema's default), and the formatter prints a note on stderr naming the relationship, so the author sees it and can choose `Read`, `Write`, `ReadWrite` or `Access`. The committed file therefore always states the type; `model-check` cannot tell a chosen `Access` from a defaulted one, so the note is the only warning. The cutover states the type on all seven existing ones, and the human chooses them in the cutover PR.
+- **Rejected for now**: `metadata`, `organizations`, `viewpoints`, `viewpointRef`, elements and attributes in foreign namespaces, and texts in a language other than `en`. A future normaliser for Archi exports must strip `organizations`, `metadata` and `&lt;style&gt;` (spike item 5) before formatting.
+- **Views with `Layout = manual`** are copied as they are, so they are exempt from the `xml:lang` rule as well as from the layout; only their property-definition references are renamed.
+- **`xml.xsd` is pinned too**: `tools/archi.env` holds four sha256 values (the three ArchiMate schemas and `xml.xsd`), and `xsd_check.py` fails when any of them differs.
+- **Trailing whitespace**, not only a trailing newline, is removed from `documentation`; inner spaces and line breaks are kept.
+- **An empty view** (no members) is valid and written without nodes.
+- **View emission** lives in `scripts/archimate/exchange.py` (`add_diagram`, with `layout.py`); `build_exchange.py` and the CSV files are gone. `exchange.read` is the one reader the checks share.
+- **The checks of `just model-check`**, in order: canonical form (`model_fmt.py --check`), schema (`xsd_check.py`), relationship rules (`check_relationships.py`), then `check_model.py`: the ID convention (before the cutover nothing checked it), every view member is an element, every diagram connection joins nodes of its relationship's ends (a plain line without a relationship, possible only in a `Layout = manual` view, is skipped), every `View` property names a view, every view's `viewpoint` is one of the `ViewpointsEnum` values of the pinned `archimate3_View.xsd` (the schema's viewpoint type is a union with `xs:string`, so it accepts any text; `build_exchange.py` had checked this against its own list), and every `` `id-…` `` in `docs/**/*.md` exists. `build.sh` runs all of them before Archi, also in `just model`. The checks for generated pages and the image lock come with steps 3–5.
+- **New rule: the model's own identifier is `id-model-&lt;slug&gt;`** (today `id-model-factory`), next to `id-&lt;layer&gt;-&lt;kind&gt;-&lt;slug&gt;`, `id-rel-NNN` and `id-view-&lt;slug&gt;`; `CLAUDE.md` lists it.
+- **Relationship types** are written without the `Relationship` suffix in the exchange format (`Serving`); `check_relationships.py` adds it to look up Archi's rules.
+- The model's `Source` property now names `docs/architecture/model.xml`.
+- The CI artifact `architecture-model` no longer carries a copy of `model.xml`: the source is in the repo.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-status">
+          <value xml:lang="en">Accepted</value>
+        </property>
+        <property propertyDefinitionRef="propid-date">
+          <value xml:lang="en">2026-11-16</value>
+        </property>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#41 (change request), #42 (task: spike and this ADR)</value>
+        </property>
+        <property propertyDefinitionRef="propid-deciders">
+          <value xml:lang="en">human approver (requirements confirmed one at a time and plan approved on 2026-11-16; sign-off at gate 1 by merging this ADR), architect agent</value>
+        </property>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/adr/0009-archimate-exchange-model-as-source.md</value>
+        </property>
+      </properties>
+    </element>
     <element identifier="id-mot-drv-blocked-slots" xsi:type="Driver">
       <name xml:lang="en">Unused slots stay blocked</name>
       <documentation xml:lang="en">Customers who can no longer come have no way to free their slot, so nobody else can book it (epic #17).</documentation>
@@ -293,11 +922,6 @@
     <element identifier="id-mot-req-togaf" xsi:type="Requirement">
       <name xml:lang="en">Architecture documented in TOGAF / ArchiMate</name>
       <documentation xml:lang="en">Business, information and technology architecture is kept as an ArchiMate model and TOGAF documents, so business-side changes can be analysed.</documentation>
-      <properties>
-        <property propertyDefinitionRef="propid-adr">
-          <value xml:lang="en">docs/adr/0002-archimate-model-as-text.md</value>
-        </property>
-      </properties>
     </element>
     <element identifier="id-mot-sh-customer" xsi:type="Stakeholder">
       <name xml:lang="en">Customer</name>
@@ -416,16 +1040,57 @@
     <relationship identifier="id-rel-078" xsi:type="Access" source="id-app-comp-db" target="id-app-data-schedule" accessType="ReadWrite"/>
     <relationship identifier="id-rel-079" xsi:type="Realization" source="id-app-data-schedule" target="id-bus-obj-reservation"/>
     <relationship identifier="id-rel-080" xsi:type="Serving" source="id-tech-sw-podman" target="id-app-comp-reservation-svc"/>
+    <relationship identifier="id-rel-081" xsi:type="Realization" source="id-bus-obj-adr" target="id-mot-adr-0001"/>
+    <relationship identifier="id-rel-082" xsi:type="Influence" source="id-mot-goal-traceable" target="id-mot-adr-0001"/>
+    <relationship identifier="id-rel-083" xsi:type="Influence" source="id-mot-req-togaf" target="id-mot-adr-0002"/>
+    <relationship identifier="id-rel-084" xsi:type="Realization" source="id-tech-sw-archi" target="id-mot-adr-0002"/>
+    <relationship identifier="id-rel-085" xsi:type="Realization" source="id-app-comp-reservation-svc" target="id-mot-adr-0003"/>
+    <relationship identifier="id-rel-086" xsi:type="Influence" source="id-mot-goal-healthy" target="id-mot-adr-0003"/>
+    <relationship identifier="id-rel-087" xsi:type="Realization" source="id-tech-sw-rust" target="id-mot-adr-0003"/>
+    <relationship identifier="id-rel-088" xsi:type="Realization" source="id-app-comp-conductor" target="id-mot-adr-0004"/>
+    <relationship identifier="id-rel-089" xsi:type="Realization" source="id-app-comp-hard" target="id-mot-adr-0004"/>
+    <relationship identifier="id-rel-090" xsi:type="Realization" source="id-app-comp-scout" target="id-mot-adr-0004"/>
+    <relationship identifier="id-rel-091" xsi:type="Realization" source="id-app-comp-simple" target="id-mot-adr-0004"/>
+    <relationship identifier="id-rel-092" xsi:type="Influence" source="id-mot-goal-cost" target="id-mot-adr-0004"/>
+    <relationship identifier="id-rel-093" xsi:type="Influence" source="id-mot-req-routing" target="id-mot-adr-0004"/>
+    <relationship identifier="id-rel-094" xsi:type="Realization" source="id-bus-proc-accept" target="id-mot-adr-0005"/>
+    <relationship identifier="id-rel-095" xsi:type="Realization" source="id-tech-svc-ghcr" target="id-mot-adr-0005"/>
+    <relationship identifier="id-rel-096" xsi:type="Realization" source="id-tech-sw-podman" target="id-mot-adr-0005"/>
+    <relationship identifier="id-rel-097" xsi:type="Realization" source="id-bus-proc-deploy" target="id-mot-adr-0006"/>
+    <relationship identifier="id-rel-098" xsi:type="Realization" source="id-tech-node-pilot" target="id-mot-adr-0006"/>
+    <relationship identifier="id-rel-099" xsi:type="Realization" source="id-tech-node-prod" target="id-mot-adr-0006"/>
+    <relationship identifier="id-rel-100" xsi:type="Realization" source="id-tech-sw-podman" target="id-mot-adr-0006"/>
+    <relationship identifier="id-rel-101" xsi:type="Realization" source="id-app-data-schedule" target="id-mot-adr-0007"/>
+    <relationship identifier="id-rel-102" xsi:type="Realization" source="id-app-intf-reservation-api" target="id-mot-adr-0007"/>
+    <relationship identifier="id-rel-103" xsi:type="Realization" source="id-app-svc-cancel" target="id-mot-adr-0007"/>
+    <relationship identifier="id-rel-104" xsi:type="Realization" source="id-bus-proc-cancel" target="id-mot-adr-0007"/>
+    <relationship identifier="id-rel-105" xsi:type="Influence" source="id-mot-out-rebook" target="id-mot-adr-0007"/>
+    <relationship identifier="id-rel-106" xsi:type="Influence" source="id-mot-req-cancel" target="id-mot-adr-0007"/>
+    <relationship identifier="id-rel-107" xsi:type="Influence" source="id-mot-req-cancel-refused" target="id-mot-adr-0007"/>
+    <relationship identifier="id-rel-108" xsi:type="Realization" source="id-app-comp-application" target="id-mot-adr-0008"/>
+    <relationship identifier="id-rel-109" xsi:type="Realization" source="id-app-comp-db" target="id-mot-adr-0008"/>
+    <relationship identifier="id-rel-110" xsi:type="Realization" source="id-app-data-schedule" target="id-mot-adr-0008"/>
+    <relationship identifier="id-rel-111" xsi:type="Influence" source="id-mot-req-togaf" target="id-mot-adr-0009"/>
+    <relationship identifier="id-rel-112" xsi:type="Realization" source="id-tech-sw-archi" target="id-mot-adr-0009"/>
+    <relationship identifier="id-rel-113" xsi:type="Association" source="id-mot-adr-0009" target="id-mot-adr-0002" isDirected="true">
+      <name xml:lang="en">supersedes</name>
+    </relationship>
   </relationships>
   <propertyDefinitions>
-    <propertyDefinition identifier="propid-adr" type="string">
-      <name xml:lang="en">ADR</name>
-    </propertyDefinition>
     <propertyDefinition identifier="propid-code" type="string">
       <name xml:lang="en">Code</name>
     </propertyDefinition>
     <propertyDefinition identifier="propid-crate" type="string">
       <name xml:lang="en">Crate</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-date" type="string">
+      <name xml:lang="en">Date</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-deciders" type="string">
+      <name xml:lang="en">Deciders</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-file" type="string">
+      <name xml:lang="en">File</name>
     </propertyDefinition>
     <propertyDefinition identifier="propid-issue" type="string">
       <name xml:lang="en">Issue</name>
@@ -435,6 +1100,9 @@
     </propertyDefinition>
     <propertyDefinition identifier="propid-source" type="string">
       <name xml:lang="en">Source</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-status" type="string">
+      <name xml:lang="en">Status</name>
     </propertyDefinition>
   </propertyDefinitions>
   <views>
