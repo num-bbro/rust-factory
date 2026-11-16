@@ -7,6 +7,7 @@
 - Deciders: product owner, conductor
 - ArchiMate elements: `id-bus-proc-deploy`, `id-tech-node-pilot`, `id-tech-node-prod`,
   `id-tech-sw-podman`
+- Released in: v0.2.0
 
 ## Context and problem
 A released image (ADR 0005) must reach users safely: first one pilot host, then production after a

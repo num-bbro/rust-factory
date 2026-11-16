@@ -113,6 +113,8 @@ delivered, and a Triggering from the previous release; nothing else changes:
   ArchiMate allows; for a pair it does not allow, use an undirected Association). A catalog's
   Release column lists each Plateau once per element, and an ADR page's "Released in" line lists
   the tags of the Plateaus linked to the ADR.
-- Add the new Plateau to the `Releases` view (`id-view-releases`) with its elements, then run
-  `just model-fmt`, `just model-docs`, `just model-check` and `just model`, and commit the new
-  image and its `views.lock` entry.
+- The Releases view (`id-view-releases`) is hand-arranged (`Layout = manual`): add the new Plateau's
+  box to the right of the last one, a box for each ADR it delivers above it, and one connection
+  per link, copying the existing nodes; the other elements a release delivers show in the
+  catalogs' Release column and are not drawn. Then run `just model-fmt`, `just model-docs`,
+  `just model-check` and `just model`, and commit the new image and its `views.lock` entry.

@@ -604,7 +604,7 @@ class TogafPages(unittest.TestCase):
 def first_page_linker() -> tuple[gen_docs.Togaf, gen_docs.Document]:
     model = exchange.read(togaf_model().encode())
     docs = gen_docs.documents(model)[0]
-    return gen_docs.Togaf(model, docs, gen_docs.adrs(model)[0]), docs[0]
+    return gen_docs.Togaf(model, docs, gen_docs.adrs(model)[0], gen_docs.releases(model)), docs[0]
 
 
 # Texts in which an identifier must not become a link (each would show link syntax as text, or
@@ -833,10 +833,6 @@ class RealModel(unittest.TestCase):
         self.assertEqual(gen_docs.missing_images(docs, root), [])
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 PLATEAUS = "".join(
     f'<element identifier="id-impl-plat-{k}" xsi:type="Plateau"><name xml:lang="en">Release '
     f'{k.replace("-", ".")}</name><properties><property propertyDefinitionRef="p-tag">'
@@ -879,6 +875,13 @@ class Releases(unittest.TestCase):
         xml = self.model(("Association", "id-app-comp-a", "id-impl-plat-v0-2-0"),
                          ("Association", "id-impl-plat-v0-2-1", "id-app-comp-a"))
         self.assertEqual(self.release_cell(xml), "Release v0.2.0, Release v0.2.1")
+
+    def test_an_aggregation_towards_a_plateau_is_not_a_release_link(self):
+        xml = self.model(("Aggregation", "id-app-comp-a", "id-impl-plat-v0-2-1"),
+                         ("Aggregation", "id-mot-adr-0001", "id-impl-plat-v0-2-1"))
+        self.assertEqual(self.release_cell(xml), "")
+        self.assertNotIn("Released in", rendered(xml)[0]["docs/adr/0001-first.md"])
+        self.assertEqual(gen_docs.releases(exchange.read(xml.encode())), {})
 
     def test_an_adr_page_says_in_which_releases_it_was_released(self):
         xml = self.model(("Aggregation", "id-impl-plat-v0-10-0", "id-mot-adr-0001"),
@@ -942,3 +945,7 @@ class SurvivingRules(unittest.TestCase):
                                     '<name xml:lang="en">A *b* &lt;c&gt; |d</name>')
         page = togaf(xml)[0]["docs/togaf/A-first.md"]
         self.assertIn('## <a id="id-view-one"></a>A \\*b\\* \\<c\\> \\|d\n', page)
+
+
+if __name__ == "__main__":
+    unittest.main()
