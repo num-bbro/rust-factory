@@ -1,0 +1,787 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model xmlns="http://www.opengroup.org/xsd/archimate/3.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengroup.org/xsd/archimate/3.0/ http://www.opengroup.org/xsd/archimate/3.1/archimate3_Diagram.xsd" identifier="id-model-factory">
+  <name xml:lang="en">Rust Software Factory</name>
+  <documentation xml:lang="en">Architecture of the software factory itself: how a business need becomes rolled-out Rust software, with AI agents doing the work and a human holding the gates. Also holds the sample reservation domain the factory builds (epic #17 onward).</documentation>
+  <properties>
+    <property propertyDefinitionRef="propid-source">
+      <value xml:lang="en">Generated from docs/architecture/model/*.csv by scripts/archimate/build_exchange.py; do not edit the .archimate by hand</value>
+    </property>
+  </properties>
+  <elements>
+    <element identifier="id-app-comp-application" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Use cases (crate application)</name>
+      <documentation xml:lang="en">One use case per user action, plus the ScheduleRepository port, whose single update operation changes the schedule atomically (ADR 0008).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-crate">
+          <value xml:lang="en">crates/application</value>
+        </property>
+        <property propertyDefinitionRef="propid-adr">
+          <value xml:lang="en">docs/adr/0008-atomic-schedule-update-through-the-port.md</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-app-comp-conductor" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Conductor agent (Fable)</name>
+      <documentation xml:lang="en">Main Claude Code session, model claude-fable-5-2.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-model">
+          <value xml:lang="en">claude-fable-5-2</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-app-comp-db" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Persistence adapter (crate adapters-db)</name>
+      <documentation xml:lang="en">Implements the ScheduleRepository port; in-memory for now, holding one lock for each whole update.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-crate">
+          <value xml:lang="en">crates/adapters-db</value>
+        </property>
+        <property propertyDefinitionRef="propid-adr">
+          <value xml:lang="en">docs/adr/0008-atomic-schedule-update-through-the-port.md</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-app-comp-domain" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Domain (crate domain)</name>
+      <documentation xml:lang="en">Pure business rules: time slots, no overlapping reservations, booking and cancelling in a Schedule.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-crate">
+          <value xml:lang="en">crates/domain</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-app-comp-github" xsi:type="ApplicationComponent">
+      <name xml:lang="en">GitHub</name>
+      <documentation xml:lang="en">Issues, Project board, pull requests and Actions CI.</documentation>
+    </element>
+    <element identifier="id-app-comp-hard" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Hard worker (Opus)</name>
+      <documentation xml:lang="en">Subagent on claude-opus-5-5 for ambiguous or cross-crate tasks.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-model">
+          <value xml:lang="en">claude-opus-5-5</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-app-comp-http" xsi:type="ApplicationComponent">
+      <name xml:lang="en">HTTP adapter (crate adapters-http)</name>
+      <documentation xml:lang="en">Maps HTTP requests to use cases and errors to status codes; no business rules.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-crate">
+          <value xml:lang="en">crates/adapters-http</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-app-comp-reservation-svc" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Reservation service</name>
+      <documentation xml:lang="en">The deployed application (crate app): wires the adapters into the use cases and serves HTTP.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-crate">
+          <value xml:lang="en">crates/app</value>
+        </property>
+        <property propertyDefinitionRef="propid-adr">
+          <value xml:lang="en">docs/adr/0003-layered-cargo-workspace.md</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-app-comp-scout" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Scout (Haiku)</name>
+      <documentation xml:lang="en">Subagent on claude-haiku-5-5 for search and context gathering.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-model">
+          <value xml:lang="en">claude-haiku-5-5</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-app-comp-simple" xsi:type="ApplicationComponent">
+      <name xml:lang="en">Simple worker (Sonnet)</name>
+      <documentation xml:lang="en">Subagent on claude-sonnet-5-5 for clear, single-crate tasks.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-model">
+          <value xml:lang="en">claude-sonnet-5-5</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-app-data-issue" xsi:type="DataObject">
+      <name xml:lang="en">Issue</name>
+      <documentation xml:lang="en">Epic, story, requirement, task, bug, change request or ADR request.</documentation>
+    </element>
+    <element identifier="id-app-data-pr" xsi:type="DataObject">
+      <name xml:lang="en">Pull request</name>
+      <documentation xml:lang="en">A proposed change with traceability links and test evidence.</documentation>
+    </element>
+    <element identifier="id-app-data-schedule" xsi:type="DataObject">
+      <name xml:lang="en">Schedule</name>
+      <documentation xml:lang="en">The day's reservations (domain type Schedule), changed only through the atomic update of ScheduleRepository (ADR 0008): read, change and store happen as one step, and a refused change stores nothing. Reservation ids are unique only within one running instance (storage is in memory).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-crate">
+          <value xml:lang="en">crates/domain</value>
+        </property>
+        <property propertyDefinitionRef="propid-code">
+          <value xml:lang="en">Schedule</value>
+        </property>
+        <property propertyDefinitionRef="propid-adr">
+          <value xml:lang="en">docs/adr/0008-atomic-schedule-update-through-the-port.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#26</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-app-intf-reservation-api" xsi:type="ApplicationInterface">
+      <name xml:lang="en">Reservations HTTP API</name>
+      <documentation xml:lang="en">JSON over HTTP: POST /reservations books a slot, DELETE /reservations/{id} cancels one, GET /health answers probes. Rule, not-found and storage errors carry an {error} JSON body; requests the framework rejects (a non-numeric id, malformed JSON) get a plain-text body (ADR 0007).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-adr">
+          <value xml:lang="en">docs/adr/0007-cancel-reservation-by-delete.md</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-app-svc-book" xsi:type="ApplicationService">
+      <name xml:lang="en">Book a slot</name>
+      <documentation xml:lang="en">Use case BookSlot, POST /reservations: 201 with the new id; 409 on overlap; 422 on an invalid slot.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-crate">
+          <value xml:lang="en">crates/application</value>
+        </property>
+        <property propertyDefinitionRef="propid-code">
+          <value xml:lang="en">BookSlot</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-app-svc-cancel" xsi:type="ApplicationService">
+      <name xml:lang="en">Cancel a reservation</name>
+      <documentation xml:lang="en">DELETE /reservations/{id}: 204 No Content when removed; 404 Not Found with {error} when the id is unknown or already cancelled (ADR 0007).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-adr">
+          <value xml:lang="en">docs/adr/0007-cancel-reservation-by-delete.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#17</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-bus-act-customer" xsi:type="BusinessActor">
+      <name xml:lang="en">Customer</name>
+      <documentation xml:lang="en">Reserves and cancels time slots through the reservation API.</documentation>
+    </element>
+    <element identifier="id-bus-act-human" xsi:type="BusinessActor">
+      <name xml:lang="en">Human approver</name>
+      <documentation xml:lang="en">Signs off architecture, merges PRs, promotes pilot to production.</documentation>
+    </element>
+    <element identifier="id-bus-obj-adr" xsi:type="BusinessObject">
+      <name xml:lang="en">Architecture decision record</name>
+      <documentation xml:lang="en">Why a significant decision was made, and what else was considered.</documentation>
+    </element>
+    <element identifier="id-bus-obj-reservation" xsi:type="BusinessObject">
+      <name xml:lang="en">Reservation</name>
+      <documentation xml:lang="en">A time slot held by a customer, identified by its reservation id.</documentation>
+    </element>
+    <element identifier="id-bus-obj-story" xsi:type="BusinessObject">
+      <name xml:lang="en">User story</name>
+      <documentation xml:lang="en">A small piece of user-visible behaviour with Gherkin acceptance criteria.</documentation>
+    </element>
+    <element identifier="id-bus-proc-accept" xsi:type="BusinessProcess">
+      <name xml:lang="en">Accept build</name>
+      <documentation xml:lang="en">Acceptance tests run against the release image.</documentation>
+    </element>
+    <element identifier="id-bus-proc-cancel" xsi:type="BusinessProcess">
+      <name xml:lang="en">Cancel a reservation</name>
+      <documentation xml:lang="en">Give up a reservation by its id so the slot is free for someone else. No refund, notification or deadline (out of scope of epic #17).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#17</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-bus-proc-deploy" xsi:type="BusinessProcess">
+      <name xml:lang="en">Pilot and roll out</name>
+      <documentation xml:lang="en">Deploy to the pilot host, then to production after approval.</documentation>
+    </element>
+    <element identifier="id-bus-proc-implement" xsi:type="BusinessProcess">
+      <name xml:lang="en">Implement task</name>
+      <documentation xml:lang="en">Code and tests for one task on its own branch.</documentation>
+    </element>
+    <element identifier="id-bus-proc-lifecycle" xsi:type="BusinessProcess">
+      <name xml:lang="en">Software delivery lifecycle</name>
+      <documentation xml:lang="en">From business need to production rollout.</documentation>
+    </element>
+    <element identifier="id-bus-proc-plan" xsi:type="BusinessProcess">
+      <name xml:lang="en">Plan and design</name>
+      <documentation xml:lang="en">Vision, epics, stories, architecture model and ADRs (TOGAF A–D).</documentation>
+    </element>
+    <element identifier="id-bus-proc-reserve" xsi:type="BusinessProcess">
+      <name xml:lang="en">Reserve a slot</name>
+      <documentation xml:lang="en">Ask for a time slot; get a reservation id, or a refusal if the slot overlaps an existing reservation.</documentation>
+    </element>
+    <element identifier="id-bus-proc-review" xsi:type="BusinessProcess">
+      <name xml:lang="en">Review and merge</name>
+      <documentation xml:lang="en">Automated gates plus human merge of the PR.</documentation>
+    </element>
+    <element identifier="id-bus-role-conductor" xsi:type="BusinessRole">
+      <name xml:lang="en">Conductor</name>
+      <documentation xml:lang="en">Plans, designs the architecture, splits work into tasks and routes each to a worker.</documentation>
+    </element>
+    <element identifier="id-bus-role-worker" xsi:type="BusinessRole">
+      <name xml:lang="en">Worker</name>
+      <documentation xml:lang="en">Carries out one task in its own git worktree and delivers it as a PR.</documentation>
+    </element>
+    <element identifier="id-mot-drv-blocked-slots" xsi:type="Driver">
+      <name xml:lang="en">Unused slots stay blocked</name>
+      <documentation xml:lang="en">Customers who can no longer come have no way to free their slot, so nobody else can book it (epic #17).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#17</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-drv-change" xsi:type="Driver">
+      <name xml:lang="en">Business needs change often</name>
+      <documentation xml:lang="en">Business rules and priorities change; software must follow quickly without decaying.</documentation>
+    </element>
+    <element identifier="id-mot-goal-cost" xsi:type="Goal">
+      <name xml:lang="en">Development cost under control</name>
+      <documentation xml:lang="en">Expensive AI models are used only where their reasoning is needed.</documentation>
+    </element>
+    <element identifier="id-mot-goal-free-slots" xsi:type="Goal">
+      <name xml:lang="en">Customers can free slots they no longer need</name>
+      <documentation xml:lang="en">The schedule reflects who is really coming, so free time can be booked by others.</documentation>
+    </element>
+    <element identifier="id-mot-goal-healthy" xsi:type="Goal">
+      <name xml:lang="en">Healthy, maintainable software</name>
+      <documentation xml:lang="en">Code stays easy to change over years: clear boundaries, strong tests, recorded decisions.</documentation>
+    </element>
+    <element identifier="id-mot-goal-traceable" xsi:type="Goal">
+      <name xml:lang="en">Every change is traceable</name>
+      <documentation xml:lang="en">Any line of code can be traced back to the business need that caused it, and forward to its release.</documentation>
+    </element>
+    <element identifier="id-mot-out-rebook" xsi:type="Outcome">
+      <name xml:lang="en">Cancelled slot rebookable at once</name>
+      <documentation xml:lang="en">Success measure of epic #17: a cancelled slot can be booked again immediately.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#17</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-pr-pr-only" xsi:type="Principle">
+      <name xml:lang="en">Every change through a reviewed PR</name>
+      <documentation xml:lang="en">main is protected; nothing reaches it without a pull request and a human merge.</documentation>
+    </element>
+    <element identifier="id-mot-req-cancel" xsi:type="Requirement">
+      <name xml:lang="en">Cancel a reservation by its id</name>
+      <documentation xml:lang="en">Only that reservation is removed and its slot is free at once; no history is kept (story #18).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#18</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-req-cancel-refused" xsi:type="Requirement">
+      <name xml:lang="en">Refuse cancelling an unknown reservation</name>
+      <documentation xml:lang="en">Cancelling a reservation that does not exist, including cancelling the same one a second time, is refused and changes nothing (story #19).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#19</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-req-routing" xsi:type="Requirement">
+      <name xml:lang="en">Route tasks to models by difficulty</name>
+      <documentation xml:lang="en">Simple, clear tasks go to Sonnet, hard ones to Opus, search to Haiku; the conductor runs on Fable.</documentation>
+    </element>
+    <element identifier="id-mot-req-togaf" xsi:type="Requirement">
+      <name xml:lang="en">Architecture documented in TOGAF / ArchiMate</name>
+      <documentation xml:lang="en">Business, information and technology architecture is kept as an ArchiMate model and TOGAF documents, so business-side changes can be analysed.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-adr">
+          <value xml:lang="en">docs/adr/0002-archimate-model-as-text.md</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-sh-customer" xsi:type="Stakeholder">
+      <name xml:lang="en">Customer</name>
+      <documentation xml:lang="en">A person who reserves time slots and wants to free a slot they can no longer use.</documentation>
+    </element>
+    <element identifier="id-mot-sh-front-desk" xsi:type="Stakeholder">
+      <name xml:lang="en">Front-desk manager</name>
+      <documentation xml:lang="en">Decision maker for epic #17.</documentation>
+    </element>
+    <element identifier="id-mot-sh-product-owner" xsi:type="Stakeholder">
+      <name xml:lang="en">Product owner</name>
+      <documentation xml:lang="en">The human who owns the business outcome and approves the factory's gates.</documentation>
+    </element>
+    <element identifier="id-tech-node-pilot" xsi:type="Node">
+      <name xml:lang="en">Pilot host</name>
+      <documentation xml:lang="en">First deploy target for a release.</documentation>
+    </element>
+    <element identifier="id-tech-node-prod" xsi:type="Node">
+      <name xml:lang="en">Production hosts</name>
+      <documentation xml:lang="en">Receive the release after the pilot is approved.</documentation>
+    </element>
+    <element identifier="id-tech-node-workstation" xsi:type="Node">
+      <name xml:lang="en">Developer workstation</name>
+      <documentation xml:lang="en">Arch Linux desktop or Ubuntu on WSL, set up by bootstrap.sh.</documentation>
+    </element>
+    <element identifier="id-tech-svc-ghcr" xsi:type="TechnologyService">
+      <name xml:lang="en">Container registry (GHCR)</name>
+      <documentation xml:lang="en">Stores the release images, built once and promoted unchanged.</documentation>
+    </element>
+    <element identifier="id-tech-sw-archi" xsi:type="SystemSoftware">
+      <name xml:lang="en">Archi</name>
+      <documentation xml:lang="en">Builds the ArchiMate model and HTML report from the text model.</documentation>
+    </element>
+    <element identifier="id-tech-sw-podman" xsi:type="SystemSoftware">
+      <name xml:lang="en">Podman</name>
+      <documentation xml:lang="en">Runs the application containers on every host.</documentation>
+    </element>
+    <element identifier="id-tech-sw-rust" xsi:type="SystemSoftware">
+      <name xml:lang="en">Rust toolchain</name>
+      <documentation xml:lang="en">Pinned in rust-toolchain.toml, with cargo tools pinned in mise.toml.</documentation>
+    </element>
+  </elements>
+  <relationships>
+    <relationship identifier="id-rel-001" xsi:type="Influence" source="id-mot-drv-change" target="id-mot-goal-healthy"/>
+    <relationship identifier="id-rel-002" xsi:type="Association" source="id-mot-sh-product-owner" target="id-mot-drv-change"/>
+    <relationship identifier="id-rel-003" xsi:type="Realization" source="id-mot-pr-pr-only" target="id-mot-goal-traceable"/>
+    <relationship identifier="id-rel-004" xsi:type="Realization" source="id-mot-req-togaf" target="id-mot-goal-traceable"/>
+    <relationship identifier="id-rel-005" xsi:type="Realization" source="id-mot-req-routing" target="id-mot-goal-cost"/>
+    <relationship identifier="id-rel-006" xsi:type="Influence" source="id-mot-pr-pr-only" target="id-mot-goal-healthy"/>
+    <relationship identifier="id-rel-010" xsi:type="Assignment" source="id-bus-act-human" target="id-bus-proc-review"/>
+    <relationship identifier="id-rel-011" xsi:type="Assignment" source="id-bus-role-conductor" target="id-bus-proc-plan"/>
+    <relationship identifier="id-rel-012" xsi:type="Assignment" source="id-bus-role-worker" target="id-bus-proc-implement"/>
+    <relationship identifier="id-rel-013" xsi:type="Composition" source="id-bus-proc-lifecycle" target="id-bus-proc-plan"/>
+    <relationship identifier="id-rel-014" xsi:type="Composition" source="id-bus-proc-lifecycle" target="id-bus-proc-implement"/>
+    <relationship identifier="id-rel-015" xsi:type="Composition" source="id-bus-proc-lifecycle" target="id-bus-proc-review"/>
+    <relationship identifier="id-rel-016" xsi:type="Composition" source="id-bus-proc-lifecycle" target="id-bus-proc-accept"/>
+    <relationship identifier="id-rel-017" xsi:type="Composition" source="id-bus-proc-lifecycle" target="id-bus-proc-deploy"/>
+    <relationship identifier="id-rel-018" xsi:type="Triggering" source="id-bus-proc-plan" target="id-bus-proc-implement"/>
+    <relationship identifier="id-rel-019" xsi:type="Triggering" source="id-bus-proc-implement" target="id-bus-proc-review"/>
+    <relationship identifier="id-rel-020" xsi:type="Triggering" source="id-bus-proc-review" target="id-bus-proc-accept"/>
+    <relationship identifier="id-rel-021" xsi:type="Triggering" source="id-bus-proc-accept" target="id-bus-proc-deploy"/>
+    <relationship identifier="id-rel-022" xsi:type="Access" source="id-bus-proc-plan" target="id-bus-obj-story" accessType="Write"/>
+    <relationship identifier="id-rel-023" xsi:type="Access" source="id-bus-proc-plan" target="id-bus-obj-adr" accessType="Write"/>
+    <relationship identifier="id-rel-024" xsi:type="Assignment" source="id-bus-act-human" target="id-bus-proc-deploy"/>
+    <relationship identifier="id-rel-030" xsi:type="Serving" source="id-app-comp-conductor" target="id-bus-role-conductor">
+      <documentation xml:lang="en">The conductor agent performs the work of the Conductor role.</documentation>
+    </relationship>
+    <relationship identifier="id-rel-031" xsi:type="Serving" source="id-app-comp-hard" target="id-bus-role-worker">
+      <documentation xml:lang="en">The hard worker agent performs the work of the Worker role.</documentation>
+    </relationship>
+    <relationship identifier="id-rel-032" xsi:type="Serving" source="id-app-comp-simple" target="id-bus-role-worker">
+      <documentation xml:lang="en">The simple worker agent performs the work of the Worker role.</documentation>
+    </relationship>
+    <relationship identifier="id-rel-033" xsi:type="Serving" source="id-app-comp-scout" target="id-app-comp-conductor"/>
+    <relationship identifier="id-rel-034" xsi:type="Access" source="id-app-comp-github" target="id-app-data-issue" accessType="ReadWrite"/>
+    <relationship identifier="id-rel-035" xsi:type="Access" source="id-app-comp-github" target="id-app-data-pr" accessType="ReadWrite"/>
+    <relationship identifier="id-rel-036" xsi:type="Realization" source="id-app-data-issue" target="id-bus-obj-story"/>
+    <relationship identifier="id-rel-037" xsi:type="Serving" source="id-app-comp-github" target="id-bus-proc-review"/>
+    <relationship identifier="id-rel-038" xsi:type="Realization" source="id-app-comp-conductor" target="id-mot-req-routing"/>
+    <relationship identifier="id-rel-040" xsi:type="Composition" source="id-tech-node-workstation" target="id-tech-sw-rust"/>
+    <relationship identifier="id-rel-041" xsi:type="Composition" source="id-tech-node-workstation" target="id-tech-sw-archi"/>
+    <relationship identifier="id-rel-042" xsi:type="Composition" source="id-tech-node-pilot" target="id-tech-sw-podman"/>
+    <relationship identifier="id-rel-043" xsi:type="Serving" source="id-tech-svc-ghcr" target="id-tech-node-pilot"/>
+    <relationship identifier="id-rel-044" xsi:type="Serving" source="id-tech-svc-ghcr" target="id-tech-node-prod"/>
+    <relationship identifier="id-rel-045" xsi:type="Serving" source="id-tech-node-workstation" target="id-app-comp-conductor"/>
+    <relationship identifier="id-rel-046" xsi:type="Serving" source="id-tech-node-pilot" target="id-bus-proc-deploy"/>
+    <relationship identifier="id-rel-047" xsi:type="Realization" source="id-tech-sw-archi" target="id-mot-req-togaf"/>
+    <relationship identifier="id-rel-050" xsi:type="Association" source="id-mot-sh-customer" target="id-mot-drv-blocked-slots"/>
+    <relationship identifier="id-rel-051" xsi:type="Association" source="id-mot-sh-front-desk" target="id-mot-goal-free-slots"/>
+    <relationship identifier="id-rel-052" xsi:type="Influence" source="id-mot-drv-blocked-slots" target="id-mot-goal-free-slots"/>
+    <relationship identifier="id-rel-053" xsi:type="Realization" source="id-mot-out-rebook" target="id-mot-goal-free-slots"/>
+    <relationship identifier="id-rel-054" xsi:type="Realization" source="id-mot-req-cancel" target="id-mot-out-rebook"/>
+    <relationship identifier="id-rel-055" xsi:type="Association" source="id-mot-sh-customer" target="id-mot-req-cancel-refused"/>
+    <relationship identifier="id-rel-056" xsi:type="Association" source="id-bus-act-customer" target="id-mot-sh-customer"/>
+    <relationship identifier="id-rel-057" xsi:type="Assignment" source="id-bus-act-customer" target="id-bus-proc-reserve"/>
+    <relationship identifier="id-rel-058" xsi:type="Assignment" source="id-bus-act-customer" target="id-bus-proc-cancel"/>
+    <relationship identifier="id-rel-059" xsi:type="Access" source="id-bus-proc-reserve" target="id-bus-obj-reservation" accessType="ReadWrite"/>
+    <relationship identifier="id-rel-060" xsi:type="Access" source="id-bus-proc-cancel" target="id-bus-obj-reservation" accessType="ReadWrite"/>
+    <relationship identifier="id-rel-061" xsi:type="Composition" source="id-app-comp-reservation-svc" target="id-app-comp-domain"/>
+    <relationship identifier="id-rel-062" xsi:type="Composition" source="id-app-comp-reservation-svc" target="id-app-comp-application"/>
+    <relationship identifier="id-rel-063" xsi:type="Composition" source="id-app-comp-reservation-svc" target="id-app-comp-http"/>
+    <relationship identifier="id-rel-064" xsi:type="Composition" source="id-app-comp-reservation-svc" target="id-app-comp-db"/>
+    <relationship identifier="id-rel-065" xsi:type="Composition" source="id-app-comp-http" target="id-app-intf-reservation-api"/>
+    <relationship identifier="id-rel-066" xsi:type="Serving" source="id-app-comp-domain" target="id-app-comp-application"/>
+    <relationship identifier="id-rel-067" xsi:type="Serving" source="id-app-comp-application" target="id-app-comp-http"/>
+    <relationship identifier="id-rel-068" xsi:type="Serving" source="id-app-comp-db" target="id-app-comp-application"/>
+    <relationship identifier="id-rel-069" xsi:type="Realization" source="id-app-comp-application" target="id-app-svc-book"/>
+    <relationship identifier="id-rel-070" xsi:type="Realization" source="id-app-comp-application" target="id-app-svc-cancel"/>
+    <relationship identifier="id-rel-071" xsi:type="Assignment" source="id-app-intf-reservation-api" target="id-app-svc-book"/>
+    <relationship identifier="id-rel-072" xsi:type="Assignment" source="id-app-intf-reservation-api" target="id-app-svc-cancel"/>
+    <relationship identifier="id-rel-073" xsi:type="Serving" source="id-app-intf-reservation-api" target="id-bus-act-customer"/>
+    <relationship identifier="id-rel-074" xsi:type="Serving" source="id-app-svc-book" target="id-bus-proc-reserve"/>
+    <relationship identifier="id-rel-075" xsi:type="Serving" source="id-app-svc-cancel" target="id-bus-proc-cancel"/>
+    <relationship identifier="id-rel-076" xsi:type="Realization" source="id-app-svc-cancel" target="id-mot-req-cancel"/>
+    <relationship identifier="id-rel-077" xsi:type="Realization" source="id-app-svc-cancel" target="id-mot-req-cancel-refused"/>
+    <relationship identifier="id-rel-078" xsi:type="Access" source="id-app-comp-db" target="id-app-data-schedule" accessType="ReadWrite"/>
+    <relationship identifier="id-rel-079" xsi:type="Realization" source="id-app-data-schedule" target="id-bus-obj-reservation"/>
+    <relationship identifier="id-rel-080" xsi:type="Serving" source="id-tech-sw-podman" target="id-app-comp-reservation-svc"/>
+  </relationships>
+  <propertyDefinitions>
+    <propertyDefinition identifier="propid-adr" type="string">
+      <name xml:lang="en">ADR</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-code" type="string">
+      <name xml:lang="en">Code</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-crate" type="string">
+      <name xml:lang="en">Crate</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-issue" type="string">
+      <name xml:lang="en">Issue</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-model" type="string">
+      <name xml:lang="en">Model</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-source" type="string">
+      <name xml:lang="en">Source</name>
+    </propertyDefinition>
+  </propertyDefinitions>
+  <views>
+    <diagrams>
+      <view identifier="id-view-layered" xsi:type="Diagram" viewpoint="Layered">
+        <name xml:lang="en">Factory overview</name>
+        <documentation xml:lang="en">Business, application and technology layers of the factory, top to bottom.</documentation>
+        <node identifier="id-view-layered-band-0" xsi:type="Container" x="20" y="20" w="1474" h="117">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-layered-n-id-mot-req-routing" xsi:type="Element" elementRef="id-mot-req-routing" x="327" y="62" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-mot-req-togaf" xsi:type="Element" elementRef="id-mot-req-togaf" x="547" y="62" w="160" h="55"/>
+        </node>
+        <node identifier="id-view-layered-band-1" xsi:type="Container" x="20" y="177" w="1474" h="242">
+          <label xml:lang="en">Business</label>
+          <node identifier="id-view-layered-n-id-bus-role-conductor" xsi:type="Element" elementRef="id-bus-role-conductor" x="506" y="219" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-bus-act-human" xsi:type="Element" elementRef="id-bus-act-human" x="795" y="219" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-bus-role-worker" xsi:type="Element" elementRef="id-bus-role-worker" x="1015" y="219" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-bus-proc-deploy" xsi:type="Element" elementRef="id-bus-proc-deploy" x="465" y="344" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-bus-proc-plan" xsi:type="Element" elementRef="id-bus-proc-plan" x="685" y="344" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-bus-proc-implement" xsi:type="Element" elementRef="id-bus-proc-implement" x="905" y="344" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-bus-proc-review" xsi:type="Element" elementRef="id-bus-proc-review" x="1125" y="344" w="160" h="55"/>
+        </node>
+        <node identifier="id-view-layered-band-2" xsi:type="Container" x="20" y="459" w="1474" h="242">
+          <label xml:lang="en">Application</label>
+          <node identifier="id-view-layered-n-id-app-comp-conductor" xsi:type="Element" elementRef="id-app-comp-conductor" x="327" y="501" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-app-comp-scout" xsi:type="Element" elementRef="id-app-comp-scout" x="547" y="501" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-app-comp-hard" xsi:type="Element" elementRef="id-app-comp-hard" x="874" y="501" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-app-comp-simple" xsi:type="Element" elementRef="id-app-comp-simple" x="1094" y="501" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-app-comp-github" xsi:type="Element" elementRef="id-app-comp-github" x="1314" y="501" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-app-data-issue" xsi:type="Element" elementRef="id-app-data-issue" x="873" y="626" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-app-data-pr" xsi:type="Element" elementRef="id-app-data-pr" x="1093" y="626" w="160" h="55"/>
+        </node>
+        <node identifier="id-view-layered-band-3" xsi:type="Container" x="20" y="741" w="1474" h="287">
+          <label xml:lang="en">Technology</label>
+          <node identifier="id-view-layered-n-id-tech-node-prod" xsi:type="Element" elementRef="id-tech-node-prod" x="40" y="783" w="160" h="55"/>
+          <node identifier="id-view-layered-n-id-tech-node-pilot" xsi:type="Element" elementRef="id-tech-node-pilot" x="260" y="783" w="190" h="100">
+            <node identifier="id-view-layered-n-id-tech-sw-podman" xsi:type="Element" elementRef="id-tech-sw-podman" x="275" y="813" w="160" h="55"/>
+          </node>
+          <node identifier="id-view-layered-n-id-tech-node-workstation" xsi:type="Element" elementRef="id-tech-node-workstation" x="510" y="783" w="380" h="100">
+            <node identifier="id-view-layered-n-id-tech-sw-archi" xsi:type="Element" elementRef="id-tech-sw-archi" x="525" y="813" w="160" h="55"/>
+            <node identifier="id-view-layered-n-id-tech-sw-rust" xsi:type="Element" elementRef="id-tech-sw-rust" x="715" y="813" w="160" h="55"/>
+          </node>
+          <node identifier="id-view-layered-n-id-tech-svc-ghcr" xsi:type="Element" elementRef="id-tech-svc-ghcr" x="40" y="953" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-layered-c-id-rel-010" xsi:type="Relationship" relationshipRef="id-rel-010" source="id-view-layered-n-id-bus-act-human" target="id-view-layered-n-id-bus-proc-review">
+          <bendpoint x="875" y="309"/>
+          <bendpoint x="1205" y="309"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-011" xsi:type="Relationship" relationshipRef="id-rel-011" source="id-view-layered-n-id-bus-role-conductor" target="id-view-layered-n-id-bus-proc-plan">
+          <bendpoint x="586" y="317"/>
+          <bendpoint x="765" y="317"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-012" xsi:type="Relationship" relationshipRef="id-rel-012" source="id-view-layered-n-id-bus-role-worker" target="id-view-layered-n-id-bus-proc-implement">
+          <bendpoint x="1095" y="301"/>
+          <bendpoint x="985" y="301"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-018" xsi:type="Relationship" relationshipRef="id-rel-018" source="id-view-layered-n-id-bus-proc-plan" target="id-view-layered-n-id-bus-proc-implement"/>
+        <connection identifier="id-view-layered-c-id-rel-019" xsi:type="Relationship" relationshipRef="id-rel-019" source="id-view-layered-n-id-bus-proc-implement" target="id-view-layered-n-id-bus-proc-review"/>
+        <connection identifier="id-view-layered-c-id-rel-024" xsi:type="Relationship" relationshipRef="id-rel-024" source="id-view-layered-n-id-bus-act-human" target="id-view-layered-n-id-bus-proc-deploy">
+          <bendpoint x="889" y="325"/>
+          <bendpoint x="545" y="325"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-030" xsi:type="Relationship" relationshipRef="id-rel-030" source="id-view-layered-n-id-app-comp-conductor" target="id-view-layered-n-id-bus-role-conductor">
+          <bendpoint x="407" y="450"/>
+          <bendpoint x="452" y="450"/>
+          <bendpoint x="452" y="293"/>
+          <bendpoint x="600" y="293"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-031" xsi:type="Relationship" relationshipRef="id-rel-031" source="id-view-layered-n-id-app-comp-hard" target="id-view-layered-n-id-bus-role-worker">
+          <bendpoint x="954" y="458"/>
+          <bendpoint x="1075" y="458"/>
+          <bendpoint x="1075" y="333"/>
+          <bendpoint x="1109" y="333"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-032" xsi:type="Relationship" relationshipRef="id-rel-032" source="id-view-layered-n-id-app-comp-simple" target="id-view-layered-n-id-bus-role-worker">
+          <bendpoint x="1174" y="442"/>
+          <bendpoint x="1111" y="442"/>
+          <bendpoint x="1111" y="285"/>
+          <bendpoint x="1081" y="285"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-033" xsi:type="Relationship" relationshipRef="id-rel-033" source="id-view-layered-n-id-app-comp-scout" target="id-view-layered-n-id-app-comp-conductor"/>
+        <connection identifier="id-view-layered-c-id-rel-034" xsi:type="Relationship" relationshipRef="id-rel-034" source="id-view-layered-n-id-app-comp-github" target="id-view-layered-n-id-app-data-issue">
+          <bendpoint x="1394" y="591"/>
+          <bendpoint x="953" y="591"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-035" xsi:type="Relationship" relationshipRef="id-rel-035" source="id-view-layered-n-id-app-comp-github" target="id-view-layered-n-id-app-data-pr">
+          <bendpoint x="1408" y="599"/>
+          <bendpoint x="1173" y="599"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-037" xsi:type="Relationship" relationshipRef="id-rel-037" source="id-view-layered-n-id-app-comp-github" target="id-view-layered-n-id-bus-proc-review">
+          <bendpoint x="1394" y="466"/>
+          <bendpoint x="1205" y="466"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-038" xsi:type="Relationship" relationshipRef="id-rel-038" source="id-view-layered-n-id-app-comp-conductor" target="id-view-layered-n-id-mot-req-routing">
+          <bendpoint x="421" y="434"/>
+          <bendpoint x="414" y="434"/>
+          <bendpoint x="414" y="168"/>
+          <bendpoint x="407" y="168"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-043" xsi:type="Relationship" relationshipRef="id-rel-043" source="id-view-layered-n-id-tech-svc-ghcr" target="id-view-layered-n-id-tech-node-pilot">
+          <bendpoint x="120" y="918"/>
+          <bendpoint x="355" y="918"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-044" xsi:type="Relationship" relationshipRef="id-rel-044" source="id-view-layered-n-id-tech-svc-ghcr" target="id-view-layered-n-id-tech-node-prod">
+          <bendpoint x="134" y="926"/>
+          <bendpoint x="120" y="926"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-045" xsi:type="Relationship" relationshipRef="id-rel-045" source="id-view-layered-n-id-tech-node-workstation" target="id-view-layered-n-id-app-comp-conductor">
+          <bendpoint x="700" y="732"/>
+          <bendpoint x="554" y="732"/>
+          <bendpoint x="554" y="583"/>
+          <bendpoint x="407" y="583"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-046" xsi:type="Relationship" relationshipRef="id-rel-046" source="id-view-layered-n-id-tech-node-pilot" target="id-view-layered-n-id-bus-proc-deploy">
+          <bendpoint x="355" y="740"/>
+          <bendpoint x="498" y="740"/>
+          <bendpoint x="498" y="474"/>
+          <bendpoint x="545" y="474"/>
+        </connection>
+        <connection identifier="id-view-layered-c-id-rel-047" xsi:type="Relationship" relationshipRef="id-rel-047" source="id-view-layered-n-id-tech-sw-archi" target="id-view-layered-n-id-mot-req-togaf">
+          <bendpoint x="605" y="724"/>
+          <bendpoint x="316" y="724"/>
+          <bendpoint x="316" y="176"/>
+          <bendpoint x="627" y="176"/>
+        </connection>
+      </view>
+      <view identifier="id-view-lifecycle" xsi:type="Diagram" viewpoint="Business Process Cooperation">
+        <name xml:lang="en">Delivery lifecycle</name>
+        <documentation xml:lang="en">Who does what in the delivery lifecycle.</documentation>
+        <node identifier="id-view-lifecycle-band-0" xsi:type="Container" x="20" y="20" w="990" h="412">
+          <label xml:lang="en">Business</label>
+          <node identifier="id-view-lifecycle-n-id-bus-role-conductor" xsi:type="Element" elementRef="id-bus-role-conductor" x="55" y="62" w="160" h="55"/>
+          <node identifier="id-view-lifecycle-n-id-bus-role-worker" xsi:type="Element" elementRef="id-bus-role-worker" x="275" y="62" w="160" h="55"/>
+          <node identifier="id-view-lifecycle-n-id-bus-act-human" xsi:type="Element" elementRef="id-bus-act-human" x="625" y="62" w="160" h="55"/>
+          <node identifier="id-view-lifecycle-n-id-bus-proc-lifecycle" xsi:type="Element" elementRef="id-bus-proc-lifecycle" x="40" y="187" w="950" h="100">
+            <node identifier="id-view-lifecycle-n-id-bus-proc-plan" xsi:type="Element" elementRef="id-bus-proc-plan" x="55" y="217" w="160" h="55"/>
+            <node identifier="id-view-lifecycle-n-id-bus-proc-implement" xsi:type="Element" elementRef="id-bus-proc-implement" x="245" y="217" w="160" h="55"/>
+            <node identifier="id-view-lifecycle-n-id-bus-proc-review" xsi:type="Element" elementRef="id-bus-proc-review" x="435" y="217" w="160" h="55"/>
+            <node identifier="id-view-lifecycle-n-id-bus-proc-accept" xsi:type="Element" elementRef="id-bus-proc-accept" x="625" y="217" w="160" h="55"/>
+            <node identifier="id-view-lifecycle-n-id-bus-proc-deploy" xsi:type="Element" elementRef="id-bus-proc-deploy" x="815" y="217" w="160" h="55"/>
+          </node>
+          <node identifier="id-view-lifecycle-n-id-bus-obj-adr" xsi:type="Element" elementRef="id-bus-obj-adr" x="105" y="357" w="160" h="55"/>
+          <node identifier="id-view-lifecycle-n-id-bus-obj-story" xsi:type="Element" elementRef="id-bus-obj-story" x="325" y="357" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-lifecycle-c-id-rel-010" xsi:type="Relationship" relationshipRef="id-rel-010" source="id-view-lifecycle-n-id-bus-act-human" target="id-view-lifecycle-n-id-bus-proc-review">
+          <bendpoint x="705" y="152"/>
+          <bendpoint x="515" y="152"/>
+        </connection>
+        <connection identifier="id-view-lifecycle-c-id-rel-011" xsi:type="Relationship" relationshipRef="id-rel-011" source="id-view-lifecycle-n-id-bus-role-conductor" target="id-view-lifecycle-n-id-bus-proc-plan"/>
+        <connection identifier="id-view-lifecycle-c-id-rel-012" xsi:type="Relationship" relationshipRef="id-rel-012" source="id-view-lifecycle-n-id-bus-role-worker" target="id-view-lifecycle-n-id-bus-proc-implement">
+          <bendpoint x="355" y="160"/>
+          <bendpoint x="325" y="160"/>
+        </connection>
+        <connection identifier="id-view-lifecycle-c-id-rel-018" xsi:type="Relationship" relationshipRef="id-rel-018" source="id-view-lifecycle-n-id-bus-proc-plan" target="id-view-lifecycle-n-id-bus-proc-implement"/>
+        <connection identifier="id-view-lifecycle-c-id-rel-019" xsi:type="Relationship" relationshipRef="id-rel-019" source="id-view-lifecycle-n-id-bus-proc-implement" target="id-view-lifecycle-n-id-bus-proc-review"/>
+        <connection identifier="id-view-lifecycle-c-id-rel-020" xsi:type="Relationship" relationshipRef="id-rel-020" source="id-view-lifecycle-n-id-bus-proc-review" target="id-view-lifecycle-n-id-bus-proc-accept"/>
+        <connection identifier="id-view-lifecycle-c-id-rel-021" xsi:type="Relationship" relationshipRef="id-rel-021" source="id-view-lifecycle-n-id-bus-proc-accept" target="id-view-lifecycle-n-id-bus-proc-deploy"/>
+        <connection identifier="id-view-lifecycle-c-id-rel-022" xsi:type="Relationship" relationshipRef="id-rel-022" source="id-view-lifecycle-n-id-bus-proc-plan" target="id-view-lifecycle-n-id-bus-obj-story">
+          <bendpoint x="135" y="322"/>
+          <bendpoint x="405" y="322"/>
+        </connection>
+        <connection identifier="id-view-lifecycle-c-id-rel-023" xsi:type="Relationship" relationshipRef="id-rel-023" source="id-view-lifecycle-n-id-bus-proc-plan" target="id-view-lifecycle-n-id-bus-obj-adr">
+          <bendpoint x="149" y="330"/>
+          <bendpoint x="185" y="330"/>
+        </connection>
+        <connection identifier="id-view-lifecycle-c-id-rel-024" xsi:type="Relationship" relationshipRef="id-rel-024" source="id-view-lifecycle-n-id-bus-act-human" target="id-view-lifecycle-n-id-bus-proc-deploy">
+          <bendpoint x="719" y="144"/>
+          <bendpoint x="895" y="144"/>
+        </connection>
+      </view>
+      <view identifier="id-view-motivation" xsi:type="Diagram" viewpoint="Motivation">
+        <name xml:lang="en">Why the factory exists</name>
+        <documentation xml:lang="en">Stakeholder, drivers, goals, principles and requirements behind the factory.</documentation>
+        <node identifier="id-view-motivation-band-0" xsi:type="Container" x="20" y="20" w="960" h="367">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-motivation-n-id-mot-drv-change" xsi:type="Element" elementRef="id-mot-drv-change" x="40" y="62" w="160" h="55"/>
+          <node identifier="id-view-motivation-n-id-mot-sh-product-owner" xsi:type="Element" elementRef="id-mot-sh-product-owner" x="260" y="62" w="160" h="55"/>
+          <node identifier="id-view-motivation-n-id-mot-goal-healthy" xsi:type="Element" elementRef="id-mot-goal-healthy" x="220" y="187" w="160" h="55"/>
+          <node identifier="id-view-motivation-n-id-mot-goal-cost" xsi:type="Element" elementRef="id-mot-goal-cost" x="580" y="187" w="160" h="55"/>
+          <node identifier="id-view-motivation-n-id-mot-goal-traceable" xsi:type="Element" elementRef="id-mot-goal-traceable" x="800" y="187" w="160" h="55"/>
+          <node identifier="id-view-motivation-n-id-mot-pr-pr-only" xsi:type="Element" elementRef="id-mot-pr-pr-only" x="360" y="312" w="160" h="55"/>
+          <node identifier="id-view-motivation-n-id-mot-req-routing" xsi:type="Element" elementRef="id-mot-req-routing" x="580" y="312" w="160" h="55"/>
+          <node identifier="id-view-motivation-n-id-mot-req-togaf" xsi:type="Element" elementRef="id-mot-req-togaf" x="800" y="312" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-motivation-c-id-rel-001" xsi:type="Relationship" relationshipRef="id-rel-001" source="id-view-motivation-n-id-mot-drv-change" target="id-view-motivation-n-id-mot-goal-healthy">
+          <bendpoint x="120" y="152"/>
+          <bendpoint x="300" y="152"/>
+        </connection>
+        <connection identifier="id-view-motivation-c-id-rel-002" xsi:type="Relationship" relationshipRef="id-rel-002" source="id-view-motivation-n-id-mot-sh-product-owner" target="id-view-motivation-n-id-mot-drv-change"/>
+        <connection identifier="id-view-motivation-c-id-rel-003" xsi:type="Relationship" relationshipRef="id-rel-003" source="id-view-motivation-n-id-mot-pr-pr-only" target="id-view-motivation-n-id-mot-goal-traceable">
+          <bendpoint x="440" y="277"/>
+          <bendpoint x="880" y="277"/>
+        </connection>
+        <connection identifier="id-view-motivation-c-id-rel-004" xsi:type="Relationship" relationshipRef="id-rel-004" source="id-view-motivation-n-id-mot-req-togaf" target="id-view-motivation-n-id-mot-goal-traceable">
+          <bendpoint x="880" y="285"/>
+          <bendpoint x="894" y="285"/>
+        </connection>
+        <connection identifier="id-view-motivation-c-id-rel-005" xsi:type="Relationship" relationshipRef="id-rel-005" source="id-view-motivation-n-id-mot-req-routing" target="id-view-motivation-n-id-mot-goal-cost"/>
+        <connection identifier="id-view-motivation-c-id-rel-006" xsi:type="Relationship" relationshipRef="id-rel-006" source="id-view-motivation-n-id-mot-pr-pr-only" target="id-view-motivation-n-id-mot-goal-healthy">
+          <bendpoint x="454" y="269"/>
+          <bendpoint x="300" y="269"/>
+        </connection>
+      </view>
+      <view identifier="id-view-reservation-cancel" xsi:type="Diagram" viewpoint="Layered">
+        <name xml:lang="en">Reservations: cancel a reservation</name>
+        <documentation xml:lang="en">Sample reservation domain, epic #17: why customers cancel, the business processes, and the crates and API that serve them. Technology is unchanged (see id-view-layered).</documentation>
+        <node identifier="id-view-reservation-cancel-band-0" xsi:type="Container" x="20" y="20" w="1347" h="367">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-reservation-cancel-n-id-mot-sh-front-desk" xsi:type="Element" elementRef="id-mot-sh-front-desk" x="40" y="62" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-mot-drv-blocked-slots" xsi:type="Element" elementRef="id-mot-drv-blocked-slots" x="260" y="62" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-mot-sh-customer" xsi:type="Element" elementRef="id-mot-sh-customer" x="480" y="62" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-mot-goal-free-slots" xsi:type="Element" elementRef="id-mot-goal-free-slots" x="40" y="187" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-mot-out-rebook" xsi:type="Element" elementRef="id-mot-out-rebook" x="260" y="187" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-mot-req-cancel" xsi:type="Element" elementRef="id-mot-req-cancel" x="254" y="312" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-mot-req-cancel-refused" xsi:type="Element" elementRef="id-mot-req-cancel-refused" x="474" y="312" w="160" h="55"/>
+        </node>
+        <node identifier="id-view-reservation-cancel-band-1" xsi:type="Container" x="20" y="427" w="1347" h="367">
+          <label xml:lang="en">Business</label>
+          <node identifier="id-view-reservation-cancel-n-id-bus-act-customer" xsi:type="Element" elementRef="id-bus-act-customer" x="367" y="469" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-bus-proc-reserve" xsi:type="Element" elementRef="id-bus-proc-reserve" x="253" y="594" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-bus-proc-cancel" xsi:type="Element" elementRef="id-bus-proc-cancel" x="473" y="594" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-bus-obj-reservation" xsi:type="Element" elementRef="id-bus-obj-reservation" x="231" y="719" w="160" h="55"/>
+        </node>
+        <node identifier="id-view-reservation-cancel-band-2" xsi:type="Container" x="20" y="834" w="1347" h="412">
+          <label xml:lang="en">Application</label>
+          <node identifier="id-view-reservation-cancel-n-id-app-intf-reservation-api" xsi:type="Element" elementRef="id-app-intf-reservation-api" x="367" y="876" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-app-comp-reservation-svc" xsi:type="Element" elementRef="id-app-comp-reservation-svc" x="587" y="876" w="760" h="100">
+            <node identifier="id-view-reservation-cancel-n-id-app-comp-application" xsi:type="Element" elementRef="id-app-comp-application" x="602" y="906" w="160" h="55"/>
+            <node identifier="id-view-reservation-cancel-n-id-app-comp-db" xsi:type="Element" elementRef="id-app-comp-db" x="792" y="906" w="160" h="55"/>
+            <node identifier="id-view-reservation-cancel-n-id-app-comp-domain" xsi:type="Element" elementRef="id-app-comp-domain" x="982" y="906" w="160" h="55"/>
+            <node identifier="id-view-reservation-cancel-n-id-app-comp-http" xsi:type="Element" elementRef="id-app-comp-http" x="1172" y="906" w="160" h="55"/>
+          </node>
+          <node identifier="id-view-reservation-cancel-n-id-app-svc-book" xsi:type="Element" elementRef="id-app-svc-book" x="255" y="1046" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-app-svc-cancel" xsi:type="Element" elementRef="id-app-svc-cancel" x="475" y="1046" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-app-data-schedule" xsi:type="Element" elementRef="id-app-data-schedule" x="137" y="1171" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-050" xsi:type="Relationship" relationshipRef="id-rel-050" source="id-view-reservation-cancel-n-id-mot-sh-customer" target="id-view-reservation-cancel-n-id-mot-drv-blocked-slots"/>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-051" xsi:type="Relationship" relationshipRef="id-rel-051" source="id-view-reservation-cancel-n-id-mot-sh-front-desk" target="id-view-reservation-cancel-n-id-mot-goal-free-slots"/>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-052" xsi:type="Relationship" relationshipRef="id-rel-052" source="id-view-reservation-cancel-n-id-mot-drv-blocked-slots" target="id-view-reservation-cancel-n-id-mot-goal-free-slots">
+          <bendpoint x="340" y="152"/>
+          <bendpoint x="134" y="152"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-053" xsi:type="Relationship" relationshipRef="id-rel-053" source="id-view-reservation-cancel-n-id-mot-out-rebook" target="id-view-reservation-cancel-n-id-mot-goal-free-slots"/>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-054" xsi:type="Relationship" relationshipRef="id-rel-054" source="id-view-reservation-cancel-n-id-mot-req-cancel" target="id-view-reservation-cancel-n-id-mot-out-rebook">
+          <bendpoint x="334" y="277"/>
+          <bendpoint x="340" y="277"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-055" xsi:type="Relationship" relationshipRef="id-rel-055" source="id-view-reservation-cancel-n-id-mot-sh-customer" target="id-view-reservation-cancel-n-id-mot-req-cancel-refused">
+          <bendpoint x="560" y="160"/>
+          <bendpoint x="557" y="160"/>
+          <bendpoint x="557" y="285"/>
+          <bendpoint x="554" y="285"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-056" xsi:type="Relationship" relationshipRef="id-rel-056" source="id-view-reservation-cancel-n-id-bus-act-customer" target="id-view-reservation-cancel-n-id-mot-sh-customer">
+          <bendpoint x="447" y="418"/>
+          <bendpoint x="462" y="418"/>
+          <bendpoint x="462" y="144"/>
+          <bendpoint x="574" y="144"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-057" xsi:type="Relationship" relationshipRef="id-rel-057" source="id-view-reservation-cancel-n-id-bus-act-customer" target="id-view-reservation-cancel-n-id-bus-proc-reserve">
+          <bendpoint x="447" y="559"/>
+          <bendpoint x="333" y="559"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-058" xsi:type="Relationship" relationshipRef="id-rel-058" source="id-view-reservation-cancel-n-id-bus-act-customer" target="id-view-reservation-cancel-n-id-bus-proc-cancel">
+          <bendpoint x="461" y="567"/>
+          <bendpoint x="553" y="567"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-059" xsi:type="Relationship" relationshipRef="id-rel-059" source="id-view-reservation-cancel-n-id-bus-proc-reserve" target="id-view-reservation-cancel-n-id-bus-obj-reservation">
+          <bendpoint x="333" y="684"/>
+          <bendpoint x="311" y="684"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-060" xsi:type="Relationship" relationshipRef="id-rel-060" source="id-view-reservation-cancel-n-id-bus-proc-cancel" target="id-view-reservation-cancel-n-id-bus-obj-reservation">
+          <bendpoint x="553" y="692"/>
+          <bendpoint x="325" y="692"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-065" xsi:type="Relationship" relationshipRef="id-rel-065" source="id-view-reservation-cancel-n-id-app-comp-http" target="id-view-reservation-cancel-n-id-app-intf-reservation-api">
+          <bendpoint x="1252" y="825"/>
+          <bendpoint x="447" y="825"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-066" xsi:type="Relationship" relationshipRef="id-rel-066" source="id-view-reservation-cancel-n-id-app-comp-domain" target="id-view-reservation-cancel-n-id-app-comp-application">
+          <bendpoint x="1062" y="833"/>
+          <bendpoint x="682" y="833"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-067" xsi:type="Relationship" relationshipRef="id-rel-067" source="id-view-reservation-cancel-n-id-app-comp-application" target="id-view-reservation-cancel-n-id-app-comp-http">
+          <bendpoint x="696" y="817"/>
+          <bendpoint x="1266" y="817"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-068" xsi:type="Relationship" relationshipRef="id-rel-068" source="id-view-reservation-cancel-n-id-app-comp-db" target="id-view-reservation-cancel-n-id-app-comp-application"/>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-069" xsi:type="Relationship" relationshipRef="id-rel-069" source="id-view-reservation-cancel-n-id-app-comp-application" target="id-view-reservation-cancel-n-id-app-svc-book">
+          <bendpoint x="682" y="1011"/>
+          <bendpoint x="335" y="1011"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-070" xsi:type="Relationship" relationshipRef="id-rel-070" source="id-view-reservation-cancel-n-id-app-comp-application" target="id-view-reservation-cancel-n-id-app-svc-cancel">
+          <bendpoint x="696" y="1019"/>
+          <bendpoint x="555" y="1019"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-071" xsi:type="Relationship" relationshipRef="id-rel-071" source="id-view-reservation-cancel-n-id-app-intf-reservation-api" target="id-view-reservation-cancel-n-id-app-svc-book">
+          <bendpoint x="447" y="1003"/>
+          <bendpoint x="349" y="1003"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-072" xsi:type="Relationship" relationshipRef="id-rel-072" source="id-view-reservation-cancel-n-id-app-intf-reservation-api" target="id-view-reservation-cancel-n-id-app-svc-cancel">
+          <bendpoint x="461" y="1027"/>
+          <bendpoint x="569" y="1027"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-073" xsi:type="Relationship" relationshipRef="id-rel-073" source="id-view-reservation-cancel-n-id-app-intf-reservation-api" target="id-view-reservation-cancel-n-id-bus-act-customer">
+          <bendpoint x="461" y="841"/>
+          <bendpoint x="447" y="841"/>
+          <bendpoint x="447" y="551"/>
+          <bendpoint x="433" y="551"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-074" xsi:type="Relationship" relationshipRef="id-rel-074" source="id-view-reservation-cancel-n-id-app-svc-book" target="id-view-reservation-cancel-n-id-bus-proc-reserve">
+          <bendpoint x="321" y="995"/>
+          <bendpoint x="218" y="995"/>
+          <bendpoint x="218" y="676"/>
+          <bendpoint x="347" y="676"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-075" xsi:type="Relationship" relationshipRef="id-rel-075" source="id-view-reservation-cancel-n-id-app-svc-cancel" target="id-view-reservation-cancel-n-id-bus-proc-cancel">
+          <bendpoint x="541" y="1035"/>
+          <bendpoint x="554" y="1035"/>
+          <bendpoint x="554" y="700"/>
+          <bendpoint x="567" y="700"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-076" xsi:type="Relationship" relationshipRef="id-rel-076" source="id-view-reservation-cancel-n-id-app-svc-cancel" target="id-view-reservation-cancel-n-id-mot-req-cancel">
+          <bendpoint x="583" y="987"/>
+          <bendpoint x="219" y="987"/>
+          <bendpoint x="219" y="426"/>
+          <bendpoint x="334" y="426"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-077" xsi:type="Relationship" relationshipRef="id-rel-077" source="id-view-reservation-cancel-n-id-app-svc-cancel" target="id-view-reservation-cancel-n-id-mot-req-cancel-refused">
+          <bendpoint x="527" y="1043"/>
+          <bendpoint x="221" y="1043"/>
+          <bendpoint x="221" y="410"/>
+          <bendpoint x="554" y="410"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-078" xsi:type="Relationship" relationshipRef="id-rel-078" source="id-view-reservation-cancel-n-id-app-comp-db" target="id-view-reservation-cancel-n-id-app-data-schedule">
+          <bendpoint x="872" y="979"/>
+          <bendpoint x="465" y="979"/>
+          <bendpoint x="465" y="1136"/>
+          <bendpoint x="217" y="1136"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-079" xsi:type="Relationship" relationshipRef="id-rel-079" source="id-view-reservation-cancel-n-id-app-data-schedule" target="id-view-reservation-cancel-n-id-bus-obj-reservation">
+          <bendpoint x="231" y="1144"/>
+          <bendpoint x="243" y="1144"/>
+          <bendpoint x="243" y="809"/>
+          <bendpoint x="311" y="809"/>
+        </connection>
+      </view>
+    </diagrams>
+  </views>
+</model>
