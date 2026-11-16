@@ -6,7 +6,7 @@ This repository is a template: the rules, agents, quality gates, CI, release and
 1. Mark this repository as a template: **Settings → General → Template repository**.
 2. Create and clone the new repository: `gh repo create <name> --template <owner>/rust-factory --private --clone`
 3. In the new folder: `./bootstrap.sh`, then `just doctor`.
-4. `gh auth refresh -s project`, then `just labels` and `just project`.
+4. `gh auth refresh -s project`, then `just labels` (it works on the current repository), then `just project <owner>/<name>` with the new repository's name (without it, `just project` would act on this template's repository).
 5. Protect `main` (**Settings → Rules → Rulesets**): changes only through pull requests, squash merge only, branch must be up to date, required checks `gates`, `architecture model`, `acceptance`, `mutants (changed code)`.
 6. For the architecture site: **Settings → Pages → Source = GitHub Actions**, and set the `Site` property of the model (`docs/architecture/model.xml`) to the new site's address.
 7. Open a Claude Code session in the folder (model `claude-fable-5-2`, pinned in `.claude/settings.json`) and paste the prompt below.
