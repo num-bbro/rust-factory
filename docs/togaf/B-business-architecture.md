@@ -36,6 +36,9 @@ Who does what in the delivery lifecycle.
 
 ![Delivery lifecycle](../architecture/views/id-view-lifecycle.png)
 
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-lifecycle.html)
+
 | ID | Name | Type | Decisions | Issues | Crate / code | Release | Other documents |
 |---|---|---|---|---|---|---|---|
 | <a id="id-bus-act-human"></a>`id-bus-act-human` | Human approver | BusinessActor |  |  |  |  | [C. Information Systems Architecture](C-information-systems-architecture.md#id-bus-act-human), [D. Technology Architecture](D-technology-architecture.md#id-bus-act-human), [G. Implementation Governance](G-implementation-governance.md#id-bus-act-human) |
@@ -56,6 +59,9 @@ Sample reservation domain, epic #17: why customers cancel, the business processe
 and API that serve them. Technology is unchanged (see id-view-layered).
 
 ![Reservations: cancel a reservation](../architecture/views/id-view-reservation-cancel.png)
+
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-reservation-cancel.html)
 
 | ID | Name | Type | Decisions | Issues | Crate / code | Release | Other documents |
 |---|---|---|---|---|---|---|---|

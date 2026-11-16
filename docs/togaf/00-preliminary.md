@@ -29,6 +29,9 @@ Stakeholder, drivers, goals, principles and requirements behind the factory.
 
 ![Why the factory exists](../architecture/views/id-view-motivation.png)
 
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-motivation.html)
+
 | ID | Name | Type | Decisions | Issues | Crate / code | Release | Other documents |
 |---|---|---|---|---|---|---|---|
 | <a id="id-mot-drv-change"></a>`id-mot-drv-change` | Business needs change often | Driver |  |  |  |  | [A. Architecture Vision](A-architecture-vision.md#id-mot-drv-change) |

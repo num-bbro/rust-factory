@@ -84,6 +84,6 @@ creates, and it gives a clear refusal for ids that do not exist.
 - Follow-up: implementation in the task issues under stories #18 and #19.
 
 ## Notes
-- 2026-11-15: the known risk above (bug #26) is resolved by [ADR
-  0008](0008-atomic-schedule-update-through-the-port.md): every change to the schedule now goes
+- 2026-11-15: the known risk above (bug #26) is resolved by
+  [ADR 0008](0008-atomic-schedule-update-through-the-port.md): every change to the schedule now goes
   through one atomic `update` operation on the repository port.

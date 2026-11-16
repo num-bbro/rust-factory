@@ -30,6 +30,9 @@ and API that serve them. Technology is unchanged (see id-view-layered).
 
 ![Reservations: cancel a reservation](../architecture/views/id-view-reservation-cancel.png)
 
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-reservation-cancel.html)
+
 | ID | Name | Type | Decisions | Issues | Crate / code | Release | Other documents |
 |---|---|---|---|---|---|---|---|
 | <a id="id-app-comp-application"></a>`id-app-comp-application` | Use cases (crate application) | ApplicationComponent | [ADR 0008](../adr/0008-atomic-schedule-update-through-the-port.md) |  | `crates/application` | Release v0.1.0, Release v0.2.0, Release v0.2.1 | [A. Architecture Vision](A-architecture-vision.md#id-app-comp-application), [B. Business Architecture](B-business-architecture.md#id-app-comp-application), [C. Information Systems Architecture](C-information-systems-architecture.md#id-app-comp-application) |

@@ -97,3 +97,11 @@ Open `build/architecture/model.archimate` in Archi to review. To change the mode
 `docs/architecture/model.xml` and run `just model-fmt`, never the generated `.archimate`. When
 `just model-check` reports a view image, run `just model` and commit `docs/architecture/views/`. See
 [ADR 0009](docs/adr/0009-archimate-exchange-model-as-source.md).
+
+## Architecture site
+
+The architecture documents (TOGAF and ADRs), the diagrams and the clickable HTML report of the model
+are published at <https://num-bbro.github.io/rust-factory/>, rebuilt on every merge to `main` by
+`.github/workflows/pages.yml`. The model file is there too, for download. The site's base URL is the
+`Site` property of the model. A "Clickable version" link under a diagram opens the
+report's page for that diagram; the full report with its navigation is at `report/index.html`.

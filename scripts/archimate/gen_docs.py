@@ -9,6 +9,8 @@
                                            committed image (`just model` uses it before the
                                            build that renders the images)
 
+--check also verifies the `Site` property (see below).
+
 ROOT is the repository (default: this script's). The model is ROOT/docs/architecture/model.xml.
 
 ADRs. Each ADR is a `Constraint` with identifier `id-mot-adr-NNNN` and name `ADR NNNN: <title>`,
@@ -48,6 +50,13 @@ the column shows the Plateau's name. Anchors are
 identifiers: a view's section has its view id, an element's first catalog row on a page has its
 element id. Documents are taken in File order. `docs/togaf/README.md` is the generated index.
 
+Site. The property `Site` of the model's root (`id-model-factory`) is the base URL of the published
+architecture site (ADR 0009, step 7): an `https://` URL ending in `/`. With it, each view section
+of a TOGAF page has a line "Clickable version: <link>" under the image, linking the view's page of
+the HTML report (`report/<model id>/views/<view id>.html`), and the TOGAF and ADR indexes have a
+line linking the site's home. Without it no site link is generated. A property given twice or with
+another form of value is a problem.
+
 An orphan is a `.md` page in `docs/adr/` or `docs/togaf/` that the model does not produce;
 `template.md` (the hand-written guide) in each is the exception. Orphans are reported, never
 deleted. The output depends on the model only: no dates, no paths of this machine.
@@ -85,6 +94,9 @@ DOC_TEXT_PROPS = ("Viewpoints", "Artifacts")
 LINKS = ("Realization", "Influence")
 SUPERSEDES = "supersedes"
 CODE_ID = re.compile(r"id-[a-z0-9-]+")
+SITE_PROP = "Site"
+SITE_URL = re.compile(r"https://[^\s/]+/([^\s/]+/)*")
+REPORT_DIR = "report"
 
 
 def generated_note(source: str, guide: str = f"{ADR_DIR}/template.md") -> str:
@@ -257,7 +269,20 @@ def page(adr: Adr, model: exchange.Model, released_in: dict[str, list[str]]) -> 
     return mdwrap.wrap(text) + "\n"
 
 
-def index(found: list[Adr]) -> str:
+def site_line(site: str) -> str:
+    """The line that links the site's home; empty without a site."""
+    return f"Architecture site: <{href('', '', site=site)}>" if site else ""
+
+
+def with_site_line(intro: str, site: str) -> str:
+    """`intro` with the site line after its first paragraph (the one under the title)."""
+    if not site:
+        return intro
+    title, first, tail = intro.split("\n\n", 2)
+    return f"{title}\n\n{first}\n\n{site_line(site)}\n\n{tail}"
+
+
+def index(found: list[Adr], site: str = "") -> str:
     files = {a.number: Path(a.props.get("File", "")).name for a in found}
 
     def status(value: str) -> str:
@@ -267,7 +292,8 @@ def index(found: list[Adr]) -> str:
 
     rows = [f"| [{a.number}]({files[a.number]}) | {_cell(a.title)} | "
             f"{status(a.props.get('Status', ''))} |" for a in found]
-    return mdwrap.wrap("\n".join([generated_note("the ADR elements"), INDEX_INTRO, *rows])) + "\n"
+    intro = with_site_line(INDEX_INTRO, site)
+    return mdwrap.wrap("\n".join([generated_note("the ADR elements"), intro, *rows])) + "\n"
 
 
 # --- TOGAF documents ----------------------------------------------------------------------------
@@ -355,12 +381,32 @@ def line_breaks(model: exchange.Model) -> list[str]:
             for ident, name in sorted(model.names.items()) if "\n" in name.strip()]
 
 
-def href(from_file: str, to_file: str, anchor: str = "") -> str:
+def site_problems(model: exchange.Model) -> list[str]:
+    """The `Site` property of the model's root must be given once, as an https URL ending in /."""
+    values = [v for owner, key, v in model.properties
+              if owner == model.identifier and key == SITE_PROP]
+    if len(values) > 1:
+        return [f"model '{model.identifier}': property {SITE_PROP} is given more than once"]
+    if values and not SITE_URL.fullmatch(values[0]):
+        return [f"model '{model.identifier}': property {SITE_PROP} = '{values[0]}' must be an "
+                "https:// URL that ends in '/'"]
+    return []
+
+
+def site_of(model: exchange.Model) -> str:
+    """The site's base URL, or '' when the model has none."""
+    return next((v for owner, key, v in model.properties
+                 if owner == model.identifier and key == SITE_PROP), "")
+
+
+def href(from_file: str, to_file: str, anchor: str = "", site: str = "") -> str:
     """The link from page `from_file` to `to_file` (both repository paths), at `anchor`.
 
-    Every link of the TOGAF pages is made here: the place where step 7 plugs in the site's base
-    URL for an element's own page.
+    Every link of the generated pages is made here. With `site` (the base URL, ending in `/`),
+    `to_file` is a path of the site (no anchor) and the link is absolute.
     """
+    if site:
+        return f"{site}{to_file}"
     if to_file == from_file and anchor:
         return f"#{anchor}"
     fragment = f"#{anchor}" if anchor else ""
@@ -428,8 +474,9 @@ class Togaf:
     """The TOGAF pages of a model: what each document shows and where each identifier links."""
 
     def __init__(self, model: exchange.Model, docs: list[Document], adr_found: list[Adr],
-                 released_in: dict[str, list[str]]):
+                 released_in: dict[str, list[str]], site: str = ""):
         self.model = model
+        self.site = site
         self.docs = [d for d in docs if d.file]
         self.adr_files = {a.ident: a.props["File"] for a in adr_found if a.props.get("File")}
         self.doc_files = {d.ident: d.file for d in self.docs}
@@ -513,8 +560,12 @@ class Togaf:
             text = self.model.documentation.get(view, "")
             if text:
                 lines += [self.link_ids(text, doc), ""]
-            lines += [f"![{name}]({href(doc.file, f'{VIEWS_DIR}/{view}.png')})", "",
-                      *self.catalog(view, doc, anchored)]
+            lines += [f"![{name}]({href(doc.file, f'{VIEWS_DIR}/{view}.png')})", ""]
+            if self.site:
+                report = f"{REPORT_DIR}/{self.model.identifier}/views/{view}.html"
+                lines += [f"Clickable version: [report]({href(doc.file, report, site=self.site)})",
+                          ""]
+            lines += self.catalog(view, doc, anchored)
         return mdwrap.wrap("\n".join(lines)) + "\n"
 
     def index(self) -> str:
@@ -528,7 +579,8 @@ class Togaf:
                         f"{_markdown_cell(d.viewpoints) or '—'} | {_markdown_cell(d.artifacts)} |")
         return mdwrap.wrap("\n".join([generated_note("the Deliverable elements",
                                                      f"{TOGAF_DIR}/template.md"),
-                                      TOGAF_INTRO, *rows, "", TOGAF_OUTRO])) + "\n"
+                                      with_site_line(TOGAF_INTRO, self.site), *rows, "",
+                                      TOGAF_OUTRO])) + "\n"
 
 
 def missing_images(docs: list[Document], root: Path) -> list[str]:
@@ -546,10 +598,11 @@ def render(model: exchange.Model) -> tuple[dict[str, str], list[str]]:
     released_in = releases(model)
     pages = {a.props["File"]: page(a, model, released_in) for a in found
              if a.props.get("File")}
-    pages[INDEX] = index(found)
+    site = site_of(model)
+    pages[INDEX] = index(found, site)
     docs, doc_problems = documents(model)
-    doc_problems += line_breaks(model) + view_problems(model, docs)
-    togaf = Togaf(model, docs, found, released_in)
+    doc_problems += line_breaks(model) + view_problems(model, docs) + site_problems(model)
+    togaf = Togaf(model, docs, found, released_in, site)
     pages.update({d.file: togaf.page(d) for d in togaf.docs})
     pages[TOGAF_INDEX] = togaf.index()
     return dict(sorted(pages.items())), problems + doc_problems

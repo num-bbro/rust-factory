@@ -55,6 +55,9 @@ Business, application and technology layers of the factory, top to bottom.
 
 ![Factory overview](../architecture/views/id-view-layered.png)
 
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-layered.html)
+
 | ID | Name | Type | Decisions | Issues | Crate / code | Release | Other documents |
 |---|---|---|---|---|---|---|---|
 | <a id="id-app-comp-conductor"></a>`id-app-comp-conductor` | Conductor agent (Fable) | ApplicationComponent | [ADR 0004](../adr/0004-agent-team-and-cost-routing.md) |  |  |  | [D. Technology Architecture](D-technology-architecture.md#id-app-comp-conductor) |
@@ -87,6 +90,9 @@ Sample reservation domain, epic #17: why customers cancel, the business processe
 and API that serve them. Technology is unchanged (see id-view-layered).
 
 ![Reservations: cancel a reservation](../architecture/views/id-view-reservation-cancel.png)
+
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-reservation-cancel.html)
 
 | ID | Name | Type | Decisions | Issues | Crate / code | Release | Other documents |
 |---|---|---|---|---|---|---|---|

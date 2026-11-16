@@ -1,0 +1,6 @@
+title: rust-factory architecture
+markdown: GFM
+plugins:
+  - jekyll-relative-links
+optional_front_matter:
+  remove_originals: true

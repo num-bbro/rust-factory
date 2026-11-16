@@ -26,7 +26,9 @@ item it was opened in.
 model's text. Wrapping never changes how the Markdown renders: raw lines are copied, and a list
 item or paragraph breaks only at a single space, never before a word that could start a block (a
 list marker, `#`, `>`, `|`, `<`, a fence, a break line, a delimiter-row fragment) and never after a
-word ending in a backslash; a word longer than the width (a long URL or code span) stays whole on
+word ending in a backslash, and never inside an inline link or image, `[text](target)` or
+`![alt](target)`, which is one unbreakable unit (`jekyll-relative-links` does not convert a link
+whose text is over two lines); a word longer than the width (a long URL or code span) stays whole on
 an over-long line.
 
 Pure functions, standard library only.
@@ -164,6 +166,41 @@ def unwrap(text: str) -> str:
     return "\n".join(out)
 
 
+def _closing(line: str, start: int, open_: str, close: str) -> int:
+    """The index of the bracket that closes the one at `start`, or -1 (backslash escapes skipped)."""
+    depth = 0
+    i = start
+    while i < len(line):
+        if line[i] == "\\":
+            i += 2
+            continue
+        depth += line[i] == open_
+        depth -= line[i] == close
+        if depth == 0:
+            return i
+        i += 1
+    return -1
+
+
+def _link_spaces(line: str, begin: int) -> set[int]:
+    """The indexes of the spaces, from `begin` on, inside an inline link or image `[..](..)`."""
+    locked: set[int] = set()
+    i = begin
+    while i < len(line):
+        if line[i] == "\\":
+            i += 2
+            continue
+        if line[i] == "[":
+            end = _closing(line, i, "[", "]")
+            if end > 0 and line[end + 1:end + 2] == "(":
+                last = _closing(line, end + 1, "(", ")")
+                if last > 0:
+                    locked.update(k for k in range(i, last) if line[k] == " ")
+                    i = last
+        i += 1
+    return locked
+
+
 def _wrap_line(line: str, kind: str, width: int) -> list[str]:
     if kind == "list":
         m = _LIST.match(line)
@@ -174,7 +211,12 @@ def _wrap_line(line: str, kind: str, width: int) -> list[str]:
     else:
         cont = _indent(line)
         head = line[:cont]
-    words = line[len(head):].split(" ")
+    locked = _link_spaces(line, len(head))
+    words: list[str] = []
+    at = len(head)
+    for part in line[len(head):].split(" "):
+        words.append(words.pop() + " " + part if words and at - 1 in locked else part)
+        at += len(part) + 1
     lines, cur = [], head + words[0]
     for prev, word in zip(words, words[1:]):
         breakable = prev and word and not prev.endswith("\\") and not _BLOCK_WORD.fullmatch(word)

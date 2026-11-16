@@ -22,6 +22,9 @@ shows what else each release delivered.
 
 ![Releases](../architecture/views/id-view-releases.png)
 
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-releases.html)
+
 | ID | Name | Type | Decisions | Issues | Crate / code | Release | Other documents |
 |---|---|---|---|---|---|---|---|
 | <a id="id-impl-plat-v0-1-0"></a>`id-impl-plat-v0-1-0` | Release v0.1.0 | Plateau |  |  |  |  |  |

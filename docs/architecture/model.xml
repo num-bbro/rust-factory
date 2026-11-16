@@ -6,6 +6,9 @@
     <property propertyDefinitionRef="propid-source">
       <value xml:lang="en">docs/architecture/model.xml (ADR 0009), built by scripts/archimate/build.sh; do not edit the .archimate by hand</value>
     </property>
+    <property propertyDefinitionRef="propid-site">
+      <value xml:lang="en">https://num-bbro.github.io/rust-factory/</value>
+    </property>
   </properties>
   <elements>
     <element identifier="id-app-comp-application" xsi:type="ApplicationComponent">
@@ -1264,7 +1267,17 @@ Step 6 (#54) recorded the three releases as `Plateau` elements. As with the amen
 - **Links:** from each Plateau, an Aggregation to every element the release delivered; `just model-check` allowed Aggregation for every pair, so no Association was needed. Recorded contents: `id-impl-plat-v0-1-0` delivers `id-app-comp-reservation-svc`, `id-app-comp-domain`, `id-app-comp-application`, `id-app-comp-db`, `id-app-comp-http`, `id-app-intf-reservation-api`, `id-app-svc-book`, `id-app-data-schedule`, `id-bus-proc-reserve`, `id-bus-obj-reservation`, `id-mot-adr-0003` and `id-mot-adr-0005`. `id-impl-plat-v0-2-0` delivers `id-app-svc-cancel`, `id-bus-proc-cancel`, `id-mot-req-cancel`, `id-mot-req-cancel-refused`, `id-mot-out-rebook`, `id-mot-goal-free-slots`, `id-app-comp-application`, `id-app-comp-http`, `id-app-intf-reservation-api`, `id-mot-adr-0006` (pilot and rollout landed before v0.2.0, the first release deployed that way) and `id-mot-adr-0007`. `id-impl-plat-v0-2-1` delivers `id-app-comp-application`, `id-app-comp-db`, `id-app-comp-http` (#37 changed the HTTP adapter), `id-app-data-schedule` and `id-mot-adr-0008`.
 - **View:** `id-view-releases` (viewpoint Implementation and Migration, documentation: "The releases in order and the decisions each one delivered; the Release column of the other catalogs shows what else each release delivered.") shows the three releases and the five ADRs they deliver (eight boxes: `id-mot-adr-0003`, `id-mot-adr-0005`, `id-mot-adr-0006`, `id-mot-adr-0007`, `id-mot-adr-0008`), with an Aggregation per ADR and the two Triggering links; the other delivered elements stay linked in the model and appear in the Release column of the catalogs. It is hand-arranged (view property `Layout = manual`, as this ADR allows): the automatic layout bent two links over the same segment, so that v0.2.1 seemed to deliver ADR 0007. Each release box stands under the ADRs it delivers and every link is a straight line. It is a `View` of the phase F document.
 - **Generator:** the catalogs' Release column lists each Plateau once per element, in version order (`v0-10-0` after `v0-2-1`), counting an Association in either direction; an ADR page's header gains `Released in: &lt;tags&gt;` when a Plateau links to the ADR; `--check` applies the one-line rule to the documentation of every view a document shows.
-- **Rule:** after a release, a task adds its Plateau (`docs/togaf/template.md`, "Recording a release").</documentation>
+- **Rule:** after a release, a task adds its Plateau (`docs/togaf/template.md`, "Recording a release").
+
+## Amendment 2026-11-16: as built in step 7 (GitHub Pages site)
+Step 7 (#56) published the documents and the report. As with the amendments above, these points refine the decision:
+- **Workflow:** `.github/workflows/pages.yml` has a `build` job for pushes to `main`, pull requests and manual runs, and a `deploy` job for pushes to `main` and manual runs on `main`. Only `deploy` has the Pages permissions (`pages: write`, `id-token: write`) and the `github-pages` environment; a pull request never deploys. The workflow is not a required check.
+- **Build:** `just model` builds the report; the official `actions/jekyll-build-pages` renders `docs/` into `_site` with GitHub-flavoured Markdown (`markdown: GFM`) and `jekyll-relative-links`, so links between `.md` pages become `.html` links; the report is copied to `_site/report/`. A pull request uploads `_site` as the downloadable artifact `site`; `main` uploads it as the Pages artifact.
+- **Source:** `docs/_config.yml` and `docs/index.md` are hand-written; every other page is generated or is the model file itself (`architecture/model.xml`, offered for download).
+- **Site property:** the base URL is the property `Site` on the model root (`id-model-factory`), `https://num-bbro.github.io/rust-factory/`. With it, each view section of a TOGAF page has the line "Clickable version" linking the view's page in the report (`report/id-model-factory/views/&lt;view id&gt;.html`), and the TOGAF and ADR indexes link the site's home; without it no site link is generated. `gen_docs.py --check` refuses a value that is not an `https://` URL ending in `/`. Every site URL is made by `href`.
+- **Base path:** the Jekyll action learns the site's base path from the Pages API, so the `build` job (and only it) has `pages: read` next to `contents: read`; without it the pages would link under a fallback path. On `main`, before the upload, a step fails the run when `_site/index.html` does not link its stylesheet under `/&lt;repository name&gt;/`, so a site with broken links is never published. The `.md` originals are not published (`remove_originals`).
+- **Unbreakable links:** `mdwrap.wrap` never breaks a line inside an inline link or image, `[text](target)`, because `jekyll-relative-links` does not convert a link whose text is over two lines; the link may make the line longer than 100 characters, as a long URL already could.
+- **Not compared:** the site is a build artifact and is never compared, as decided above.</documentation>
       <properties>
         <property propertyDefinitionRef="propid-status">
           <value xml:lang="en">Accepted</value>
@@ -1564,6 +1577,9 @@ Step 6 (#54) recorded the three releases as `Plateau` elements. As with the amen
     </propertyDefinition>
     <propertyDefinition identifier="propid-phase" type="string">
       <name xml:lang="en">Phase</name>
+    </propertyDefinition>
+    <propertyDefinition identifier="propid-site" type="string">
+      <name xml:lang="en">Site</name>
     </propertyDefinition>
     <propertyDefinition identifier="propid-source" type="string">
       <name xml:lang="en">Source</name>

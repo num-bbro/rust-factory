@@ -596,3 +596,33 @@ points refine the decision:
   to the documentation of every view a document shows.
 - **Rule:** after a release, a task adds its Plateau (`docs/togaf/template.md`, "Recording a
   release").
+
+## Amendment 2026-11-16: as built in step 7 (GitHub Pages site)
+Step 7 (#56) published the documents and the report. As with the amendments above, these points
+refine the decision:
+- **Workflow:** `.github/workflows/pages.yml` has a `build` job for pushes to `main`, pull requests
+  and manual runs, and a `deploy` job for pushes to `main` and manual runs on `main`. Only `deploy`
+  has the Pages permissions (`pages: write`, `id-token: write`) and the `github-pages` environment;
+  a pull request never deploys. The workflow is not a required check.
+- **Build:** `just model` builds the report; the official `actions/jekyll-build-pages` renders
+  `docs/` into `_site` with GitHub-flavoured Markdown (`markdown: GFM`) and `jekyll-relative-links`,
+  so links between `.md` pages become `.html` links; the report is copied to `_site/report/`. A pull
+  request uploads `_site` as the downloadable artifact `site`; `main` uploads it as the Pages
+  artifact.
+- **Source:** `docs/_config.yml` and `docs/index.md` are hand-written; every other page is generated
+  or is the model file itself (`architecture/model.xml`, offered for download).
+- **Site property:** the base URL is the property `Site` on the model root (`id-model-factory`),
+  `https://num-bbro.github.io/rust-factory/`. With it, each view section of a TOGAF page has the
+  line "Clickable version" linking the view's page in the report
+  (`report/id-model-factory/views/<view id>.html`), and the TOGAF and ADR indexes link the site's
+  home; without it no site link is generated. `gen_docs.py --check` refuses a value that is not an
+  `https://` URL ending in `/`. Every site URL is made by `href`.
+- **Base path:** the Jekyll action learns the site's base path from the Pages API, so the `build`
+  job (and only it) has `pages: read` next to `contents: read`; without it the pages would link
+  under a fallback path. On `main`, before the upload, a step fails the run when `_site/index.html`
+  does not link its stylesheet under `/<repository name>/`, so a site with broken links is never
+  published. The `.md` originals are not published (`remove_originals`).
+- **Unbreakable links:** `mdwrap.wrap` never breaks a line inside an inline link or image,
+  `[text](target)`, because `jekyll-relative-links` does not convert a link whose text is over two
+  lines; the link may make the line longer than 100 characters, as a long URL already could.
+- **Not compared:** the site is a build artifact and is never compared, as decided above.

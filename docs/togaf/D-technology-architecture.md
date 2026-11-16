@@ -30,6 +30,9 @@ Business, application and technology layers of the factory, top to bottom.
 
 ![Factory overview](../architecture/views/id-view-layered.png)
 
+Clickable version:
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-layered.html)
+
 | ID | Name | Type | Decisions | Issues | Crate / code | Release | Other documents |
 |---|---|---|---|---|---|---|---|
 | <a id="id-app-comp-conductor"></a>`id-app-comp-conductor` | Conductor agent (Fable) | ApplicationComponent | [ADR 0004](../adr/0004-agent-team-and-cost-routing.md) |  |  |  | [C. Information Systems Architecture](C-information-systems-architecture.md#id-app-comp-conductor) |
