@@ -103,4 +103,5 @@ Open `build/architecture/model.archimate` in Archi to review. To change the mode
 The architecture documents (TOGAF and ADRs), the diagrams and the clickable HTML report of the model
 are published at <https://num-bbro.github.io/rust-factory/>, rebuilt on every merge to `main` by
 `.github/workflows/pages.yml`. The model file is there too, for download. The site's base URL is the
-`Site` property of the model.
+`Site` property of the model. A "Clickable version" link under a diagram opens the
+report's page for that diagram; the full report with its navigation is at `report/index.html`.

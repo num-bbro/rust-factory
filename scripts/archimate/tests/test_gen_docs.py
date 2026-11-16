@@ -837,6 +837,51 @@ SITE = "https://example.github.io/proj/"
 REPORT = f"{SITE}report/id-model-t/views/"
 
 
+class WrapLinks(unittest.TestCase):
+    """A link `[text](target)` or image is one unit: wrap never breaks inside it."""
+
+    def wrapped(self, text: str, width: int = 40) -> list[str]:
+        out = mdwrap.wrap(text, width)
+        self.assertEqual(mdwrap.unwrap(out), mdwrap.unwrap(text))
+        return out.split("\n")
+
+    def test_a_long_link_text_near_the_wrap_column_stays_whole(self):
+        text = "Some words before [ADR 0009 as built in step seven](0009-x.md) and after."
+        lines = self.wrapped(text)
+        self.assertIn("[ADR 0009 as built in step seven](0009-x.md)", "\n".join(lines).split("\n")[1])
+        self.assertTrue(all("[" not in ln or "](" in ln for ln in lines))
+        self.assertEqual(len(lines), 3)
+
+    def test_two_links_in_one_paragraph(self):
+        text = "See [first link text](a.md) and then [second link text](b.md) for more."
+        lines = self.wrapped(text)
+        self.assertIn("[first link text](a.md)", lines[0] + lines[1])
+        for link in ("[first link text](a.md)", "[second link text](b.md)"):
+            self.assertTrue(any(link in ln for ln in lines), link)
+
+    def test_a_link_in_a_list_item(self):
+        lines = self.wrapped("- A list item with a [link with a long text](target.md) inside.")
+        self.assertTrue(any("[link with a long text](target.md)" in ln for ln in lines))
+        self.assertTrue(all(ln.startswith("  ") for ln in lines[1:]))
+
+    def test_an_image_is_one_unit(self):
+        lines = self.wrapped("Before the picture ![alt text of the picture](x.png) after.")
+        self.assertTrue(any("![alt text of the picture](x.png)" in ln for ln in lines))
+
+    def test_square_brackets_that_are_not_a_link_still_break(self):
+        lines = self.wrapped("Text [not a link at all, just words in brackets] and more words.")
+        self.assertGreater(len(lines), 1)
+        self.assertFalse(any("[not a link at all, just words in brackets]" in ln for ln in lines))
+
+    def test_a_link_text_with_a_code_span(self):
+        lines = self.wrapped("Read [the `some code` part of it](t.md) now and then.")
+        self.assertTrue(any("[the `some code` part of it](t.md)" in ln for ln in lines))
+
+    def test_a_link_longer_than_the_width_goes_over_long(self):
+        lines = self.wrapped("[a link text that is longer than the width of twenty](t.md)", 20)
+        self.assertEqual(lines, ["[a link text that is longer than the width of twenty](t.md)"])
+
+
 class SiteLinks(unittest.TestCase):
     def test_without_the_property_no_site_link_is_generated(self):
         pages, problems = togaf()
@@ -873,15 +918,17 @@ class SiteLinks(unittest.TestCase):
         self.assertEqual(problems, ["model 'id-model-t': property Site is given more than once"])
 
     def test_a_site_property_on_another_element_is_ignored(self):
-        xml = with_site(togaf_model(), SITE).replace(
-            '<element identifier="id-app-comp-a" xsi:type="ApplicationComponent"><name xml:lang='
-            '"en">a</name>', '<element identifier="id-app-comp-a" xsi:type="ApplicationComponent">'
-            '<name xml:lang="en">a</name><properties><property propertyDefinitionRef="p-site">'
-            '<value xml:lang="en">nonsense</value></property></properties>', 1)
-        self.assertNotEqual(xml, with_site(togaf_model(), SITE))
-        self.assertEqual(gen_docs.site_of(exchange.read(xml.encode())), SITE)
-        self.assertEqual(gen_docs.site_problems(exchange.read(xml.encode())), [])
-        self.assertEqual(gen_docs.site_of(exchange.read(togaf_model().encode())), "")
+        stray = ('<element identifier="id-app-comp-a" xsi:type="ApplicationComponent">'
+                 '<name xml:lang="en">a</name><properties><property propertyDefinitionRef="p-site">'
+                 '<value xml:lang="en">http://stray</value></property></properties>')
+        plain = ('<element identifier="id-app-comp-a" xsi:type="ApplicationComponent">'
+                 '<name xml:lang="en">a</name>')
+        for root in ((SITE,), ()):
+            xml = with_site(togaf_model(), *root)
+            self.assertIn(plain, xml)
+            model = exchange.read(xml.replace(plain, stray, 1).encode())
+            self.assertEqual(gen_docs.site_of(model), root[0] if root else "")
+            self.assertEqual(gen_docs.site_problems(model), [])
 
 
 class SiteCheck(unittest.TestCase):

@@ -617,4 +617,12 @@ refine the decision:
   (`report/id-model-factory/views/<view id>.html`), and the TOGAF and ADR indexes link the site's
   home; without it no site link is generated. `gen_docs.py --check` refuses a value that is not an
   `https://` URL ending in `/`. Every site URL is made by `href`.
+- **Base path:** the Jekyll action learns the site's base path from the Pages API, so the `build`
+  job (and only it) has `pages: read` next to `contents: read`; without it the pages would link
+  under a fallback path. On `main`, before the upload, a step fails the run when `_site/index.html`
+  does not link its stylesheet under `/<repository name>/`, so a site with broken links is never
+  published. The `.md` originals are not published (`remove_originals`).
+- **Unbreakable links:** `mdwrap.wrap` never breaks a line inside an inline link or image,
+  `[text](target)`, because `jekyll-relative-links` does not convert a link whose text is over two
+  lines; the link may make the line longer than 100 characters, as a long URL already could.
 - **Not compared:** the site is a build artifact and is never compared, as decided above.

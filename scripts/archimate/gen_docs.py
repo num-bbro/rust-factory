@@ -403,13 +403,13 @@ def href(from_file: str, to_file: str, anchor: str = "", site: str = "") -> str:
     """The link from page `from_file` to `to_file` (both repository paths), at `anchor`.
 
     Every link of the generated pages is made here. With `site` (the base URL, ending in `/`),
-    `to_file` is a path of the site and the link is absolute.
+    `to_file` is a path of the site (no anchor) and the link is absolute.
     """
-    fragment = f"#{anchor}" if anchor else ""
     if site:
-        return f"{site}{to_file}{fragment}"
+        return f"{site}{to_file}"
     if to_file == from_file and anchor:
         return f"#{anchor}"
+    fragment = f"#{anchor}" if anchor else ""
     return posixpath.relpath(to_file, posixpath.dirname(from_file)) + fragment
 
 
@@ -602,7 +602,7 @@ def render(model: exchange.Model) -> tuple[dict[str, str], list[str]]:
     pages[INDEX] = index(found, site)
     docs, doc_problems = documents(model)
     doc_problems += line_breaks(model) + view_problems(model, docs) + site_problems(model)
-    togaf = Togaf(model, docs, found, released_in, site if not site_problems(model) else "")
+    togaf = Togaf(model, docs, found, released_in, site)
     pages.update({d.file: togaf.page(d) for d in togaf.docs})
     pages[TOGAF_INDEX] = togaf.index()
     return dict(sorted(pages.items())), problems + doc_problems
