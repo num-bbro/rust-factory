@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Reservation API
-  version: 1.0.0
+  version: 1.1.0
 paths:
   /health:
     get:
@@ -15,6 +15,29 @@ paths:
               schema: { type: string, const: ok }
               example: ok
   /reservations:
+    get:
+      operationId: list
+      summary: List all reservations by start time
+      description: >-
+        Every reservation made and not cancelled, once each, ordered by start time; an empty
+        schedule answers an empty list. Listing changes nothing (ADR 0012).
+      responses:
+        "200":
+          description: The reservations, ordered by start time.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reservations]
+                properties:
+                  reservations:
+                    type: array
+                    items: { $ref: "#/components/schemas/Reservation" }
+              example:
+                reservations:
+                  - { id: 2, start: 480, end: 540 }
+                  - { id: 1, start: 540, end: 600 }
+        "503": { $ref: "#/components/responses/Problem" }
     post:
       operationId: book
       summary: Book a slot
@@ -86,6 +109,14 @@ components:
         text/plain:
           schema: { type: string }
   schemas:
+    Reservation:
+      description: A reservation; times are minutes since midnight, the slot is [start, end).
+      type: object
+      required: [id, start, end]
+      properties:
+        id: { type: integer, minimum: 0 }
+        start: { type: integer, minimum: 0, maximum: 1439 }
+        end: { type: integer, minimum: 1, maximum: 1440 }
     Problem:
       type: object
       required: [error]
