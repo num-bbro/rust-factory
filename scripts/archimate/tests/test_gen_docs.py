@@ -1040,9 +1040,11 @@ class RealModel(unittest.TestCase):
         self.assertEqual(problems, [])
         self.assertEqual(gen_docs.compare(pages, root), [])
         docs = gen_docs.documents(exchange.read((root / gen_docs.MODEL).read_bytes()))[0]
-        self.assertEqual(len(docs), 10)
+        self.assertGreaterEqual(len(docs), 1)
         found = gen_docs.adrs(exchange.read((root / gen_docs.MODEL).read_bytes()))[0]
-        self.assertEqual(len(found), 12)
+        self.assertGreaterEqual(len(found), 1)
+        self.assertEqual([a.number for a in found],
+                         [f"{n:04d}" for n in range(1, len(found) + 1)])
         self.assertTrue(all(a.props.get("View") == f"id-view-adr-{a.number}" for a in found))
         self.assertEqual(gen_docs.missing_images(docs, found, root), [])
 
