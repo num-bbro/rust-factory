@@ -104,3 +104,9 @@ where
 - **(D) A lock in the HTTP adapter**: protects only HTTP callers; any other driving adapter (a CLI,
   a queue consumer) would bring the bug back, and correctness would depend on how the binary is
   wired rather than on the port.
+
+## Notes
+- 2026-11-17: ADR 0012 ([`id-mot-adr-0012`](0012-list-reservations-by-get.md), Proposed) adds a
+  read-only operation to the port beside `update`, for listing reservations (story #80). It does not
+  supersede this ADR: every change still goes through `update`, and `load` and `save` stay removed;
+  only the premise above that nothing reads the schedule without writing it no longer holds.

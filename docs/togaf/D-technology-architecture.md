@@ -18,8 +18,8 @@ hosts.
 The sample reservation service
 ([`id-app-comp-reservation-svc`](A-architecture-vision.md#id-app-comp-reservation-svc)) runs as a
 container under Podman ([`id-tech-sw-podman`](#id-tech-sw-podman)) on the pilot host
-([`id-tech-node-pilot`](#id-tech-node-pilot)) and production hosts. Epic #17 needs no technology
-change.
+([`id-tech-node-pilot`](#id-tech-node-pilot)) and production hosts. Epics #17 and #79 need no
+technology change.
 
 ## Open questions
 - _none yet_
