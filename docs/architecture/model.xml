@@ -13,7 +13,7 @@
   <elements>
     <element identifier="id-app-comp-application" xsi:type="ApplicationComponent">
       <name xml:lang="en">Use cases (crate application)</name>
-      <documentation xml:lang="en">One use case per user action, plus the ScheduleRepository port, whose single update operation changes the schedule atomically (ADR 0008).</documentation>
+      <documentation xml:lang="en">One use case per user action, plus the ScheduleRepository port: its update operation changes the schedule atomically (ADR 0008), and its read-only operation lets a use case read the schedule without taking the write path (ADR 0012).</documentation>
       <properties>
         <property propertyDefinitionRef="propid-crate">
           <value xml:lang="en">crates/application</value>
@@ -31,7 +31,7 @@
     </element>
     <element identifier="id-app-comp-db" xsi:type="ApplicationComponent">
       <name xml:lang="en">Persistence adapter (crate adapters-db)</name>
-      <documentation xml:lang="en">Implements the ScheduleRepository port; in-memory for now, holding one lock for each whole update.</documentation>
+      <documentation xml:lang="en">Implements the ScheduleRepository port; in-memory for now, holding one lock for each whole update or read.</documentation>
       <properties>
         <property propertyDefinitionRef="propid-crate">
           <value xml:lang="en">crates/adapters-db</value>
@@ -40,7 +40,7 @@
     </element>
     <element identifier="id-app-comp-domain" xsi:type="ApplicationComponent">
       <name xml:lang="en">Domain (crate domain)</name>
-      <documentation xml:lang="en">Pure business rules: time slots, no overlapping reservations, booking and cancelling in a Schedule.</documentation>
+      <documentation xml:lang="en">Pure business rules: time slots, no overlapping reservations, booking and cancelling in a Schedule, which gives its reservations ordered by start time (ADR 0012).</documentation>
       <properties>
         <property propertyDefinitionRef="propid-crate">
           <value xml:lang="en">crates/domain</value>
@@ -106,7 +106,7 @@
     </element>
     <element identifier="id-app-data-schedule" xsi:type="DataObject">
       <name xml:lang="en">Schedule</name>
-      <documentation xml:lang="en">The day's reservations (domain type Schedule), changed only through the atomic update of ScheduleRepository (ADR 0008): read, change and store happen as one step, and a refused change stores nothing. Reservation ids are unique only within one running instance (storage is in memory).</documentation>
+      <documentation xml:lang="en">The day's reservations (domain type Schedule), changed only through the atomic update of ScheduleRepository (ADR 0008): read, change and store happen as one step, and a refused change stores nothing. Listing reads it through the port's read-only operation, which stores nothing (ADR 0012). Reservation ids are unique only within one running instance (storage is in memory).</documentation>
       <properties>
         <property propertyDefinitionRef="propid-crate">
           <value xml:lang="en">crates/domain</value>
@@ -121,7 +121,7 @@
     </element>
     <element identifier="id-app-intf-reservation-api" xsi:type="ApplicationInterface">
       <name xml:lang="en">Reservations HTTP API</name>
-      <documentation xml:lang="en">JSON over HTTP: POST /reservations books a slot, DELETE /reservations/{id} cancels one, GET /health answers probes. Rule, not-found and storage errors carry an {error} JSON body; requests the framework rejects (a non-numeric id, malformed JSON) get a plain-text body (ADR 0007). The contract is the OpenAPI specification docs/api/openapi.yaml, checked against the running service (ADR 0010).</documentation>
+      <documentation xml:lang="en">JSON over HTTP: POST /reservations books a slot, GET /reservations lists all reservations by start time (ADR 0012), DELETE /reservations/{id} cancels one, GET /health answers probes. Rule, not-found and storage errors carry an {error} JSON body; requests the framework rejects (a non-numeric id, malformed JSON) get a plain-text body (ADR 0007). The contract is the OpenAPI specification docs/api/openapi.yaml, checked against the running service (ADR 0010).</documentation>
     </element>
     <element identifier="id-app-svc-book" xsi:type="ApplicationService">
       <name xml:lang="en">Book a slot</name>
@@ -144,9 +144,24 @@
         </property>
       </properties>
     </element>
+    <element identifier="id-app-svc-list" xsi:type="ApplicationService">
+      <name xml:lang="en">List the reservations</name>
+      <documentation xml:lang="en">Use case ListReservations, GET /reservations: 200 with {"reservations": [{"id", "start", "end"}]}, ordered by start time, times in minutes since midnight; an empty schedule gives an empty list. Reads the schedule through the port's read-only operation and changes nothing (ADR 0012).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-crate">
+          <value xml:lang="en">crates/application</value>
+        </property>
+        <property propertyDefinitionRef="propid-code">
+          <value xml:lang="en">ListReservations</value>
+        </property>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#79</value>
+        </property>
+      </properties>
+    </element>
     <element identifier="id-bus-act-customer" xsi:type="BusinessActor">
       <name xml:lang="en">Customer</name>
-      <documentation xml:lang="en">Reserves and cancels time slots through the reservation API.</documentation>
+      <documentation xml:lang="en">Reserves, lists and cancels time slots through the reservation API.</documentation>
     </element>
     <element identifier="id-bus-act-human" xsi:type="BusinessActor">
       <name xml:lang="en">Human approver</name>
@@ -188,6 +203,15 @@
     <element identifier="id-bus-proc-lifecycle" xsi:type="BusinessProcess">
       <name xml:lang="en">Software delivery lifecycle</name>
       <documentation xml:lang="en">From business need to production rollout.</documentation>
+    </element>
+    <element identifier="id-bus-proc-list" xsi:type="BusinessProcess">
+      <name xml:lang="en">List the reservations</name>
+      <documentation xml:lang="en">See every reservation made and not cancelled, with its id and time slot, ordered by start time, to know which slots are taken or to find a reservation to cancel. Listing changes nothing. One shared schedule: no customer identity, filtering or paging (out of scope of epic #79).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#79</value>
+        </property>
+      </properties>
     </element>
     <element identifier="id-bus-proc-plan" xsi:type="BusinessProcess">
       <name xml:lang="en">Plan and design</name>
@@ -262,6 +286,8 @@ The factory's sample product is a reservation service for time slots. Epic #17, 
 - Goal: customers can free slots they no longer need (`id-mot-goal-free-slots`), measured by the outcome "a cancelled slot can be booked again immediately" (`id-mot-out-rebook`).
 - Out of scope: refunds, notifications, cancellation deadlines.
 
+Epic #79, "Customers can list the reservations", follows: customers and the front desk cannot see which slots are taken, and a customer who lost a reservation id cannot find it again to cancel. Same stakeholders; success measure: every reservation made and not cancelled can be read back through the API, with its id and time slot (story #80, `id-mot-req-list`). Out of scope: customer identity, filtering, paging, search and the history of cancelled reservations; the service keeps one shared schedule.
+
 ## Open questions
 - _none yet_</documentation>
       <properties>
@@ -302,6 +328,8 @@ For a project, each **user story** maps to business behaviour here; business rul
 
 ### Sample domain: reservations
 A customer (`id-bus-act-customer`) reserves a slot (`id-bus-proc-reserve`) and, since epic #17, can cancel it again (`id-bus-proc-cancel`); both work on a reservation (`id-bus-obj-reservation`). Business rules for cancelling (stories #18, #19): only the named reservation is removed, its slot is free at once, no history is kept, and cancelling a reservation that does not exist (or no longer exists) is refused and changes nothing. Decision and alternatives: ADR 0007.
+
+Since epic #79 the customer can also list the reservations (`id-bus-proc-list`), which only reads them. Business rules (story #80): every reservation made and not cancelled is listed once with its id, start and end, ordered by start time; listing changes nothing; one shared schedule, with no customer identity, filtering or paging. Decision and alternatives: ADR 0012 (`id-mot-adr-0012`).
 
 ## Open questions
 - _none yet_</documentation>
@@ -372,13 +400,15 @@ For a project, each application component maps to a crate in the Cargo workspace
 ### Sample domain: reservations
 The reservation service (`id-app-comp-reservation-svc`, crate `app`) is composed of one component per crate, following ADR 0003: domain (`id-app-comp-domain`), use cases (`id-app-comp-application`), HTTP adapter (`id-app-comp-http`) and persistence adapter (`id-app-comp-db`). The Serving relationships between these crate components show the run-time call direction, not the Cargo dependency direction, which ADR 0003 governs. So `id-rel-068` (the persistence adapter serves the use cases) is not a layering violation: at run time the use cases call the adapter through their `ScheduleRepository` port, while in Cargo `adapters-db` depends on `application` (dependency inversion).
 
-Customers use the service through the reservations HTTP API (`id-app-intf-reservation-api`), which is part of the HTTP adapter. The API offers two application services: book a slot (`id-app-svc-book`) and, from epic #17, cancel a reservation (`id-app-svc-cancel`). The data is the day's schedule (`id-app-data-schedule`), which realises the reservation business object.
+Customers use the service through the reservations HTTP API (`id-app-intf-reservation-api`), which is part of the HTTP adapter. The API offers three application services: book a slot (`id-app-svc-book`), from epic #17 cancel a reservation (`id-app-svc-cancel`), and from epic #79 list the reservations (`id-app-svc-list`). The data is the day's schedule (`id-app-data-schedule`), which realises the reservation business object.
 
 Cancelling is `DELETE /reservations/{id}`: `204 No Content` on success, `404 Not Found` with the usual `{error}` body for an unknown or already cancelled id; a non-numeric id gets the framework's plain-text `400`. The reservation is removed, not marked; see ADR 0007 for the options considered. The domain rule already exists (`Schedule::cancel`); the change adds a use case and an HTTP route.
 
+Listing is `GET /reservations`: `200 OK` with `{"reservations": [{"id", "start", "end"}]}`, times in minutes since midnight as in booking, ordered by start time; an empty schedule gives an empty list, not `404`. The list sits inside an object so that paging can be added later without breaking clients. The domain guarantees the order (`Schedule::reservations()`), and the use case reads the schedule through a read-only operation of the `ScheduleRepository` port beside `update`, so a list never takes the write path; see ADR 0012 (`id-mot-adr-0012`). The contract goes from `1.0.0` to `1.1.0` in the PR that adds the route.
+
 The contract of the API is the OpenAPI 3.1 specification `docs/api/openapi.yaml`, written by hand: every route, status code, content type and body, including the framework's plain-text rejections. The acceptance check runs Schemathesis against the running container to prove that the service answers as the file says, and a PR that changes HTTP behaviour changes the file with it; see ADR 0010 (`id-mot-adr-0010`, change request #60).
 
-Every change to the schedule goes through one atomic `update` operation on the `ScheduleRepository` port: reading, changing and storing the schedule happen as one step, and a change refused by a business rule stores nothing. Concurrent requests therefore cannot lose, duplicate or bring back reservations (bug #26, fixed by ADR 0008). Each host still keeps its own in-memory schedule.
+Every change to the schedule goes through one atomic `update` operation on the `ScheduleRepository` port: reading, changing and storing the schedule happen as one step, and a change refused by a business rule stores nothing. Concurrent requests therefore cannot lose, duplicate or bring back reservations (bug #26, fixed by ADR 0008). Reads that change nothing use the port's read-only operation (ADR 0012), which runs under the same lock and stores nothing. Each host still keeps its own in-memory schedule.
 
 ## Open questions
 - _none yet_</documentation>
@@ -399,7 +429,7 @@ Every change to the schedule goes through one atomic `update` operation on the `
           <value xml:lang="en">id-view-layered</value>
         </property>
         <property propertyDefinitionRef="propid-view">
-          <value xml:lang="en">id-view-reservation-cancel</value>
+          <value xml:lang="en">id-view-reservation-app</value>
         </property>
       </properties>
     </element>
@@ -511,7 +541,7 @@ Principles for this factory:
 ## Content
 Requirements live as GitHub issues (forms in `.github/ISSUE_TEMPLATE/`), prioritised with MoSCoW labels and tracked on the Project board through Backlog → Released. Important requirements are also ArchiMate Requirement elements, linked to the elements that realise them.
 
-Sample domain: the stories of epic #17 are requirements in the model, so the chain story → requirement → application service is visible in `id-view-reservation-cancel`: #18 is `id-mot-req-cancel`, #19 is `id-mot-req-cancel-refused`, both realised by `id-app-svc-cancel`.
+Sample domain: the stories of epic #17 are requirements in the model, so the chain story → requirement → application service is visible in `id-view-reservation-cancel`: #18 is `id-mot-req-cancel`, #19 is `id-mot-req-cancel-refused`, both realised by `id-app-svc-cancel`. Story #80 of epic #79 is `id-mot-req-list`, realised by `id-app-svc-list`.
 
 ## Open questions
 - _none yet_</documentation>
@@ -545,7 +575,7 @@ Sample domain: the stories of epic #17 are requirements in the model, so the cha
 ## Content
 Factory technology: developer workstations (Arch / Ubuntu-WSL, `id-tech-node-workstation`) with the pinned Rust toolchain and Archi; release images in GHCR (`id-tech-svc-ghcr`); Podman on pilot and production hosts.
 
-The sample reservation service (`id-app-comp-reservation-svc`) runs as a container under Podman (`id-tech-sw-podman`) on the pilot host (`id-tech-node-pilot`) and production hosts. Epic #17 needs no technology change.
+The sample reservation service (`id-app-comp-reservation-svc`) runs as a container under Podman (`id-tech-sw-podman`) on the pilot host (`id-tech-node-pilot`) and production hosts. Epics #17 and #79 need no technology change.
 
 ## Open questions
 - _none yet_</documentation>
@@ -1029,7 +1059,10 @@ where
 ## Option details
 - **(B) Optimistic version check with retry**: needs a version in the port and a retry loop (with a limit, and an error when it is reached) in every use case; under contention requests spin and can still fail. More code and more behaviour to test, for a store that can simply lock.
 - **(C) A shared lock inside the use cases**: puts locking policy into `application`, protects only callers that share that lock (two `BookSlot` values, or another process, would not), and leaves load–change–save in the port for the next caller to misuse.
-- **(D) A lock in the HTTP adapter**: protects only HTTP callers; any other driving adapter (a CLI, a queue consumer) would bring the bug back, and correctness would depend on how the binary is wired rather than on the port.</documentation>
+- **(D) A lock in the HTTP adapter**: protects only HTTP callers; any other driving adapter (a CLI, a queue consumer) would bring the bug back, and correctness would depend on how the binary is wired rather than on the port.
+
+## Notes
+- 2026-11-17: ADR 0012 (`id-mot-adr-0012`, Proposed) adds a read-only operation to the port beside `update`, for listing reservations (story #80). It does not supersede this ADR: every change still goes through `update`, and `load` and `save` stay removed; only the premise above that nothing reads the schedule without writing it no longer holds.</documentation>
       <properties>
         <property propertyDefinitionRef="propid-status">
           <value xml:lang="en">Accepted</value>
@@ -1467,6 +1500,83 @@ Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mo
         </property>
       </properties>
     </element>
+    <element identifier="id-mot-adr-0012" xsi:type="Constraint">
+      <name xml:lang="en">ADR 0012: List reservations by `GET`, read through the port</name>
+      <documentation xml:lang="en">## Context and problem
+Epic #79: customers and the front desk cannot see which slots are already reserved, and a customer who lost a reservation id cannot find it again to cancel. Story #80 (`id-mot-req-list`) asks for every reservation made and not cancelled, with its id, start and end, ordered by start time; listing changes nothing. Three things are not decided yet: the shape of the HTTP answer on the reservations API (`id-app-intf-reservation-api`), who guarantees the order, and how a use case reads the schedule at all, because the port `ScheduleRepository` has only the atomic `update` of ADR 0008 (`id-mot-adr-0008`), which removed `load` on the premise that nothing reads the schedule without writing it. Today `Schedule::reservations()` gives the reservations in insertion order, with no guarantee. The human approved the plan at gate 1 on 2026-11-17; this ADR records it.
+
+## Decision drivers
+- Clients must not break when paging or filtering is added later (both out of scope of epic #79).
+- The order is a business rule of story #80, so it belongs in the domain (ADR 0003), tested where the rule lives, not in an adapter or a handler.
+- A list must not be able to change or store the schedule, by construction, and must see a consistent schedule, never half of a concurrent change.
+- Consistent with the existing API: times are integer minutes since midnight and ids are integers, as in `POST /reservations`; the contract changes with the behaviour (ADR 0010, `id-mot-adr-0010`).
+- Smallest change; the service keeps one shared schedule and no notion of a customer (epic #79).
+
+## Options considered
+### Response shape
+1. **(A1) An object holding the list**: `{"reservations": [{"id": 1, "start": 540, "end": 600}]}`.
+2. **(A2) A bare JSON array**: `[{"id": 1, "start": 540, "end": 600}]`; adding paging later (a cursor, a total) would change the top-level type and break every client.
+
+### Order
+1. **(B1) By start time, guaranteed by the domain**: `Schedule` promises the order, and the use case and adapters pass it through.
+2. **(B2) By id**: follows booking order, which says nothing about the day; a client that wants the day in order sorts itself.
+3. **(B3) Unspecified**: today's insertion order, which clients would come to rely on anyway, and which story #80 rules out.
+
+### Read access
+1. **(C1) A read-only operation on the port beside `update`**: it can only read the current schedule, and it stores nothing.
+2. **(C2) Listing through `update` with a change that changes nothing**: no port change, but every list takes the write path, clones the schedule and stores it back, and the type no longer tells readers from writers.
+3. **(C3) Bring back `load`, returning a copy of the schedule** (added at drafting, see Notes): simple to call, but it reopens the load–change–save pattern that caused bug #26 and that ADR 0008 removed on purpose.
+
+### Empty schedule
+1. **(D1) `200` with an empty list.**
+2. **(D2) `404 Not Found`** (added at drafting, see Notes): the collection exists even when it is empty, and a client would have to treat an error as a normal answer.
+
+## Decision
+Chosen: **A1, B1, C1 and D1**, because the object leaves room for paging without a breaking change, the order is a business rule and is kept where the other rules are, a read-only operation makes "listing changes nothing" a property of the types rather than of each caller's discipline, and an empty schedule is a normal state.
+
+- **Route:** `GET /reservations` on `id-app-intf-reservation-api`, realised by a new use case `ListReservations` in `crates/application` (`id-app-svc-list`). Answer `200 OK`, `application/json`, body `{"reservations": [{"id": 1, "start": 540, "end": 600}]}`: `id` as the `POST /reservations` answer gives it, `start` and `end` in minutes since midnight as in the booking request. Every reservation made and not cancelled appears exactly once; the object has no other field yet.
+- **Order:** ascending `start`. Reservations never overlap (the booking rule), so no two share a start and the order needs no tie-break. The domain guarantees it: `Schedule::reservations()` (`id-app-data-schedule`, crate `domain`) is documented and tested to yield reservations by start time, whatever the booking order; the use case and adapters neither sort nor reorder. Whether the domain keeps its list sorted or sorts when asked is left to the implementing task.
+- **Read access:** the port `ScheduleRepository` (`id-app-comp-application`) gains one read-only operation beside `update`. It runs under the same lock as `update` (in the in-memory adapter, `id-app-comp-db`), so a read sees the schedule as it is between two changes; it cannot change the schedule, and it stores nothing. Its name, signature and error style are left to task #82, which follows the style of `update` (ADR 0008) unless it states a reason not to.
+- **Errors:** a storage failure answers `503 Service Unavailable` with `{error}`, as the other routes do (ADR 0007, ADR 0010); added at drafting, see Notes.
+- **Empty schedule:** `200` with `{"reservations": []}`. It is checked by a unit test, not by an acceptance scenario, because the acceptance tests share one running container (story #80).
+- **Contract:** `docs/api/openapi.yaml` gains `get` on `/reservations`, and `info.version` goes from `1.0.0` to `1.1.0`, a compatible addition (ADR 0010), in the PR that adds the route, not before.
+- **ADR 0008 stays in force:** every change still goes through `update`. This ADR revises only the premise of its decision that nothing reads the schedule without writing it: reads now exist, and they get their own operation, which cannot store, rather than a `load` that could be paired with a `save` again.
+- **Out of scope**, as epic #79 sets it (not decided here): customer identity, filtering, paging and search, and the history of cancelled reservations.
+
+## Consequences
+- Good: a customer can see which slots are taken and find a lost reservation id again, which is the success measure of epic #79.
+- Good: clients can rely on the order, which is tested in the domain, next to the overlap rule that makes it total.
+- Good: paging or filtering can later add fields beside `reservations` without breaking clients.
+- Good: a list cannot change or store the schedule.
+- Bad: the port gets a second operation that every adapter and every test double must implement.
+- Bad: every caller sees every reservation and its id, and anyone who knows an id can cancel it (ADR 0007, `id-mot-adr-0007`): the list makes those ids easy to find. Accepted for the sample domain, which has no customer identity; a later epic with customer identity must revisit both decisions.
+- Bad: the whole list comes in one answer. Fine for one day's reservations; paging needs a new ADR if the schedule grows.
+- Bad: in the in-memory adapter a read holds the same lock as the changes, so a list briefly waits for, and delays, bookings and cancellations on that host.
+- Follow-up: task #82 adds the order guarantee in `crates/domain`, the read operation (its name and signature) and `ListReservations` in `crates/application`, and the operation in `crates/adapters-db`; task #83 adds the route, the contract `1.1.0` and the acceptance scenarios of story #80.
+
+## Notes
+- Added at drafting: three points go beyond the plan approved at gate 1 on 2026-11-17 and were added by the architect agent: the `503` rule for a storage failure, and the rejected options C3 (bring back `load`) and D2 (`404` for an empty schedule). The human's sign-off of PR #84 confirms them.</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-status">
+          <value xml:lang="en">Proposed</value>
+        </property>
+        <property propertyDefinitionRef="propid-date">
+          <value xml:lang="en">2026-11-17</value>
+        </property>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#80 (task #81)</value>
+        </property>
+        <property propertyDefinitionRef="propid-deciders">
+          <value xml:lang="en">human approver (plan approved at gate 1 on 2026-11-17), architect agent</value>
+        </property>
+        <property propertyDefinitionRef="propid-file">
+          <value xml:lang="en">docs/adr/0012-list-reservations-by-get.md</value>
+        </property>
+        <property propertyDefinitionRef="propid-view">
+          <value xml:lang="en">id-view-adr-0012</value>
+        </property>
+      </properties>
+    </element>
     <element identifier="id-mot-drv-blocked-slots" xsi:type="Driver">
       <name xml:lang="en">Unused slots stay blocked</name>
       <documentation xml:lang="en">Customers who can no longer come have no way to free their slot, so nobody else can book it (epic #17).</documentation>
@@ -1524,6 +1634,15 @@ Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mo
       <properties>
         <property propertyDefinitionRef="propid-issue">
           <value xml:lang="en">#19</value>
+        </property>
+      </properties>
+    </element>
+    <element identifier="id-mot-req-list" xsi:type="Requirement">
+      <name xml:lang="en">List all reservations by start time</name>
+      <documentation xml:lang="en">Every reservation made and not cancelled is listed once, with its id, start and end, ordered by start time; an empty schedule gives an empty list, and listing changes nothing (story #80).</documentation>
+      <properties>
+        <property propertyDefinitionRef="propid-issue">
+          <value xml:lang="en">#80</value>
         </property>
       </properties>
     </element>
@@ -1724,6 +1843,22 @@ Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mo
     <relationship identifier="id-rel-148" xsi:type="Influence" source="id-mot-goal-traceable" target="id-mot-adr-0011"/>
     <relationship identifier="id-rel-149" xsi:type="Influence" source="id-mot-req-togaf" target="id-mot-adr-0011"/>
     <relationship identifier="id-rel-150" xsi:type="Realization" source="id-tech-sw-archi" target="id-mot-adr-0011"/>
+    <relationship identifier="id-rel-151" xsi:type="Assignment" source="id-bus-act-customer" target="id-bus-proc-list"/>
+    <relationship identifier="id-rel-152" xsi:type="Access" source="id-bus-proc-list" target="id-bus-obj-reservation" accessType="Read"/>
+    <relationship identifier="id-rel-153" xsi:type="Realization" source="id-app-comp-application" target="id-app-svc-list"/>
+    <relationship identifier="id-rel-154" xsi:type="Assignment" source="id-app-intf-reservation-api" target="id-app-svc-list"/>
+    <relationship identifier="id-rel-155" xsi:type="Serving" source="id-app-svc-list" target="id-bus-proc-list"/>
+    <relationship identifier="id-rel-156" xsi:type="Realization" source="id-app-svc-list" target="id-mot-req-list"/>
+    <relationship identifier="id-rel-157" xsi:type="Access" source="id-app-svc-list" target="id-app-data-schedule" accessType="Read"/>
+    <relationship identifier="id-rel-158" xsi:type="Association" source="id-mot-sh-customer" target="id-mot-req-list"/>
+    <relationship identifier="id-rel-159" xsi:type="Realization" source="id-app-svc-list" target="id-mot-adr-0010"/>
+    <relationship identifier="id-rel-160" xsi:type="Realization" source="id-app-svc-list" target="id-mot-adr-0012"/>
+    <relationship identifier="id-rel-161" xsi:type="Realization" source="id-app-intf-reservation-api" target="id-mot-adr-0012"/>
+    <relationship identifier="id-rel-162" xsi:type="Realization" source="id-app-comp-application" target="id-mot-adr-0012"/>
+    <relationship identifier="id-rel-163" xsi:type="Realization" source="id-app-comp-db" target="id-mot-adr-0012"/>
+    <relationship identifier="id-rel-164" xsi:type="Realization" source="id-app-data-schedule" target="id-mot-adr-0012"/>
+    <relationship identifier="id-rel-165" xsi:type="Realization" source="id-bus-proc-list" target="id-mot-adr-0012"/>
+    <relationship identifier="id-rel-166" xsi:type="Influence" source="id-mot-req-list" target="id-mot-adr-0012"/>
   </relationships>
   <propertyDefinitions>
     <propertyDefinition identifier="propid-artifacts" type="string">
@@ -2087,42 +2222,53 @@ Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mo
       </view>
       <view identifier="id-view-adr-0010" xsi:type="Diagram">
         <name xml:lang="en">ADR 0010: what the decision applies to</name>
-        <node identifier="id-view-adr-0010-band-0" xsi:type="Container" x="20" y="20" w="420" h="309">
+        <node identifier="id-view-adr-0010-band-0" xsi:type="Container" x="20" y="20" w="640" h="309">
           <label xml:lang="en">Motivation</label>
-          <node identifier="id-view-adr-0010-n-id-mot-goal-healthy" xsi:type="Element" elementRef="id-mot-goal-healthy" x="105" y="62" w="160" h="63"/>
-          <node identifier="id-view-adr-0010-n-id-mot-adr-0010" xsi:type="Element" elementRef="id-mot-adr-0010" x="105" y="195" w="160" h="114"/>
+          <node identifier="id-view-adr-0010-n-id-mot-goal-healthy" xsi:type="Element" elementRef="id-mot-goal-healthy" x="194" y="62" w="160" h="63"/>
+          <node identifier="id-view-adr-0010-n-id-mot-adr-0010" xsi:type="Element" elementRef="id-mot-adr-0010" x="194" y="195" w="160" h="114"/>
         </node>
-        <node identifier="id-view-adr-0010-band-1" xsi:type="Container" x="20" y="369" w="420" h="242">
+        <node identifier="id-view-adr-0010-band-1" xsi:type="Container" x="20" y="369" w="640" h="242">
           <label xml:lang="en">Application</label>
-          <node identifier="id-view-adr-0010-n-id-app-intf-reservation-api" xsi:type="Element" elementRef="id-app-intf-reservation-api" x="111" y="411" w="160" h="55"/>
+          <node identifier="id-view-adr-0010-n-id-app-intf-reservation-api" xsi:type="Element" elementRef="id-app-intf-reservation-api" x="203" y="411" w="160" h="55"/>
           <node identifier="id-view-adr-0010-n-id-app-svc-book" xsi:type="Element" elementRef="id-app-svc-book" x="40" y="536" w="160" h="55"/>
           <node identifier="id-view-adr-0010-n-id-app-svc-cancel" xsi:type="Element" elementRef="id-app-svc-cancel" x="260" y="536" w="160" h="55"/>
+          <node identifier="id-view-adr-0010-n-id-app-svc-list" xsi:type="Element" elementRef="id-app-svc-list" x="480" y="536" w="160" h="55"/>
         </node>
         <connection identifier="id-view-adr-0010-c-id-rel-071" xsi:type="Relationship" relationshipRef="id-rel-071" source="id-view-adr-0010-n-id-app-intf-reservation-api" target="id-view-adr-0010-n-id-app-svc-book">
-          <bendpoint x="191" y="501"/>
+          <bendpoint x="283" y="501"/>
           <bendpoint x="120" y="501"/>
         </connection>
         <connection identifier="id-view-adr-0010-c-id-rel-072" xsi:type="Relationship" relationshipRef="id-rel-072" source="id-view-adr-0010-n-id-app-intf-reservation-api" target="id-view-adr-0010-n-id-app-svc-cancel">
-          <bendpoint x="205" y="509"/>
+          <bendpoint x="297" y="509"/>
           <bendpoint x="340" y="509"/>
         </connection>
         <connection identifier="id-view-adr-0010-c-id-rel-144" xsi:type="Relationship" relationshipRef="id-rel-144" source="id-view-adr-0010-n-id-app-intf-reservation-api" target="id-view-adr-0010-n-id-mot-adr-0010">
-          <bendpoint x="191" y="360"/>
-          <bendpoint x="185" y="360"/>
+          <bendpoint x="283" y="360"/>
+          <bendpoint x="274" y="360"/>
         </connection>
         <connection identifier="id-view-adr-0010-c-id-rel-145" xsi:type="Relationship" relationshipRef="id-rel-145" source="id-view-adr-0010-n-id-app-svc-book" target="id-view-adr-0010-n-id-mot-adr-0010">
           <bendpoint x="134" y="493"/>
-          <bendpoint x="98" y="493"/>
-          <bendpoint x="98" y="368"/>
-          <bendpoint x="199" y="368"/>
+          <bendpoint x="191" y="493"/>
+          <bendpoint x="191" y="368"/>
+          <bendpoint x="288" y="368"/>
         </connection>
         <connection identifier="id-view-adr-0010-c-id-rel-146" xsi:type="Relationship" relationshipRef="id-rel-146" source="id-view-adr-0010-n-id-app-svc-cancel" target="id-view-adr-0010-n-id-mot-adr-0010">
           <bendpoint x="354" y="517"/>
-          <bendpoint x="282" y="517"/>
-          <bendpoint x="282" y="352"/>
-          <bendpoint x="171" y="352"/>
+          <bendpoint x="375" y="517"/>
+          <bendpoint x="375" y="352"/>
+          <bendpoint x="260" y="352"/>
         </connection>
         <connection identifier="id-view-adr-0010-c-id-rel-147" xsi:type="Relationship" relationshipRef="id-rel-147" source="id-view-adr-0010-n-id-mot-goal-healthy" target="id-view-adr-0010-n-id-mot-adr-0010"/>
+        <connection identifier="id-view-adr-0010-c-id-rel-154" xsi:type="Relationship" relationshipRef="id-rel-154" source="id-view-adr-0010-n-id-app-intf-reservation-api" target="id-view-adr-0010-n-id-app-svc-list">
+          <bendpoint x="269" y="485"/>
+          <bendpoint x="560" y="485"/>
+        </connection>
+        <connection identifier="id-view-adr-0010-c-id-rel-159" xsi:type="Relationship" relationshipRef="id-rel-159" source="id-view-adr-0010-n-id-app-svc-list" target="id-view-adr-0010-n-id-mot-adr-0010">
+          <bendpoint x="574" y="525"/>
+          <bendpoint x="438" y="525"/>
+          <bendpoint x="438" y="376"/>
+          <bendpoint x="302" y="376"/>
+        </connection>
       </view>
       <view identifier="id-view-adr-0011" xsi:type="Diagram">
         <name xml:lang="en">ADR 0011: what the decision applies to</name>
@@ -2153,6 +2299,95 @@ Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mo
           <bendpoint x="189" y="309"/>
           <bendpoint x="120" y="309"/>
         </connection>
+      </view>
+      <view identifier="id-view-adr-0012" xsi:type="Diagram">
+        <name xml:lang="en">ADR 0012: what the decision applies to</name>
+        <node identifier="id-view-adr-0012-band-0" xsi:type="Container" x="20" y="20" w="647" h="142">
+          <label xml:lang="en">Motivation</label>
+          <node identifier="id-view-adr-0012-n-id-mot-req-list" xsi:type="Element" elementRef="id-mot-req-list" x="95" y="62" w="160" h="63"/>
+          <node identifier="id-view-adr-0012-n-id-mot-adr-0012" xsi:type="Element" elementRef="id-mot-adr-0012" x="315" y="62" w="160" h="80"/>
+        </node>
+        <node identifier="id-view-adr-0012-band-1" xsi:type="Container" x="20" y="202" w="647" h="117">
+          <label xml:lang="en">Business</label>
+          <node identifier="id-view-adr-0012-n-id-bus-proc-list" xsi:type="Element" elementRef="id-bus-proc-list" x="95" y="244" w="160" h="55"/>
+        </node>
+        <node identifier="id-view-adr-0012-band-2" xsi:type="Container" x="20" y="359" w="647" h="375">
+          <label xml:lang="en">Application</label>
+          <node identifier="id-view-adr-0012-n-id-app-comp-application" xsi:type="Element" elementRef="id-app-comp-application" x="47" y="401" w="160" h="55"/>
+          <node identifier="id-view-adr-0012-n-id-app-intf-reservation-api" xsi:type="Element" elementRef="id-app-intf-reservation-api" x="267" y="401" w="160" h="55"/>
+          <node identifier="id-view-adr-0012-n-id-app-comp-db" xsi:type="Element" elementRef="id-app-comp-db" x="487" y="401" w="160" h="63"/>
+          <node identifier="id-view-adr-0012-n-id-app-svc-list" xsi:type="Element" elementRef="id-app-svc-list" x="154" y="534" w="160" h="55"/>
+          <node identifier="id-view-adr-0012-n-id-app-data-schedule" xsi:type="Element" elementRef="id-app-data-schedule" x="40" y="659" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-adr-0012-c-id-rel-068" xsi:type="Relationship" relationshipRef="id-rel-068" source="id-view-adr-0012-n-id-app-comp-db" target="id-view-adr-0012-n-id-app-comp-application">
+          <bendpoint x="567" y="350"/>
+          <bendpoint x="127" y="350"/>
+        </connection>
+        <connection identifier="id-view-adr-0012-c-id-rel-078" xsi:type="Relationship" relationshipRef="id-rel-078" source="id-view-adr-0012-n-id-app-comp-db" target="id-view-adr-0012-n-id-app-data-schedule">
+          <bendpoint x="567" y="499"/>
+          <bendpoint x="344" y="499"/>
+          <bendpoint x="344" y="624"/>
+          <bendpoint x="120" y="624"/>
+        </connection>
+        <connection identifier="id-view-adr-0012-c-id-rel-153" xsi:type="Relationship" relationshipRef="id-rel-153" source="id-view-adr-0012-n-id-app-comp-application" target="id-view-adr-0012-n-id-app-svc-list">
+          <bendpoint x="127" y="507"/>
+          <bendpoint x="234" y="507"/>
+        </connection>
+        <connection identifier="id-view-adr-0012-c-id-rel-154" xsi:type="Relationship" relationshipRef="id-rel-154" source="id-view-adr-0012-n-id-app-intf-reservation-api" target="id-view-adr-0012-n-id-app-svc-list">
+          <bendpoint x="347" y="491"/>
+          <bendpoint x="248" y="491"/>
+        </connection>
+        <connection identifier="id-view-adr-0012-c-id-rel-155" xsi:type="Relationship" relationshipRef="id-rel-155" source="id-view-adr-0012-n-id-app-svc-list" target="id-view-adr-0012-n-id-bus-proc-list">
+          <bendpoint x="220" y="515"/>
+          <bendpoint x="218" y="515"/>
+          <bendpoint x="218" y="358"/>
+          <bendpoint x="175" y="358"/>
+        </connection>
+        <connection identifier="id-view-adr-0012-c-id-rel-156" xsi:type="Relationship" relationshipRef="id-rel-156" source="id-view-adr-0012-n-id-app-svc-list" target="id-view-adr-0012-n-id-mot-req-list">
+          <bendpoint x="262" y="483"/>
+          <bendpoint x="35" y="483"/>
+          <bendpoint x="35" y="193"/>
+          <bendpoint x="175" y="193"/>
+        </connection>
+        <connection identifier="id-view-adr-0012-c-id-rel-157" xsi:type="Relationship" relationshipRef="id-rel-157" source="id-view-adr-0012-n-id-app-svc-list" target="id-view-adr-0012-n-id-app-data-schedule">
+          <bendpoint x="234" y="632"/>
+          <bendpoint x="134" y="632"/>
+        </connection>
+        <connection identifier="id-view-adr-0012-c-id-rel-160" xsi:type="Relationship" relationshipRef="id-rel-160" source="id-view-adr-0012-n-id-app-svc-list" target="id-view-adr-0012-n-id-mot-adr-0012">
+          <bendpoint x="206" y="523"/>
+          <bendpoint x="441" y="523"/>
+          <bendpoint x="441" y="201"/>
+          <bendpoint x="395" y="201"/>
+        </connection>
+        <connection identifier="id-view-adr-0012-c-id-rel-161" xsi:type="Relationship" relationshipRef="id-rel-161" source="id-view-adr-0012-n-id-app-intf-reservation-api" target="id-view-adr-0012-n-id-mot-adr-0012">
+          <bendpoint x="347" y="342"/>
+          <bendpoint x="378" y="342"/>
+          <bendpoint x="378" y="185"/>
+          <bendpoint x="409" y="185"/>
+        </connection>
+        <connection identifier="id-view-adr-0012-c-id-rel-162" xsi:type="Relationship" relationshipRef="id-rel-162" source="id-view-adr-0012-n-id-app-comp-application" target="id-view-adr-0012-n-id-mot-adr-0012">
+          <bendpoint x="141" y="366"/>
+          <bendpoint x="265" y="366"/>
+          <bendpoint x="265" y="209"/>
+          <bendpoint x="381" y="209"/>
+        </connection>
+        <connection identifier="id-view-adr-0012-c-id-rel-163" xsi:type="Relationship" relationshipRef="id-rel-163" source="id-view-adr-0012-n-id-app-comp-db" target="id-view-adr-0012-n-id-mot-adr-0012">
+          <bendpoint x="581" y="334"/>
+          <bendpoint x="502" y="334"/>
+          <bendpoint x="502" y="177"/>
+          <bendpoint x="423" y="177"/>
+        </connection>
+        <connection identifier="id-view-adr-0012-c-id-rel-164" xsi:type="Relationship" relationshipRef="id-rel-164" source="id-view-adr-0012-n-id-app-data-schedule" target="id-view-adr-0012-n-id-mot-adr-0012">
+          <bendpoint x="106" y="616"/>
+          <bendpoint x="37" y="616"/>
+          <bendpoint x="37" y="217"/>
+          <bendpoint x="367" y="217"/>
+        </connection>
+        <connection identifier="id-view-adr-0012-c-id-rel-165" xsi:type="Relationship" relationshipRef="id-rel-165" source="id-view-adr-0012-n-id-bus-proc-list" target="id-view-adr-0012-n-id-mot-adr-0012">
+          <bendpoint x="175" y="169"/>
+          <bendpoint x="437" y="169"/>
+        </connection>
+        <connection identifier="id-view-adr-0012-c-id-rel-166" xsi:type="Relationship" relationshipRef="id-rel-166" source="id-view-adr-0012-n-id-mot-req-list" target="id-view-adr-0012-n-id-mot-adr-0012"/>
       </view>
       <view identifier="id-view-layered" xsi:type="Diagram" viewpoint="Layered">
         <name xml:lang="en">Factory overview</name>
@@ -2383,38 +2618,136 @@ Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mo
         <connection identifier="id-view-releases-c-id-rel-141" xsi:type="Relationship" relationshipRef="id-rel-141" source="id-view-releases-n-id-impl-plat-v0-2-0" target="id-view-releases-n-id-impl-plat-v0-2-1"/>
         <connection identifier="id-view-releases-c-id-rel-142" xsi:type="Relationship" relationshipRef="id-rel-142" source="id-view-releases-n-id-impl-plat-v0-2-0" target="id-view-releases-n-id-mot-adr-0006"/>
       </view>
+      <view identifier="id-view-reservation-app" xsi:type="Diagram" viewpoint="Layered">
+        <name xml:lang="en">Reservations 2/2: how (application)</name>
+        <documentation xml:lang="en">Sample reservation domain, epics #17 and #79, part 2 of 2: the business processes (from part 1, id-view-reservation-cancel) and the application that serves them: the API, the three application services, the crates of the reservation service and the schedule. Technology is unchanged (see id-view-layered).</documentation>
+        <node identifier="id-view-reservation-app-band-0" xsi:type="Container" x="20" y="20" w="1207" h="242">
+          <label xml:lang="en">Business</label>
+          <node identifier="id-view-reservation-app-n-id-bus-act-customer" xsi:type="Element" elementRef="id-bus-act-customer" x="252" y="62" w="160" h="55"/>
+          <node identifier="id-view-reservation-app-n-id-bus-proc-reserve" xsi:type="Element" elementRef="id-bus-proc-reserve" x="40" y="187" w="160" h="55"/>
+          <node identifier="id-view-reservation-app-n-id-bus-proc-cancel" xsi:type="Element" elementRef="id-bus-proc-cancel" x="260" y="187" w="160" h="55"/>
+          <node identifier="id-view-reservation-app-n-id-bus-proc-list" xsi:type="Element" elementRef="id-bus-proc-list" x="480" y="187" w="160" h="55"/>
+        </node>
+        <node identifier="id-view-reservation-app-band-1" xsi:type="Container" x="20" y="302" w="1207" h="420">
+          <label xml:lang="en">Application</label>
+          <node identifier="id-view-reservation-app-n-id-app-intf-reservation-api" xsi:type="Element" elementRef="id-app-intf-reservation-api" x="227" y="344" w="160" h="55"/>
+          <node identifier="id-view-reservation-app-n-id-app-comp-reservation-svc" xsi:type="Element" elementRef="id-app-comp-reservation-svc" x="447" y="344" w="760" h="108">
+            <node identifier="id-view-reservation-app-n-id-app-comp-application" xsi:type="Element" elementRef="id-app-comp-application" x="462" y="374" w="160" h="55"/>
+            <node identifier="id-view-reservation-app-n-id-app-comp-db" xsi:type="Element" elementRef="id-app-comp-db" x="652" y="374" w="160" h="63"/>
+            <node identifier="id-view-reservation-app-n-id-app-comp-domain" xsi:type="Element" elementRef="id-app-comp-domain" x="842" y="374" w="160" h="55"/>
+            <node identifier="id-view-reservation-app-n-id-app-comp-http" xsi:type="Element" elementRef="id-app-comp-http" x="1032" y="374" w="160" h="63"/>
+          </node>
+          <node identifier="id-view-reservation-app-n-id-app-svc-book" xsi:type="Element" elementRef="id-app-svc-book" x="54" y="522" w="160" h="55"/>
+          <node identifier="id-view-reservation-app-n-id-app-svc-cancel" xsi:type="Element" elementRef="id-app-svc-cancel" x="274" y="522" w="160" h="55"/>
+          <node identifier="id-view-reservation-app-n-id-app-svc-list" xsi:type="Element" elementRef="id-app-svc-list" x="494" y="522" w="160" h="55"/>
+          <node identifier="id-view-reservation-app-n-id-app-data-schedule" xsi:type="Element" elementRef="id-app-data-schedule" x="90" y="647" w="160" h="55"/>
+        </node>
+        <connection identifier="id-view-reservation-app-c-id-rel-057" xsi:type="Relationship" relationshipRef="id-rel-057" source="id-view-reservation-app-n-id-bus-act-customer" target="id-view-reservation-app-n-id-bus-proc-reserve">
+          <bendpoint x="332" y="152"/>
+          <bendpoint x="120" y="152"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-058" xsi:type="Relationship" relationshipRef="id-rel-058" source="id-view-reservation-app-n-id-bus-act-customer" target="id-view-reservation-app-n-id-bus-proc-cancel">
+          <bendpoint x="346" y="160"/>
+          <bendpoint x="340" y="160"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-065" xsi:type="Relationship" relationshipRef="id-rel-065" source="id-view-reservation-app-n-id-app-comp-http" target="id-view-reservation-app-n-id-app-intf-reservation-api">
+          <bendpoint x="1112" y="293"/>
+          <bendpoint x="307" y="293"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-066" xsi:type="Relationship" relationshipRef="id-rel-066" source="id-view-reservation-app-n-id-app-comp-domain" target="id-view-reservation-app-n-id-app-comp-application">
+          <bendpoint x="922" y="301"/>
+          <bendpoint x="542" y="301"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-067" xsi:type="Relationship" relationshipRef="id-rel-067" source="id-view-reservation-app-n-id-app-comp-application" target="id-view-reservation-app-n-id-app-comp-http">
+          <bendpoint x="556" y="285"/>
+          <bendpoint x="1126" y="285"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-068" xsi:type="Relationship" relationshipRef="id-rel-068" source="id-view-reservation-app-n-id-app-comp-db" target="id-view-reservation-app-n-id-app-comp-application"/>
+        <connection identifier="id-view-reservation-app-c-id-rel-069" xsi:type="Relationship" relationshipRef="id-rel-069" source="id-view-reservation-app-n-id-app-comp-application" target="id-view-reservation-app-n-id-app-svc-book">
+          <bendpoint x="542" y="487"/>
+          <bendpoint x="134" y="487"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-070" xsi:type="Relationship" relationshipRef="id-rel-070" source="id-view-reservation-app-n-id-app-comp-application" target="id-view-reservation-app-n-id-app-svc-cancel">
+          <bendpoint x="556" y="495"/>
+          <bendpoint x="354" y="495"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-071" xsi:type="Relationship" relationshipRef="id-rel-071" source="id-view-reservation-app-n-id-app-intf-reservation-api" target="id-view-reservation-app-n-id-app-svc-book">
+          <bendpoint x="307" y="479"/>
+          <bendpoint x="148" y="479"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-072" xsi:type="Relationship" relationshipRef="id-rel-072" source="id-view-reservation-app-n-id-app-intf-reservation-api" target="id-view-reservation-app-n-id-app-svc-cancel">
+          <bendpoint x="321" y="503"/>
+          <bendpoint x="368" y="503"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-073" xsi:type="Relationship" relationshipRef="id-rel-073" source="id-view-reservation-app-n-id-app-intf-reservation-api" target="id-view-reservation-app-n-id-bus-act-customer">
+          <bendpoint x="321" y="309"/>
+          <bendpoint x="247" y="309"/>
+          <bendpoint x="247" y="144"/>
+          <bendpoint x="318" y="144"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-074" xsi:type="Relationship" relationshipRef="id-rel-074" source="id-view-reservation-app-n-id-app-svc-book" target="id-view-reservation-app-n-id-bus-proc-reserve"/>
+        <connection identifier="id-view-reservation-app-c-id-rel-075" xsi:type="Relationship" relationshipRef="id-rel-075" source="id-view-reservation-app-n-id-app-svc-cancel" target="id-view-reservation-app-n-id-bus-proc-cancel">
+          <bendpoint x="340" y="471"/>
+          <bendpoint x="400" y="471"/>
+          <bendpoint x="400" y="277"/>
+          <bendpoint x="340" y="277"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-078" xsi:type="Relationship" relationshipRef="id-rel-078" source="id-view-reservation-app-n-id-app-comp-db" target="id-view-reservation-app-n-id-app-data-schedule">
+          <bendpoint x="732" y="511"/>
+          <bendpoint x="451" y="511"/>
+          <bendpoint x="451" y="612"/>
+          <bendpoint x="170" y="612"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-151" xsi:type="Relationship" relationshipRef="id-rel-151" source="id-view-reservation-app-n-id-bus-act-customer" target="id-view-reservation-app-n-id-bus-proc-list">
+          <bendpoint x="360" y="168"/>
+          <bendpoint x="560" y="168"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-153" xsi:type="Relationship" relationshipRef="id-rel-153" source="id-view-reservation-app-n-id-app-comp-application" target="id-view-reservation-app-n-id-app-svc-list">
+          <bendpoint x="528" y="463"/>
+          <bendpoint x="574" y="463"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-154" xsi:type="Relationship" relationshipRef="id-rel-154" source="id-view-reservation-app-n-id-app-intf-reservation-api" target="id-view-reservation-app-n-id-app-svc-list">
+          <bendpoint x="293" y="519"/>
+          <bendpoint x="588" y="519"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-155" xsi:type="Relationship" relationshipRef="id-rel-155" source="id-view-reservation-app-n-id-app-svc-list" target="id-view-reservation-app-n-id-bus-proc-list">
+          <bendpoint x="560" y="455"/>
+          <bendpoint x="436" y="455"/>
+          <bendpoint x="436" y="317"/>
+          <bendpoint x="560" y="317"/>
+        </connection>
+        <connection identifier="id-view-reservation-app-c-id-rel-157" xsi:type="Relationship" relationshipRef="id-rel-157" source="id-view-reservation-app-n-id-app-svc-list" target="id-view-reservation-app-n-id-app-data-schedule">
+          <bendpoint x="574" y="620"/>
+          <bendpoint x="184" y="620"/>
+        </connection>
+      </view>
       <view identifier="id-view-reservation-cancel" xsi:type="Diagram" viewpoint="Layered">
-        <name xml:lang="en">Reservations: cancel a reservation</name>
-        <documentation xml:lang="en">Sample reservation domain, epic #17: why customers cancel, the business processes, and the crates and API that serve them. Technology is unchanged (see id-view-layered).</documentation>
-        <node identifier="id-view-reservation-cancel-band-0" xsi:type="Container" x="20" y="20" w="1347" h="383">
+        <name xml:lang="en">Reservations 1/2: why and what (motivation, business)</name>
+        <documentation xml:lang="en">Sample reservation domain, epics #17 and #79, part 1 of 2: why customers cancel and list, the requirements of stories #18, #19 and #80, the business processes, and the application services that realise and serve them. Part 2, id-view-reservation-app, shows the crates, API and data behind those services.</documentation>
+        <node identifier="id-view-reservation-cancel-band-0" xsi:type="Container" x="20" y="20" w="1047" h="383">
           <label xml:lang="en">Motivation</label>
           <node identifier="id-view-reservation-cancel-n-id-mot-sh-front-desk" xsi:type="Element" elementRef="id-mot-sh-front-desk" x="40" y="62" w="160" h="55"/>
           <node identifier="id-view-reservation-cancel-n-id-mot-drv-blocked-slots" xsi:type="Element" elementRef="id-mot-drv-blocked-slots" x="260" y="62" w="160" h="55"/>
-          <node identifier="id-view-reservation-cancel-n-id-mot-sh-customer" xsi:type="Element" elementRef="id-mot-sh-customer" x="480" y="62" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-mot-sh-customer" xsi:type="Element" elementRef="id-mot-sh-customer" x="498" y="62" w="160" h="55"/>
           <node identifier="id-view-reservation-cancel-n-id-mot-goal-free-slots" xsi:type="Element" elementRef="id-mot-goal-free-slots" x="40" y="187" w="160" h="63"/>
-          <node identifier="id-view-reservation-cancel-n-id-mot-out-rebook" xsi:type="Element" elementRef="id-mot-out-rebook" x="260" y="187" w="160" h="63"/>
-          <node identifier="id-view-reservation-cancel-n-id-mot-req-cancel" xsi:type="Element" elementRef="id-mot-req-cancel" x="254" y="320" w="160" h="63"/>
-          <node identifier="id-view-reservation-cancel-n-id-mot-req-cancel-refused" xsi:type="Element" elementRef="id-mot-req-cancel-refused" x="474" y="320" w="160" h="63"/>
+          <node identifier="id-view-reservation-cancel-n-id-mot-out-rebook" xsi:type="Element" elementRef="id-mot-out-rebook" x="274" y="187" w="160" h="63"/>
+          <node identifier="id-view-reservation-cancel-n-id-mot-req-cancel" xsi:type="Element" elementRef="id-mot-req-cancel" x="292" y="320" w="160" h="63"/>
+          <node identifier="id-view-reservation-cancel-n-id-mot-req-cancel-refused" xsi:type="Element" elementRef="id-mot-req-cancel-refused" x="512" y="320" w="160" h="63"/>
+          <node identifier="id-view-reservation-cancel-n-id-mot-req-list" xsi:type="Element" elementRef="id-mot-req-list" x="732" y="320" w="160" h="63"/>
         </node>
-        <node identifier="id-view-reservation-cancel-band-1" xsi:type="Container" x="20" y="443" w="1347" h="367">
+        <node identifier="id-view-reservation-cancel-band-1" xsi:type="Container" x="20" y="443" w="1047" h="367">
           <label xml:lang="en">Business</label>
-          <node identifier="id-view-reservation-cancel-n-id-bus-act-customer" xsi:type="Element" elementRef="id-bus-act-customer" x="367" y="485" w="160" h="55"/>
-          <node identifier="id-view-reservation-cancel-n-id-bus-proc-reserve" xsi:type="Element" elementRef="id-bus-proc-reserve" x="253" y="610" w="160" h="55"/>
-          <node identifier="id-view-reservation-cancel-n-id-bus-proc-cancel" xsi:type="Element" elementRef="id-bus-proc-cancel" x="473" y="610" w="160" h="55"/>
-          <node identifier="id-view-reservation-cancel-n-id-bus-obj-reservation" xsi:type="Element" elementRef="id-bus-obj-reservation" x="231" y="735" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-bus-act-customer" xsi:type="Element" elementRef="id-bus-act-customer" x="596" y="485" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-bus-proc-reserve" xsi:type="Element" elementRef="id-bus-proc-reserve" x="447" y="610" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-bus-proc-cancel" xsi:type="Element" elementRef="id-bus-proc-cancel" x="667" y="610" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-bus-proc-list" xsi:type="Element" elementRef="id-bus-proc-list" x="887" y="610" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-bus-obj-reservation" xsi:type="Element" elementRef="id-bus-obj-reservation" x="548" y="735" w="160" h="55"/>
         </node>
-        <node identifier="id-view-reservation-cancel-band-2" xsi:type="Container" x="20" y="850" w="1347" h="420">
+        <node identifier="id-view-reservation-cancel-band-2" xsi:type="Container" x="20" y="850" w="1047" h="117">
           <label xml:lang="en">Application</label>
-          <node identifier="id-view-reservation-cancel-n-id-app-intf-reservation-api" xsi:type="Element" elementRef="id-app-intf-reservation-api" x="367" y="892" w="160" h="55"/>
-          <node identifier="id-view-reservation-cancel-n-id-app-comp-reservation-svc" xsi:type="Element" elementRef="id-app-comp-reservation-svc" x="587" y="892" w="760" h="108">
-            <node identifier="id-view-reservation-cancel-n-id-app-comp-application" xsi:type="Element" elementRef="id-app-comp-application" x="602" y="922" w="160" h="55"/>
-            <node identifier="id-view-reservation-cancel-n-id-app-comp-db" xsi:type="Element" elementRef="id-app-comp-db" x="792" y="922" w="160" h="63"/>
-            <node identifier="id-view-reservation-cancel-n-id-app-comp-domain" xsi:type="Element" elementRef="id-app-comp-domain" x="982" y="922" w="160" h="55"/>
-            <node identifier="id-view-reservation-cancel-n-id-app-comp-http" xsi:type="Element" elementRef="id-app-comp-http" x="1172" y="922" w="160" h="63"/>
-          </node>
-          <node identifier="id-view-reservation-cancel-n-id-app-svc-book" xsi:type="Element" elementRef="id-app-svc-book" x="255" y="1070" w="160" h="55"/>
-          <node identifier="id-view-reservation-cancel-n-id-app-svc-cancel" xsi:type="Element" elementRef="id-app-svc-cancel" x="475" y="1070" w="160" h="55"/>
-          <node identifier="id-view-reservation-cancel-n-id-app-data-schedule" xsi:type="Element" elementRef="id-app-data-schedule" x="137" y="1195" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-app-svc-book" xsi:type="Element" elementRef="id-app-svc-book" x="328" y="892" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-app-svc-cancel" xsi:type="Element" elementRef="id-app-svc-cancel" x="548" y="892" w="160" h="55"/>
+          <node identifier="id-view-reservation-cancel-n-id-app-svc-list" xsi:type="Element" elementRef="id-app-svc-list" x="768" y="892" w="160" h="55"/>
         </node>
         <connection identifier="id-view-reservation-cancel-c-id-rel-050" xsi:type="Relationship" relationshipRef="id-rel-050" source="id-view-reservation-cancel-n-id-mot-sh-customer" target="id-view-reservation-cancel-n-id-mot-drv-blocked-slots"/>
         <connection identifier="id-view-reservation-cancel-c-id-rel-051" xsi:type="Relationship" relationshipRef="id-rel-051" source="id-view-reservation-cancel-n-id-mot-sh-front-desk" target="id-view-reservation-cancel-n-id-mot-goal-free-slots"/>
@@ -2424,107 +2757,86 @@ Sample of task #70 (2026-11-17): the view `id-view-adr-0007` of ADR 0007 (`id-mo
         </connection>
         <connection identifier="id-view-reservation-cancel-c-id-rel-053" xsi:type="Relationship" relationshipRef="id-rel-053" source="id-view-reservation-cancel-n-id-mot-out-rebook" target="id-view-reservation-cancel-n-id-mot-goal-free-slots"/>
         <connection identifier="id-view-reservation-cancel-c-id-rel-054" xsi:type="Relationship" relationshipRef="id-rel-054" source="id-view-reservation-cancel-n-id-mot-req-cancel" target="id-view-reservation-cancel-n-id-mot-out-rebook">
-          <bendpoint x="334" y="285"/>
-          <bendpoint x="340" y="285"/>
+          <bendpoint x="372" y="285"/>
+          <bendpoint x="354" y="285"/>
         </connection>
         <connection identifier="id-view-reservation-cancel-c-id-rel-055" xsi:type="Relationship" relationshipRef="id-rel-055" source="id-view-reservation-cancel-n-id-mot-sh-customer" target="id-view-reservation-cancel-n-id-mot-req-cancel-refused">
-          <bendpoint x="560" y="160"/>
-          <bendpoint x="557" y="160"/>
-          <bendpoint x="557" y="293"/>
-          <bendpoint x="554" y="293"/>
+          <bendpoint x="578" y="160"/>
+          <bendpoint x="585" y="160"/>
+          <bendpoint x="585" y="293"/>
+          <bendpoint x="592" y="293"/>
         </connection>
         <connection identifier="id-view-reservation-cancel-c-id-rel-056" xsi:type="Relationship" relationshipRef="id-rel-056" source="id-view-reservation-cancel-n-id-bus-act-customer" target="id-view-reservation-cancel-n-id-mot-sh-customer">
-          <bendpoint x="447" y="434"/>
-          <bendpoint x="462" y="434"/>
-          <bendpoint x="462" y="144"/>
-          <bendpoint x="574" y="144"/>
+          <bendpoint x="676" y="434"/>
+          <bendpoint x="682" y="434"/>
+          <bendpoint x="682" y="144"/>
+          <bendpoint x="592" y="144"/>
         </connection>
         <connection identifier="id-view-reservation-cancel-c-id-rel-057" xsi:type="Relationship" relationshipRef="id-rel-057" source="id-view-reservation-cancel-n-id-bus-act-customer" target="id-view-reservation-cancel-n-id-bus-proc-reserve">
-          <bendpoint x="447" y="575"/>
-          <bendpoint x="333" y="575"/>
+          <bendpoint x="676" y="575"/>
+          <bendpoint x="527" y="575"/>
         </connection>
         <connection identifier="id-view-reservation-cancel-c-id-rel-058" xsi:type="Relationship" relationshipRef="id-rel-058" source="id-view-reservation-cancel-n-id-bus-act-customer" target="id-view-reservation-cancel-n-id-bus-proc-cancel">
-          <bendpoint x="461" y="583"/>
-          <bendpoint x="553" y="583"/>
+          <bendpoint x="690" y="583"/>
+          <bendpoint x="747" y="583"/>
         </connection>
         <connection identifier="id-view-reservation-cancel-c-id-rel-059" xsi:type="Relationship" relationshipRef="id-rel-059" source="id-view-reservation-cancel-n-id-bus-proc-reserve" target="id-view-reservation-cancel-n-id-bus-obj-reservation">
-          <bendpoint x="333" y="700"/>
-          <bendpoint x="311" y="700"/>
+          <bendpoint x="527" y="700"/>
+          <bendpoint x="628" y="700"/>
         </connection>
         <connection identifier="id-view-reservation-cancel-c-id-rel-060" xsi:type="Relationship" relationshipRef="id-rel-060" source="id-view-reservation-cancel-n-id-bus-proc-cancel" target="id-view-reservation-cancel-n-id-bus-obj-reservation">
-          <bendpoint x="553" y="708"/>
-          <bendpoint x="325" y="708"/>
-        </connection>
-        <connection identifier="id-view-reservation-cancel-c-id-rel-065" xsi:type="Relationship" relationshipRef="id-rel-065" source="id-view-reservation-cancel-n-id-app-comp-http" target="id-view-reservation-cancel-n-id-app-intf-reservation-api">
-          <bendpoint x="1252" y="841"/>
-          <bendpoint x="447" y="841"/>
-        </connection>
-        <connection identifier="id-view-reservation-cancel-c-id-rel-066" xsi:type="Relationship" relationshipRef="id-rel-066" source="id-view-reservation-cancel-n-id-app-comp-domain" target="id-view-reservation-cancel-n-id-app-comp-application">
-          <bendpoint x="1062" y="849"/>
-          <bendpoint x="682" y="849"/>
-        </connection>
-        <connection identifier="id-view-reservation-cancel-c-id-rel-067" xsi:type="Relationship" relationshipRef="id-rel-067" source="id-view-reservation-cancel-n-id-app-comp-application" target="id-view-reservation-cancel-n-id-app-comp-http">
-          <bendpoint x="696" y="833"/>
-          <bendpoint x="1266" y="833"/>
-        </connection>
-        <connection identifier="id-view-reservation-cancel-c-id-rel-068" xsi:type="Relationship" relationshipRef="id-rel-068" source="id-view-reservation-cancel-n-id-app-comp-db" target="id-view-reservation-cancel-n-id-app-comp-application"/>
-        <connection identifier="id-view-reservation-cancel-c-id-rel-069" xsi:type="Relationship" relationshipRef="id-rel-069" source="id-view-reservation-cancel-n-id-app-comp-application" target="id-view-reservation-cancel-n-id-app-svc-book">
-          <bendpoint x="682" y="1035"/>
-          <bendpoint x="335" y="1035"/>
-        </connection>
-        <connection identifier="id-view-reservation-cancel-c-id-rel-070" xsi:type="Relationship" relationshipRef="id-rel-070" source="id-view-reservation-cancel-n-id-app-comp-application" target="id-view-reservation-cancel-n-id-app-svc-cancel">
-          <bendpoint x="696" y="1043"/>
-          <bendpoint x="555" y="1043"/>
-        </connection>
-        <connection identifier="id-view-reservation-cancel-c-id-rel-071" xsi:type="Relationship" relationshipRef="id-rel-071" source="id-view-reservation-cancel-n-id-app-intf-reservation-api" target="id-view-reservation-cancel-n-id-app-svc-book">
-          <bendpoint x="447" y="1027"/>
-          <bendpoint x="349" y="1027"/>
-        </connection>
-        <connection identifier="id-view-reservation-cancel-c-id-rel-072" xsi:type="Relationship" relationshipRef="id-rel-072" source="id-view-reservation-cancel-n-id-app-intf-reservation-api" target="id-view-reservation-cancel-n-id-app-svc-cancel">
-          <bendpoint x="461" y="1051"/>
-          <bendpoint x="569" y="1051"/>
-        </connection>
-        <connection identifier="id-view-reservation-cancel-c-id-rel-073" xsi:type="Relationship" relationshipRef="id-rel-073" source="id-view-reservation-cancel-n-id-app-intf-reservation-api" target="id-view-reservation-cancel-n-id-bus-act-customer">
-          <bendpoint x="461" y="857"/>
-          <bendpoint x="447" y="857"/>
-          <bendpoint x="447" y="567"/>
-          <bendpoint x="433" y="567"/>
+          <bendpoint x="747" y="708"/>
+          <bendpoint x="642" y="708"/>
         </connection>
         <connection identifier="id-view-reservation-cancel-c-id-rel-074" xsi:type="Relationship" relationshipRef="id-rel-074" source="id-view-reservation-cancel-n-id-app-svc-book" target="id-view-reservation-cancel-n-id-bus-proc-reserve">
-          <bendpoint x="321" y="1019"/>
-          <bendpoint x="218" y="1019"/>
-          <bendpoint x="218" y="692"/>
-          <bendpoint x="347" y="692"/>
+          <bendpoint x="408" y="841"/>
+          <bendpoint x="475" y="841"/>
+          <bendpoint x="475" y="692"/>
+          <bendpoint x="541" y="692"/>
         </connection>
         <connection identifier="id-view-reservation-cancel-c-id-rel-075" xsi:type="Relationship" relationshipRef="id-rel-075" source="id-view-reservation-cancel-n-id-app-svc-cancel" target="id-view-reservation-cancel-n-id-bus-proc-cancel">
-          <bendpoint x="541" y="1059"/>
-          <bendpoint x="554" y="1059"/>
-          <bendpoint x="554" y="716"/>
-          <bendpoint x="567" y="716"/>
+          <bendpoint x="628" y="849"/>
+          <bendpoint x="719" y="849"/>
+          <bendpoint x="719" y="716"/>
+          <bendpoint x="761" y="716"/>
         </connection>
         <connection identifier="id-view-reservation-cancel-c-id-rel-076" xsi:type="Relationship" relationshipRef="id-rel-076" source="id-view-reservation-cancel-n-id-app-svc-cancel" target="id-view-reservation-cancel-n-id-mot-req-cancel">
-          <bendpoint x="583" y="1011"/>
-          <bendpoint x="219" y="1011"/>
-          <bendpoint x="219" y="442"/>
-          <bendpoint x="334" y="442"/>
+          <bendpoint x="642" y="833"/>
+          <bendpoint x="435" y="833"/>
+          <bendpoint x="435" y="442"/>
+          <bendpoint x="372" y="442"/>
         </connection>
         <connection identifier="id-view-reservation-cancel-c-id-rel-077" xsi:type="Relationship" relationshipRef="id-rel-077" source="id-view-reservation-cancel-n-id-app-svc-cancel" target="id-view-reservation-cancel-n-id-mot-req-cancel-refused">
-          <bendpoint x="527" y="1067"/>
-          <bendpoint x="221" y="1067"/>
-          <bendpoint x="221" y="426"/>
-          <bendpoint x="554" y="426"/>
+          <bendpoint x="614" y="857"/>
+          <bendpoint x="443" y="857"/>
+          <bendpoint x="443" y="426"/>
+          <bendpoint x="592" y="426"/>
         </connection>
-        <connection identifier="id-view-reservation-cancel-c-id-rel-078" xsi:type="Relationship" relationshipRef="id-rel-078" source="id-view-reservation-cancel-n-id-app-comp-db" target="id-view-reservation-cancel-n-id-app-data-schedule">
-          <bendpoint x="872" y="1003"/>
-          <bendpoint x="465" y="1003"/>
-          <bendpoint x="465" y="1160"/>
-          <bendpoint x="217" y="1160"/>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-151" xsi:type="Relationship" relationshipRef="id-rel-151" source="id-view-reservation-cancel-n-id-bus-act-customer" target="id-view-reservation-cancel-n-id-bus-proc-list">
+          <bendpoint x="662" y="567"/>
+          <bendpoint x="967" y="567"/>
         </connection>
-        <connection identifier="id-view-reservation-cancel-c-id-rel-079" xsi:type="Relationship" relationshipRef="id-rel-079" source="id-view-reservation-cancel-n-id-app-data-schedule" target="id-view-reservation-cancel-n-id-bus-obj-reservation">
-          <bendpoint x="231" y="1168"/>
-          <bendpoint x="243" y="1168"/>
-          <bendpoint x="243" y="825"/>
-          <bendpoint x="311" y="825"/>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-152" xsi:type="Relationship" relationshipRef="id-rel-152" source="id-view-reservation-cancel-n-id-bus-proc-list" target="id-view-reservation-cancel-n-id-bus-obj-reservation">
+          <bendpoint x="967" y="684"/>
+          <bendpoint x="614" y="684"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-155" xsi:type="Relationship" relationshipRef="id-rel-155" source="id-view-reservation-cancel-n-id-app-svc-list" target="id-view-reservation-cancel-n-id-bus-proc-list">
+          <bendpoint x="848" y="825"/>
+          <bendpoint x="915" y="825"/>
+          <bendpoint x="915" y="724"/>
+          <bendpoint x="981" y="724"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-156" xsi:type="Relationship" relationshipRef="id-rel-156" source="id-view-reservation-cancel-n-id-app-svc-list" target="id-view-reservation-cancel-n-id-mot-req-list">
+          <bendpoint x="862" y="865"/>
+          <bendpoint x="841" y="865"/>
+          <bendpoint x="841" y="450"/>
+          <bendpoint x="812" y="450"/>
+        </connection>
+        <connection identifier="id-view-reservation-cancel-c-id-rel-158" xsi:type="Relationship" relationshipRef="id-rel-158" source="id-view-reservation-cancel-n-id-mot-sh-customer" target="id-view-reservation-cancel-n-id-mot-req-list">
+          <bendpoint x="564" y="168"/>
+          <bendpoint x="688" y="168"/>
+          <bendpoint x="688" y="277"/>
+          <bendpoint x="812" y="277"/>
         </connection>
       </view>
     </diagrams>

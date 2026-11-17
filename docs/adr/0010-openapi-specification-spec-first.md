@@ -6,7 +6,7 @@
 - Issue: #60 (task #61)
 - Deciders: human approver (approach chosen on 2026-11-16, change request #60), architect agent
 - ArchiMate elements: `id-app-intf-reservation-api`, `id-app-svc-book`, `id-app-svc-cancel`,
-  `id-mot-goal-healthy`
+  `id-app-svc-list`, `id-mot-goal-healthy`
 
 ## <a id="id-view-adr-0010"></a>Elements this decision applies to
 
@@ -17,12 +17,12 @@ Clickable version:
 
 ## Context and problem
 The reservations HTTP API
-([`id-app-intf-reservation-api`](../togaf/A-architecture-vision.md#id-app-intf-reservation-api)) is
-described only as prose in the model and as Rust code in `crates/adapters-http`. Clients and other
-tools have nothing machine-readable, and nothing checks that the prose matches what the service
-answers. Change request #60 asks for an OpenAPI specification kept in the repo and checked in CI
-against the running service. The human chose the approach on 2026-11-16; this ADR records it, with
-the details that the tool spike of task #61 settled.
+([`id-app-intf-reservation-api`](../togaf/C-information-systems-architecture.md#id-app-intf-reservation-api))
+is described only as prose in the model and as Rust code in `crates/adapters-http`. Clients and
+other tools have nothing machine-readable, and nothing checks that the prose matches what the
+service answers. Change request #60 asks for an OpenAPI specification kept in the repo and checked
+in CI against the running service. The human chose the approach on 2026-11-16; this ADR records it,
+with the details that the tool spike of task #61 settled.
 
 ## Decision drivers
 - One contract that people and tools can read, reviewed in the same PR as the behaviour it
@@ -55,7 +55,7 @@ the published contract, it needs no change to the service code, and it runs insi
 already required.
 
 - **Source of truth:** `docs/api/openapi.yaml`, written and edited by hand. It is the contract of
-  [`id-app-intf-reservation-api`](../togaf/A-architecture-vision.md#id-app-intf-reservation-api),
+  [`id-app-intf-reservation-api`](../togaf/C-information-systems-architecture.md#id-app-intf-reservation-api),
   whose documentation points to it; the model does not repeat it.
 - **OpenAPI 3.1** (`openapi: 3.1.0`): the spike ran the pinned tool against a 3.1 file with no flag
   and no warning about the version, and 3.1 uses plain JSON Schema, so there is no reason to fall

@@ -30,3 +30,4 @@ Architecture site: <https://num-bbro.github.io/rust-factory/>
 | [0009](0009-archimate-exchange-model-as-source.md) | ArchiMate exchange model as the single source of the architecture documentation | Accepted |
 | [0010](0010-openapi-specification-spec-first.md) | OpenAPI specification, spec-first, checked against the running service | Accepted |
 | [0011](0011-a-diagram-on-every-adr-page.md) | A diagram on every ADR page | Accepted |
+| [0012](0012-list-reservations-by-get.md) | List reservations by `GET`, read through the port | Proposed |

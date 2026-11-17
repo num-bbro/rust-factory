@@ -245,13 +245,13 @@ Throwaway work in a temporary directory, nothing of it committed. Input: today's
 for ADR 0002 (has a table), ADR 0008 (has a Rust code block with `Result<T, E>`, lists, emphasis)
 and a stub ADR 0009; a Deliverable holding the full text of
 `docs/togaf/C-information-systems-architecture.md`; a Plateau `Release v0.2.1`; a Realization from
-[`id-app-comp-application`](../togaf/A-architecture-vision.md#id-app-comp-application) to the ADR
-0008 Constraint; an Influence from [`id-mot-req-togaf`](../togaf/00-preliminary.md#id-mot-req-togaf)
-to the ADR 0002 Constraint; a directed Association `supersedes` from ADR 0009 to ADR 0002;
-Aggregations from the Plateau to
-[`id-app-comp-application`](../togaf/A-architecture-vision.md#id-app-comp-application) and to the
-ADR 0008 Constraint; eight new property definitions (`propid-status`, `propid-file`, `propid-view`,
-`propid-layout`, …), a repeated `View` property, properties on the existing view
+[`id-app-comp-application`](../togaf/C-information-systems-architecture.md#id-app-comp-application)
+to the ADR 0008 Constraint; an Influence from
+[`id-mot-req-togaf`](../togaf/00-preliminary.md#id-mot-req-togaf) to the ADR 0002 Constraint; a
+directed Association `supersedes` from ADR 0009 to ADR 0002; Aggregations from the Plateau to
+[`id-app-comp-application`](../togaf/C-information-systems-architecture.md#id-app-comp-application)
+and to the ADR 0008 Constraint; eight new property definitions (`propid-status`, `propid-file`,
+`propid-view`, `propid-layout`, …), a repeated `View` property, properties on the existing view
 [`id-view-motivation`](../togaf/00-preliminary.md#id-view-motivation), a new hand-placed view
 showing all of the above, and `xsi:schemaLocation`. Result: 58 elements, 74 relationships, 5 views,
 84,394 bytes, 1,148 lines.
@@ -273,8 +273,8 @@ showing all of the above, and `xsi:schemaLocation`. Result: 58 elements, 74 rela
   show ragged lines (open question under Consequences).
 - The view image map links every box to its element page (`<area … href="../elements/<id>.html">`, 7
   of 7 boxes on the spike view). An element page lists its relationships, so
-  [`id-app-comp-application`](../togaf/A-architecture-vision.md#id-app-comp-application) links to
-  the ADR 0008 Constraint and to the Plateau.
+  [`id-app-comp-application`](../togaf/C-information-systems-architecture.md#id-app-comp-application)
+  links to the ADR 0008 Constraint and to the Plateau.
 - All 74 relationships are allowed by Archi's `relationships.xml` (checked with the rules loader of
   `check_relationships.py`). Rules that shape the mapping: Realization to a Constraint is allowed
   from every core structure and behaviour element, but not from motivation elements; Influence to a
@@ -592,14 +592,14 @@ points refine the decision:
 - **Links:** from each Plateau, an Aggregation to every element the release delivered; `just
   model-check` allowed Aggregation for every pair, so no Association was needed. Recorded contents:
   [`id-impl-plat-v0-1-0`](../togaf/F-migration-planning.md#id-impl-plat-v0-1-0) delivers
-  [`id-app-comp-reservation-svc`](../togaf/A-architecture-vision.md#id-app-comp-reservation-svc),
-  [`id-app-comp-domain`](../togaf/A-architecture-vision.md#id-app-comp-domain),
-  [`id-app-comp-application`](../togaf/A-architecture-vision.md#id-app-comp-application),
-  [`id-app-comp-db`](../togaf/A-architecture-vision.md#id-app-comp-db),
-  [`id-app-comp-http`](../togaf/A-architecture-vision.md#id-app-comp-http),
-  [`id-app-intf-reservation-api`](../togaf/A-architecture-vision.md#id-app-intf-reservation-api),
+  [`id-app-comp-reservation-svc`](../togaf/C-information-systems-architecture.md#id-app-comp-reservation-svc),
+  [`id-app-comp-domain`](../togaf/C-information-systems-architecture.md#id-app-comp-domain),
+  [`id-app-comp-application`](../togaf/C-information-systems-architecture.md#id-app-comp-application),
+  [`id-app-comp-db`](../togaf/C-information-systems-architecture.md#id-app-comp-db),
+  [`id-app-comp-http`](../togaf/C-information-systems-architecture.md#id-app-comp-http),
+  [`id-app-intf-reservation-api`](../togaf/C-information-systems-architecture.md#id-app-intf-reservation-api),
   [`id-app-svc-book`](../togaf/A-architecture-vision.md#id-app-svc-book),
-  [`id-app-data-schedule`](../togaf/A-architecture-vision.md#id-app-data-schedule),
+  [`id-app-data-schedule`](../togaf/C-information-systems-architecture.md#id-app-data-schedule),
   [`id-bus-proc-reserve`](../togaf/A-architecture-vision.md#id-bus-proc-reserve),
   [`id-bus-obj-reservation`](../togaf/A-architecture-vision.md#id-bus-obj-reservation),
   [`id-mot-adr-0003`](0003-layered-cargo-workspace.md) and
@@ -611,17 +611,18 @@ points refine the decision:
   [`id-mot-req-cancel-refused`](../togaf/A-architecture-vision.md#id-mot-req-cancel-refused),
   [`id-mot-out-rebook`](../togaf/A-architecture-vision.md#id-mot-out-rebook),
   [`id-mot-goal-free-slots`](../togaf/A-architecture-vision.md#id-mot-goal-free-slots),
-  [`id-app-comp-application`](../togaf/A-architecture-vision.md#id-app-comp-application),
-  [`id-app-comp-http`](../togaf/A-architecture-vision.md#id-app-comp-http),
-  [`id-app-intf-reservation-api`](../togaf/A-architecture-vision.md#id-app-intf-reservation-api),
+  [`id-app-comp-application`](../togaf/C-information-systems-architecture.md#id-app-comp-application),
+  [`id-app-comp-http`](../togaf/C-information-systems-architecture.md#id-app-comp-http),
+  [`id-app-intf-reservation-api`](../togaf/C-information-systems-architecture.md#id-app-intf-reservation-api),
   [`id-mot-adr-0006`](0006-pilot-and-rollout-with-quadlet.md) (pilot and rollout landed before
   v0.2.0, the first release deployed that way) and
   [`id-mot-adr-0007`](0007-cancel-reservation-by-delete.md).
   [`id-impl-plat-v0-2-1`](../togaf/F-migration-planning.md#id-impl-plat-v0-2-1) delivers
-  [`id-app-comp-application`](../togaf/A-architecture-vision.md#id-app-comp-application),
-  [`id-app-comp-db`](../togaf/A-architecture-vision.md#id-app-comp-db),
-  [`id-app-comp-http`](../togaf/A-architecture-vision.md#id-app-comp-http) (#37 changed the HTTP
-  adapter), [`id-app-data-schedule`](../togaf/A-architecture-vision.md#id-app-data-schedule) and
+  [`id-app-comp-application`](../togaf/C-information-systems-architecture.md#id-app-comp-application),
+  [`id-app-comp-db`](../togaf/C-information-systems-architecture.md#id-app-comp-db),
+  [`id-app-comp-http`](../togaf/C-information-systems-architecture.md#id-app-comp-http) (#37 changed
+  the HTTP adapter),
+  [`id-app-data-schedule`](../togaf/C-information-systems-architecture.md#id-app-data-schedule) and
   [`id-mot-adr-0008`](0008-atomic-schedule-update-through-the-port.md).
 - **View:** [`id-view-releases`](../togaf/F-migration-planning.md#id-view-releases) (viewpoint
   Implementation and Migration, documentation: "The releases in order and the decisions each one
