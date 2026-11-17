@@ -50,6 +50,34 @@ impl Api {
         self.status = res.status().as_u16();
         self.body = res.json().await.unwrap_or(Value::Null);
     }
+
+    /// `GET /reservations`: the listed reservations, in the order the service gives them. The
+    /// list also holds other scenarios' reservations (one shared service).
+    async fn list(&mut self) -> Vec<Value> {
+        let res = self
+            .client
+            .get(format!("{}/reservations", self.base))
+            .send()
+            .await
+            .expect("service reachable");
+        self.status = res.status().as_u16();
+        self.body = res.json().await.unwrap_or(Value::Null);
+        assert_eq!(self.status, 200, "body: {}", self.body);
+        self.body["reservations"]
+            .as_array()
+            .unwrap_or_else(|| panic!("a list of reservations: {}", self.body))
+            .clone()
+    }
+}
+
+/// Position in `listed` of the reservation for `from`..`to`. Reservations never overlap, so at
+/// most one has that slot.
+fn position_of(listed: &[Value], from: &str, to: &str) -> usize {
+    let (start, end) = (minutes(from), minutes(to));
+    listed
+        .iter()
+        .position(|r| r["start"] == start && r["end"] == end)
+        .unwrap_or_else(|| panic!("{from} to {to} is listed: {listed:?}"))
 }
 
 /// "09:30" -> 570 minutes since midnight.
@@ -143,6 +171,41 @@ fn refused_overlap(api: &mut Api) {
     assert!(
         error.contains("overlaps"),
         "error explains the overlap: {error}"
+    );
+}
+
+#[then(expr = "the list of reservations contains that reservation with {word} to {word}")]
+async fn listed_with_slot(api: &mut Api, from: String, to: String) {
+    let id = api.reservation_id.expect("a reservation was made earlier");
+    let listed = api.list().await;
+    let mine: Vec<&Value> = listed.iter().filter(|r| r["id"] == id).collect();
+    assert_eq!(
+        mine,
+        [&json!({ "id": id, "start": minutes(&from), "end": minutes(&to) })],
+        "reservation {id} is listed once with its slot: {listed:?}"
+    );
+}
+
+#[then("the list of reservations does not contain that reservation")]
+async fn not_listed(api: &mut Api) {
+    let id = api.reservation_id.expect("a reservation was made earlier");
+    let listed = api.list().await;
+    assert!(
+        listed.iter().all(|r| r["id"] != id),
+        "reservation {id} is not listed: {listed:?}"
+    );
+}
+
+#[then(expr = "{word} to {word} comes before {word} to {word} in the list")]
+async fn listed_before(api: &mut Api, from: String, to: String, from2: String, to2: String) {
+    let listed = api.list().await;
+    let (first, second) = (
+        position_of(&listed, &from, &to),
+        position_of(&listed, &from2, &to2),
+    );
+    assert!(
+        first < second,
+        "{from} to {to} comes before {from2} to {to2}: {listed:?}"
     );
 }
 

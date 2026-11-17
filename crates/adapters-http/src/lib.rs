@@ -2,11 +2,14 @@
 //!
 //! No business rules here — only mapping. Errors from the domain become status codes:
 //! invalid input → 422, overlap → 409, unknown reservation → 404, storage failure → 503.
-//! See ADR 0007 for the cancel endpoint.
+//! See ADR 0007 for the cancel endpoint and ADR 0012 for the list endpoint.
 
 use std::sync::Arc;
 
-use application::{BookSlot, BookingError, CancelReservation, RepositoryError, ScheduleRepository};
+use application::{
+    BookSlot, BookingError, CancelReservation, ListReservations, RepositoryError,
+    ScheduleRepository,
+};
 use axum::{
     Json, Router,
     extract::{Path, State},
@@ -24,7 +27,7 @@ where
 {
     Router::new()
         .route("/health", get(|| async { "ok" }))
-        .route("/reservations", post(book::<R>))
+        .route("/reservations", post(book::<R>).get(list::<R>))
         .route("/reservations/{id}", delete(cancel::<R>))
         .with_state(Arc::new(UseCases::new(repo)))
 }
@@ -59,6 +62,7 @@ impl<R: ScheduleRepository> ScheduleRepository for Shared<R> {
 struct UseCases<R> {
     book: BookSlot<Shared<R>>,
     cancel: CancelReservation<Shared<R>>,
+    list: ListReservations<Shared<R>>,
 }
 
 impl<R: ScheduleRepository> UseCases<R> {
@@ -66,7 +70,8 @@ impl<R: ScheduleRepository> UseCases<R> {
         let shared = Shared(Arc::new(repo));
         Self {
             book: BookSlot::new(shared.clone()),
-            cancel: CancelReservation::new(shared),
+            cancel: CancelReservation::new(shared.clone()),
+            list: ListReservations::new(shared),
         }
     }
 }
@@ -80,6 +85,19 @@ struct BookRequest {
 #[derive(Debug, Serialize)]
 struct Booked {
     id: u64,
+}
+
+/// The answer of `GET /reservations`: an object, so paging can add fields later (ADR 0012).
+#[derive(Debug, Serialize)]
+struct Listed {
+    reservations: Vec<Listing>,
+}
+
+#[derive(Debug, Serialize)]
+struct Listing {
+    id: u64,
+    start: u16,
+    end: u16,
 }
 
 #[derive(Debug, Serialize)]
@@ -104,6 +122,24 @@ async fn cancel<R: ScheduleRepository>(
     match use_cases.cancel.execute(ReservationId::new(id)) {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(err) => problem(&err),
+    }
+}
+
+/// The order is the domain's (by start time); it is passed through, never re-sorted here.
+async fn list<R: ScheduleRepository>(State(use_cases): State<Arc<UseCases<R>>>) -> Response {
+    match use_cases.list.execute() {
+        Ok(reservations) => Json(Listed {
+            reservations: reservations
+                .into_iter()
+                .map(|(id, slot)| Listing {
+                    id: id.get(),
+                    start: slot.start(),
+                    end: slot.end(),
+                })
+                .collect(),
+        })
+        .into_response(),
+        Err(err) => problem(&err.into()),
     }
 }
 
@@ -206,6 +242,61 @@ mod tests {
         let res = app.clone().oneshot(req).await.unwrap();
         let status = res.status();
         (status, res.into_body().collect().await.unwrap().to_bytes())
+    }
+
+    async fn get(app: &Router, uri: &str) -> (StatusCode, serde_json::Value) {
+        let req = Request::get(uri).body(Body::empty()).unwrap();
+        let res = app.clone().oneshot(req).await.unwrap();
+        let status = res.status();
+        let bytes = res.into_body().collect().await.unwrap().to_bytes();
+        (status, serde_json::from_slice(&bytes).unwrap())
+    }
+
+    #[tokio::test]
+    async fn list_of_an_empty_schedule_is_an_empty_list() {
+        let app = router(MemRepo::default());
+        let (status, body) = get(&app, "/reservations").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body, serde_json::json!({ "reservations": [] }));
+    }
+
+    #[tokio::test]
+    async fn list_gives_every_reservation_by_start_time() {
+        let app = router(MemRepo::default());
+        post(&app, r#"{"start":720,"end":780}"#).await;
+        post(&app, r#"{"start":540,"end":600}"#).await;
+        post(&app, r#"{"start":600,"end":660}"#).await;
+        let (status, body) = get(&app, "/reservations").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(
+            body,
+            serde_json::json!({ "reservations": [
+                { "id": 2, "start": 540, "end": 600 },
+                { "id": 3, "start": 600, "end": 660 },
+                { "id": 1, "start": 720, "end": 780 },
+            ] })
+        );
+    }
+
+    #[tokio::test]
+    async fn list_leaves_out_a_cancelled_reservation() {
+        let app = router(MemRepo::default());
+        post(&app, r#"{"start":540,"end":600}"#).await;
+        post(&app, r#"{"start":600,"end":660}"#).await;
+        delete(&app, "/reservations/1").await;
+        let (_, body) = get(&app, "/reservations").await;
+        assert_eq!(
+            body,
+            serde_json::json!({ "reservations": [{ "id": 2, "start": 600, "end": 660 }] })
+        );
+    }
+
+    #[tokio::test]
+    async fn list_storage_failure_returns_503_with_error_body() {
+        let app = router(BrokenRepo);
+        let (status, body) = get(&app, "/reservations").await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert!(body["error"].is_string());
     }
 
     #[tokio::test]
