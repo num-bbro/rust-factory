@@ -70,7 +70,10 @@ pub enum ScheduleError {
     NotFound(ReservationId),
 }
 
-/// A day's reservations. Invariant: no two reservations overlap.
+/// A day's reservations.
+///
+/// Invariants: no two reservations overlap, and the reservations are kept ordered by start time
+/// (ADR 0012), so [`Schedule::reservations`] yields them in that order without sorting on read.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Schedule {
     reservations: Vec<(ReservationId, TimeSlot)>,
@@ -92,6 +95,7 @@ impl Schedule {
         self.next_id += 1;
         let id = ReservationId(self.next_id);
         self.reservations.push((id, slot));
+        self.reservations.sort_by_key(|(_, slot)| slot.start());
         Ok(id)
     }
 
@@ -104,6 +108,9 @@ impl Schedule {
         Ok(self.reservations.remove(pos).1)
     }
 
+    /// Every reservation made and not cancelled, exactly once, in ascending order of start time,
+    /// whatever the order they were booked in (ADR 0012). No two reservations share a start,
+    /// because they never overlap, so the order is total and needs no tie-break.
     pub fn reservations(&self) -> impl Iterator<Item = (ReservationId, TimeSlot)> + '_ {
         self.reservations.iter().copied()
     }
@@ -196,6 +203,42 @@ mod tests {
         assert_eq!(s.cancel(id), Err(ScheduleError::NotFound(id)));
     }
 
+    #[test]
+    fn an_empty_schedule_has_no_reservations() {
+        assert_eq!(Schedule::new().reservations().count(), 0);
+    }
+
+    #[test]
+    fn reservations_come_by_start_time_whatever_the_booking_order() {
+        let mut s = Schedule::new();
+        let late = s.book(slot(720, 780)).unwrap();
+        let early = s.book(slot(540, 600)).unwrap();
+        let touching = s.book(slot(600, 660)).unwrap();
+        let listed: Vec<_> = s.reservations().collect();
+        assert_eq!(
+            listed,
+            vec![
+                (early, slot(540, 600)),
+                (touching, slot(600, 660)),
+                (late, slot(720, 780)),
+            ]
+        );
+    }
+
+    #[test]
+    fn cancelling_keeps_the_others_in_start_order() {
+        let mut s = Schedule::new();
+        let late = s.book(slot(720, 780)).unwrap();
+        let middle = s.book(slot(600, 660)).unwrap();
+        let early = s.book(slot(540, 600)).unwrap();
+        s.cancel(middle).unwrap();
+        let listed: Vec<_> = s.reservations().collect();
+        assert_eq!(
+            listed,
+            vec![(early, slot(540, 600)), (late, slot(720, 780))]
+        );
+    }
+
     fn any_slot() -> impl Strategy<Value = TimeSlot> {
         (0..DAY_MINUTES).prop_flat_map(|start| {
             (Just(start), start + 1..=DAY_MINUTES).prop_map(|(s, e)| slot(s, e))
@@ -222,6 +265,33 @@ mod tests {
                     prop_assert!(!a.overlaps(*b), "{a:?} overlaps {b:?}");
                 }
             }
+        }
+
+        /// Whatever is booked and cancelled, in any order, the reservations come strictly by start
+        /// time, and they are exactly the bookings that were accepted and not cancelled.
+        #[test]
+        fn reservations_are_ordered_by_start_time(
+            steps in prop::collection::vec((any_slot(), any::<bool>()), 0..40),
+        ) {
+            let mut s = Schedule::new();
+            let mut kept = Vec::new();
+            for (slot, cancel_it) in steps {
+                if let Ok(id) = s.book(slot) {
+                    if cancel_it {
+                        s.cancel(id).unwrap();
+                    } else {
+                        kept.push((id, slot));
+                    }
+                }
+            }
+            let listed: Vec<_> = s.reservations().collect();
+            for pair in listed.windows(2) {
+                prop_assert!(pair[0].1.start() < pair[1].1.start(), "{pair:?} out of order");
+            }
+            kept.sort_by_key(|(id, _)| *id);
+            let mut by_id = listed.clone();
+            by_id.sort_by_key(|(id, _)| *id);
+            prop_assert_eq!(by_id, kept);
         }
 
         /// A booking is rejected only when it really overlaps something already booked.

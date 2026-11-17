@@ -40,6 +40,22 @@ impl ScheduleRepository for InMemoryScheduleRepository {
         *stored = copy;
         Ok(value)
     }
+
+    /// Holds the same lock as [`update`](Self::update), so a read sees the schedule between two
+    /// changes and waits for, or delays, a concurrent change (ADR 0012). `look` gets the stored
+    /// schedule itself, read-only, so nothing is copied or stored. A poisoned lock is a
+    /// `RepositoryError`, as for `update`.
+    fn read<T, E, F>(&self, look: F) -> Result<T, E>
+    where
+        F: FnOnce(&Schedule) -> Result<T, E>,
+        E: From<RepositoryError>,
+    {
+        let stored = self
+            .schedule
+            .lock()
+            .map_err(|e| RepositoryError(e.to_string()))?;
+        look(&stored)
+    }
 }
 
 #[cfg(test)]
@@ -52,8 +68,27 @@ mod tests {
     }
 
     fn snapshot(repo: &InMemoryScheduleRepository) -> Schedule {
-        repo.update(|s| Ok::<_, RepositoryError>(s.clone()))
-            .unwrap()
+        repo.read(|s| Ok::<_, RepositoryError>(s.clone())).unwrap()
+    }
+
+    #[test]
+    fn read_sees_what_update_stored_and_passes_its_result_through() {
+        let repo = InMemoryScheduleRepository::new();
+        let id = repo
+            .update(|s| {
+                s.book(slot(60, 120))
+                    .map_err(|e| RepositoryError(e.to_string()))
+            })
+            .unwrap();
+        let listed = repo
+            .read(|s| Ok::<_, RepositoryError>(s.reservations().collect::<Vec<_>>()))
+            .unwrap();
+        assert_eq!(listed, vec![(id, slot(60, 120))]);
+        let err = repo
+            .read(|_| -> Result<(), RepositoryError> { Err(RepositoryError("no".into())) })
+            .unwrap_err();
+        assert_eq!(err.0, "no");
+        assert_eq!(snapshot(&repo).reservations().count(), 1);
     }
 
     #[test]
@@ -100,5 +135,9 @@ mod tests {
             })
             .unwrap_err();
         assert!(err.0.contains("poisoned"), "{err}");
+        let err = repo
+            .read(|s| Ok::<_, RepositoryError>(s.reservations().count()))
+            .unwrap_err();
+        assert!(err.0.contains("poisoned"), "read too: {err}");
     }
 }

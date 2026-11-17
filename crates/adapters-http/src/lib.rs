@@ -46,6 +46,14 @@ impl<R: ScheduleRepository> ScheduleRepository for Shared<R> {
     {
         self.0.update(change)
     }
+
+    fn read<T, E, F>(&self, look: F) -> Result<T, E>
+    where
+        F: FnOnce(&Schedule) -> Result<T, E>,
+        E: From<RepositoryError>,
+    {
+        self.0.read(look)
+    }
 }
 
 struct UseCases<R> {
@@ -141,6 +149,14 @@ mod tests {
             *stored = copy;
             Ok(value)
         }
+
+        fn read<T, E, F>(&self, look: F) -> Result<T, E>
+        where
+            F: FnOnce(&Schedule) -> Result<T, E>,
+            E: From<RepositoryError>,
+        {
+            look(&self.0.lock().unwrap())
+        }
     }
 
     async fn post(app: &Router, body: &str) -> (StatusCode, serde_json::Value) {
@@ -164,6 +180,25 @@ mod tests {
         {
             Err(RepositoryError("disk on fire".into()).into())
         }
+
+        fn read<T, E, F>(&self, _: F) -> Result<T, E>
+        where
+            F: FnOnce(&Schedule) -> Result<T, E>,
+            E: From<RepositoryError>,
+        {
+            Err(RepositoryError("disk on fire".into()).into())
+        }
+    }
+
+    #[test]
+    fn shared_repository_forwards_reads() {
+        let shared = Shared(Arc::new(MemRepo::default()));
+        let id = BookSlot::new(shared.clone()).execute(540, 600).unwrap();
+        let listed = shared
+            .read(|s| Ok::<_, RepositoryError>(s.reservations().collect::<Vec<_>>()))
+            .unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].0, id);
     }
 
     async fn delete(app: &Router, uri: &str) -> (StatusCode, axum::body::Bytes) {

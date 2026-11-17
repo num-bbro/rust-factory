@@ -75,7 +75,7 @@ fn run_thread(repo: &InMemoryScheduleRepository, t: u16, start: &Barrier) -> Out
 
 /// The stored schedule, read through the port.
 fn snapshot(repo: &InMemoryScheduleRepository) -> Schedule {
-    repo.update(|s| Ok::<_, RepositoryError>(s.clone()))
+    repo.read(|s| Ok::<_, RepositoryError>(s.clone()))
         .expect("in-memory storage is available")
 }
 
