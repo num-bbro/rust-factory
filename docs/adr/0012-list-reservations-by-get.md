@@ -7,6 +7,7 @@
 - Deciders: human approver (plan approved at gate 1 on 2026-11-17), architect agent
 - ArchiMate elements: `id-app-comp-application`, `id-app-comp-db`, `id-app-data-schedule`,
   `id-app-intf-reservation-api`, `id-app-svc-list`, `id-bus-proc-list`, `id-mot-req-list`
+- Released in: v0.3.0
 
 ## <a id="id-view-adr-0012"></a>Elements this decision applies to
 
