@@ -198,6 +198,12 @@ class AdrViews(unittest.TestCase):
 REAL_MODEL = HERE.parents[2] / "docs" / "architecture" / "model.xml"
 
 
+def releases_band() -> exchange.Node:
+    """The lower band of the real releases view, which widens with each release recorded."""
+    return next(n for n in exchange.read(REAL_MODEL.read_bytes()).nodes
+                if n.identifier == "id-view-releases-band-1")
+
+
 class ManualViews(unittest.TestCase):
     def test_the_fixture_and_the_real_releases_view_pass(self):
         self.assertEqual(check_model.manual_views(MODEL), [])
@@ -223,10 +229,13 @@ class ManualViews(unittest.TestCase):
         text = REAL_MODEL.read_text(encoding="utf-8")
         old = 'elementRef="id-impl-plat-v0-2-1" x="920" y="219"'
         self.assertIn(old, text)
-        model = exchange.read(text.replace(old, 'elementRef="id-impl-plat-v0-2-1" x="1500" y="400"').encode())
+        band = releases_band()
+        x = band.x + band.w + 1
+        model = exchange.read(text.replace(old, f'elementRef="id-impl-plat-v0-2-1" x="{x}" y="400"').encode())
         self.assertEqual(check_model.manual_views(model), [
             "view 'id-view-releases' (Layout = manual): node 'id-view-releases-n-id-impl-plat-v0-2-1'"
-            " (1500,400 160x55) is not inside its parent 'id-view-releases-band-1' (20,177 1080x117)"])
+            f" ({x},400 160x55) is not inside its parent 'id-view-releases-band-1'"
+            f" ({band.x},{band.y} {band.w}x{band.h})"])
 
     def releases(self, x: int = 920, y: int = 219, w: int = 160, h: int = 55) -> exchange.Model:
         text = REAL_MODEL.read_text(encoding="utf-8")
@@ -236,13 +245,19 @@ class ManualViews(unittest.TestCase):
             old, f'elementRef="id-impl-plat-v0-2-1" x="{x}" y="{y}" w="{w}" h="{h}"').encode())
 
     def test_a_box_exactly_flush_with_its_parent_passes(self):
-        # band-1 is 20,177 1080x117: right edge 1100, bottom edge 294
-        self.assertEqual(check_model.manual_views(self.releases(x=940, y=239)), [])
-        self.assertEqual(check_model.manual_views(self.releases(x=20, y=177, w=1080, h=117)), [])
+        band = releases_band()
+        right, bottom = band.x + band.w - 160, band.y + band.h - 55
+        self.assertEqual(check_model.manual_views(self.releases(x=right, y=bottom)), [])
+        self.assertEqual(check_model.manual_views(
+            self.releases(x=band.x, y=band.y, w=band.w, h=band.h)), [])
 
     def test_a_box_one_pixel_over_any_edge_fails(self):
-        for what, box in (("right", dict(x=941, y=239)), ("bottom", dict(x=940, y=240)),
-                          ("left", dict(x=19, y=239)), ("top", dict(x=940, y=176))):
+        band = releases_band()
+        right, bottom = band.x + band.w - 160, band.y + band.h - 55
+        for what, box in (("right", dict(x=right + 1, y=bottom)),
+                          ("bottom", dict(x=right, y=bottom + 1)),
+                          ("left", dict(x=band.x - 1, y=bottom)),
+                          ("top", dict(x=right, y=band.y - 1))):
             with self.subTest(edge=what):
                 problems = check_model.manual_views(self.releases(**box))
                 self.assertEqual(len(problems), 1, problems)
@@ -256,7 +271,8 @@ class ManualViews(unittest.TestCase):
         model.connections = [c for c in model.connections if c.view != "id-view-releases"]
         node = next(n for n in model.nodes
                     if n.identifier == "id-view-releases-n-id-impl-plat-v0-2-1")
-        node.x, node.y = 1500, 400
+        band = releases_band()
+        node.x, node.y = band.x + band.w + 1, 400
         self.assertEqual(check_model.manual_views(model), [])
 
     def test_a_relationship_drawn_twice_is_reported(self):

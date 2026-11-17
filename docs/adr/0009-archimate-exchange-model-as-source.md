@@ -586,9 +586,11 @@ Step 6 (#54) recorded the three releases as `Plateau` elements. As with the amen
 points refine the decision:
 - **Elements:** [`id-impl-plat-v0-1-0`](../togaf/F-migration-planning.md#id-impl-plat-v0-1-0),
   [`id-impl-plat-v0-2-0`](../togaf/F-migration-planning.md#id-impl-plat-v0-2-0) and
-  [`id-impl-plat-v0-2-1`](../togaf/F-migration-planning.md#id-impl-plat-v0-2-1), named `Release
-  vX.Y.Z`, with the properties `Date` (2026-11-15 for all three) and `Tag` (the git tag), and a
-  one-line documentation. A Triggering relationship leads from each release to the next.
+  [`id-impl-plat-v0-2-1`](../togaf/F-migration-planning.md#id-impl-plat-v0-2-1), then
+  [`id-impl-plat-v0-3-0`](../togaf/F-migration-planning.md#id-impl-plat-v0-3-0) (#102, by the rule
+  below), named `Release vX.Y.Z`, with the properties `Date` (2026-11-15 for the first three,
+  2026-11-17 for v0.3.0) and `Tag` (the git tag), and a one-line documentation. A Triggering
+  relationship leads from each release to the next.
 - **Links:** from each Plateau, an Aggregation to every element the release delivered; `just
   model-check` allowed Aggregation for every pair, so no Association was needed. Recorded contents:
   [`id-impl-plat-v0-1-0`](../togaf/F-migration-planning.md#id-impl-plat-v0-1-0) delivers
@@ -624,20 +626,38 @@ points refine the decision:
   the HTTP adapter),
   [`id-app-data-schedule`](../togaf/C-information-systems-architecture.md#id-app-data-schedule) and
   [`id-mot-adr-0008`](0008-atomic-schedule-update-through-the-port.md).
+  [`id-impl-plat-v0-3-0`](../togaf/F-migration-planning.md#id-impl-plat-v0-3-0) delivers
+  [`id-app-svc-list`](../togaf/A-architecture-vision.md#id-app-svc-list),
+  [`id-bus-proc-list`](../togaf/A-architecture-vision.md#id-bus-proc-list),
+  [`id-mot-req-list`](../togaf/A-architecture-vision.md#id-mot-req-list),
+  [`id-app-comp-domain`](../togaf/C-information-systems-architecture.md#id-app-comp-domain) (the
+  Schedule now keeps its reservations ordered by start time),
+  [`id-app-comp-application`](../togaf/C-information-systems-architecture.md#id-app-comp-application),
+  [`id-app-comp-db`](../togaf/C-information-systems-architecture.md#id-app-comp-db),
+  [`id-app-comp-http`](../togaf/C-information-systems-architecture.md#id-app-comp-http),
+  [`id-app-intf-reservation-api`](../togaf/C-information-systems-architecture.md#id-app-intf-reservation-api)
+  (`GET /reservations` and the OpenAPI contract),
+  [`id-app-data-schedule`](../togaf/C-information-systems-architecture.md#id-app-data-schedule),
+  [`id-mot-adr-0010`](0010-openapi-specification-spec-first.md) and
+  [`id-mot-adr-0012`](0012-list-reservations-by-get.md); ADR 0009 and ADR 0011 also landed between
+  v0.2.1 and v0.3.0, but they change only the factory's documentation tooling, not the released
+  image, so no release delivers them, as for ADR 0001, 0002 and 0004.
 - **View:** [`id-view-releases`](../togaf/F-migration-planning.md#id-view-releases) (viewpoint
   Implementation and Migration, documentation: "The releases in order and the decisions each one
   delivered; the Release column of the other catalogs shows what else each release delivered.")
-  shows the three releases and the five ADRs they deliver (eight boxes:
+  shows the releases and the ADRs they deliver (eight boxes in step 6:
   [`id-mot-adr-0003`](0003-layered-cargo-workspace.md),
   [`id-mot-adr-0005`](0005-release-image-and-acceptance.md),
   [`id-mot-adr-0006`](0006-pilot-and-rollout-with-quadlet.md),
   [`id-mot-adr-0007`](0007-cancel-reservation-by-delete.md),
-  [`id-mot-adr-0008`](0008-atomic-schedule-update-through-the-port.md)), with an Aggregation per ADR
-  and the two Triggering links; the other delivered elements stay linked in the model and appear in
-  the Release column of the catalogs. It is hand-arranged (view property `Layout = manual`, as this
-  ADR allows): the automatic layout bent two links over the same segment, so that v0.2.1 seemed to
-  deliver ADR 0007. Each release box stands under the ADRs it delivers and every link is a straight
-  line. It is a `View` of the phase F document.
+  [`id-mot-adr-0008`](0008-atomic-schedule-update-through-the-port.md); eleven since v0.3.0 added
+  its Plateau, [`id-mot-adr-0010`](0010-openapi-specification-spec-first.md) and
+  [`id-mot-adr-0012`](0012-list-reservations-by-get.md)), with an Aggregation per ADR and a
+  Triggering link from each release to the next; the other delivered elements stay linked in the
+  model and appear in the Release column of the catalogs. It is hand-arranged (view property `Layout =
+  manual`, as this ADR allows): the automatic layout bent two links over the same segment, so that
+  v0.2.1 seemed to deliver ADR 0007. Each release box stands under the ADRs it delivers and every
+  link is a straight line. It is a `View` of the phase F document.
 - **Generator:** the catalogs' Release column lists each Plateau once per element, in version order
   (`v0-10-0` after `v0-2-1`), counting an Association in either direction; an ADR page's header
   gains `Released in: <tags>` when a Plateau links to the ADR; `--check` applies the one-line rule

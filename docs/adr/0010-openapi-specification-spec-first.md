@@ -7,6 +7,7 @@
 - Deciders: human approver (approach chosen on 2026-11-16, change request #60), architect agent
 - ArchiMate elements: `id-app-intf-reservation-api`, `id-app-svc-book`, `id-app-svc-cancel`,
   `id-app-svc-list`, `id-mot-goal-healthy`
+- Released in: v0.3.0
 
 ## <a id="id-view-adr-0010"></a>Elements this decision applies to
 
