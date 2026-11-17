@@ -10,6 +10,7 @@ version = 2
 yanked = "deny"
 ignore = [
     # Format: { id = "RUSTSEC-YYYY-NNNN", reason = "why this does not affect us; issue #N" },
+    { id = "RUSTSEC-2026-0542", reason = "humantime is unmaintained, not a known vulnerability; reached only through the test-only dev-dependency cucumber (crates/acceptance-tests), not in the shipped service; issue #89" },
 ]
 
 # Only licenses that are safe to ship in a commercial product without source-disclosure duties.
