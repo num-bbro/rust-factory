@@ -2,8 +2,9 @@
 """cost-report.py — what did the agents spend, per task and per model?
 
 Reads Claude Code's local session transcripts for this repository (and its agent worktrees):
-  ~/.claude/projects/<repo-path-with-non-alphanumerics-as-dashes>*/<session>.jsonl
-  ~/.claude/projects/<...>/<session>/subagents/agent-<id>.jsonl (+ .meta.json: agent type)
+  <config>/projects/<repo-path-with-non-alphanumerics-as-dashes>*/<session>.jsonl
+  <config>/projects/<...>/<session>/subagents/agent-<id>.jsonl (+ .meta.json: agent type)
+where <config> is $CLAUDE_CONFIG_DIR when it is set and not empty, else ~/.claude.
 
 Every assistant response records its model and token usage. The task comes from the subagent's
 launch description, which the conductor always starts with the issue number ("#42 implement ...",
@@ -27,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import tomllib
@@ -56,9 +58,14 @@ class Tally:
             self.cost += cost
 
 
-def project_dirs(root: Path) -> list[Path]:
+def projects_base() -> Path:
+    """Folder holding Claude Code's transcripts: $CLAUDE_CONFIG_DIR/projects, else ~/.claude/projects."""
+    config = os.environ.get("CLAUDE_CONFIG_DIR")
+    return (Path(config) if config else Path.home() / ".claude") / "projects"
+
+
+def project_dirs(root: Path, base: Path) -> list[Path]:
     """Transcript folders for the repo and any worktree inside it (e.g. .claude/worktrees/...)."""
-    base = Path.home() / ".claude" / "projects"
     prefix = re.sub(r"[^A-Za-z0-9]", "-", str(root.resolve()))
     return sorted(p for p in base.glob("*") if p.is_dir() and p.name.startswith(prefix))
 
@@ -134,9 +141,10 @@ def main() -> int:
     args = ap.parse_args()
 
     prices = tomllib.loads((args.root / "tools" / "model-prices.toml").read_text())["models"]
-    dirs = project_dirs(args.root)
+    base = projects_base()
+    dirs = project_dirs(args.root, base)
     if not dirs:
-        print(f"no Claude Code transcripts found for {args.root}", file=sys.stderr)
+        print(f"no Claude Code transcripts found for {args.root} in {base}", file=sys.stderr)
         return 1
 
     seen: set[tuple[str, str]] = set()
