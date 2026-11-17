@@ -64,10 +64,10 @@ where
   `Result<Result<…>>` and no new error enum.
 - **Commit only on success**: if the change returns `Err`, nothing is stored, *even if the change
   modified the schedule before failing*. The in-memory adapter
-  ([`id-app-comp-db`](../togaf/A-architecture-vision.md#id-app-comp-db)) holds its mutex for the
-  whole operation, applies the change to a copy and swaps the copy in only on `Ok`. The copy costs
-  one clone per change (the old `load` cloned too) and also leaves the stored schedule intact if a
-  change panics.
+  ([`id-app-comp-db`](../togaf/C-information-systems-architecture.md#id-app-comp-db)) holds its
+  mutex for the whole operation, applies the change to a copy and swaps the copy in only on `Ok`.
+  The copy costs one clone per change (the old `load` cloned too) and also leaves the stored
+  schedule intact if a change panics.
 - **A poisoned mutex is a `RepositoryError`** (answered `503` by the HTTP adapter), never a panic.
 
 ## Consequences
@@ -104,3 +104,9 @@ where
 - **(D) A lock in the HTTP adapter**: protects only HTTP callers; any other driving adapter (a CLI,
   a queue consumer) would bring the bug back, and correctness would depend on how the binary is
   wired rather than on the port.
+
+## Notes
+- 2026-11-17: ADR 0012 ([`id-mot-adr-0012`](0012-list-reservations-by-get.md), Proposed) adds a
+  read-only operation to the port beside `update`, for listing reservations (story #80). It does not
+  supersede this ADR: every change still goes through `update`, and `load` and `save` stay removed;
+  only the premise above that nothing reads the schedule without writing it no longer holds.

@@ -31,15 +31,24 @@ depends on `application` (dependency inversion).
 
 Customers use the service through the reservations HTTP API
 ([`id-app-intf-reservation-api`](#id-app-intf-reservation-api)), which is part of the HTTP adapter.
-The API offers two application services: book a slot ([`id-app-svc-book`](#id-app-svc-book)) and,
-from epic #17, cancel a reservation ([`id-app-svc-cancel`](#id-app-svc-cancel)). The data is the
-day's schedule ([`id-app-data-schedule`](#id-app-data-schedule)), which realises the reservation
-business object.
+The API offers three application services: book a slot ([`id-app-svc-book`](#id-app-svc-book)), from
+epic #17 cancel a reservation ([`id-app-svc-cancel`](#id-app-svc-cancel)), and from epic #79 list
+the reservations ([`id-app-svc-list`](#id-app-svc-list)). The data is the day's schedule
+([`id-app-data-schedule`](#id-app-data-schedule)), which realises the reservation business object.
 
 Cancelling is `DELETE /reservations/{id}`: `204 No Content` on success, `404 Not Found` with the
 usual `{error}` body for an unknown or already cancelled id; a non-numeric id gets the framework's
 plain-text `400`. The reservation is removed, not marked; see ADR 0007 for the options considered.
 The domain rule already exists (`Schedule::cancel`); the change adds a use case and an HTTP route.
+
+Listing is `GET /reservations`: `200 OK` with `{"reservations": [{"id", "start", "end"}]}`, times in
+minutes since midnight as in booking, ordered by start time; an empty schedule gives an empty list,
+not `404`. The list sits inside an object so that paging can be added later without breaking
+clients. The domain guarantees the order (`Schedule::reservations()`), and the use case reads the
+schedule through a read-only operation of the `ScheduleRepository` port beside `update`, so a list
+never takes the write path; see ADR 0012
+([`id-mot-adr-0012`](../adr/0012-list-reservations-by-get.md)). The contract goes from `1.0.0` to
+`1.1.0` in the PR that adds the route.
 
 The contract of the API is the OpenAPI 3.1 specification `docs/api/openapi.yaml`, written by hand:
 every route, status code, content type and body, including the framework's plain-text rejections.
@@ -50,7 +59,9 @@ answers as the file says, and a PR that changes HTTP behaviour changes the file 
 Every change to the schedule goes through one atomic `update` operation on the `ScheduleRepository`
 port: reading, changing and storing the schedule happen as one step, and a change refused by a
 business rule stores nothing. Concurrent requests therefore cannot lose, duplicate or bring back
-reservations (bug #26, fixed by ADR 0008). Each host still keeps its own in-memory schedule.
+reservations (bug #26, fixed by ADR 0008). Reads that change nothing use the port's read-only
+operation (ADR 0012), which runs under the same lock and stores nothing. Each host still keeps its
+own in-memory schedule.
 
 ## Open questions
 - _none yet_
@@ -90,35 +101,31 @@ Clickable version:
 | <a id="id-tech-sw-podman"></a>`id-tech-sw-podman` | Podman | SystemSoftware | [ADR 0005](../adr/0005-release-image-and-acceptance.md), [ADR 0006](../adr/0006-pilot-and-rollout-with-quadlet.md) |  |  |  | [D. Technology Architecture](D-technology-architecture.md#id-tech-sw-podman) |
 | <a id="id-tech-sw-rust"></a>`id-tech-sw-rust` | Rust toolchain | SystemSoftware | [ADR 0003](../adr/0003-layered-cargo-workspace.md) |  |  |  | [D. Technology Architecture](D-technology-architecture.md#id-tech-sw-rust) |
 
-## <a id="id-view-reservation-cancel"></a>Reservations: cancel a reservation
+## <a id="id-view-reservation-app"></a>Reservations 2/2: how (application)
 
-Sample reservation domain, epic #17: why customers cancel, the business processes, and the crates
-and API that serve them. Technology is unchanged (see id-view-layered).
+Sample reservation domain, epics #17 and #79, part 2 of 2: the business processes (from part 1,
+id-view-reservation-cancel) and the application that serves them: the API, the three application
+services, the crates of the reservation service and the schedule. Technology is unchanged (see
+id-view-layered).
 
-![Reservations: cancel a reservation](../architecture/views/id-view-reservation-cancel.png)
+![Reservations 2/2: how (application)](../architecture/views/id-view-reservation-app.png)
 
 Clickable version:
-[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-reservation-cancel.html)
+[report](https://num-bbro.github.io/rust-factory/report/id-model-factory/views/id-view-reservation-app.html)
 
 | ID | Name | Type | Decisions | Issues | Crate / code | Release | Other documents |
 |---|---|---|---|---|---|---|---|
-| <a id="id-app-comp-application"></a>`id-app-comp-application` | Use cases (crate application) | ApplicationComponent | [ADR 0008](../adr/0008-atomic-schedule-update-through-the-port.md) |  | `crates/application` | Release v0.1.0, Release v0.2.0, Release v0.2.1 | [A. Architecture Vision](A-architecture-vision.md#id-app-comp-application), [B. Business Architecture](B-business-architecture.md#id-app-comp-application), [Requirements Management](requirements-management.md#id-app-comp-application) |
-| <a id="id-app-comp-db"></a>`id-app-comp-db` | Persistence adapter (crate adapters-db) | ApplicationComponent | [ADR 0008](../adr/0008-atomic-schedule-update-through-the-port.md) |  | `crates/adapters-db` | Release v0.1.0, Release v0.2.1 | [A. Architecture Vision](A-architecture-vision.md#id-app-comp-db), [B. Business Architecture](B-business-architecture.md#id-app-comp-db), [Requirements Management](requirements-management.md#id-app-comp-db) |
-| <a id="id-app-comp-domain"></a>`id-app-comp-domain` | Domain (crate domain) | ApplicationComponent |  |  | `crates/domain` | Release v0.1.0 | [A. Architecture Vision](A-architecture-vision.md#id-app-comp-domain), [B. Business Architecture](B-business-architecture.md#id-app-comp-domain), [Requirements Management](requirements-management.md#id-app-comp-domain) |
-| <a id="id-app-comp-http"></a>`id-app-comp-http` | HTTP adapter (crate adapters-http) | ApplicationComponent |  |  | `crates/adapters-http` | Release v0.1.0, Release v0.2.0, Release v0.2.1 | [A. Architecture Vision](A-architecture-vision.md#id-app-comp-http), [B. Business Architecture](B-business-architecture.md#id-app-comp-http), [Requirements Management](requirements-management.md#id-app-comp-http) |
-| <a id="id-app-comp-reservation-svc"></a>`id-app-comp-reservation-svc` | Reservation service | ApplicationComponent | [ADR 0003](../adr/0003-layered-cargo-workspace.md) |  | `crates/app` | Release v0.1.0 | [A. Architecture Vision](A-architecture-vision.md#id-app-comp-reservation-svc), [B. Business Architecture](B-business-architecture.md#id-app-comp-reservation-svc), [Requirements Management](requirements-management.md#id-app-comp-reservation-svc) |
-| <a id="id-app-data-schedule"></a>`id-app-data-schedule` | Schedule | DataObject | [ADR 0007](../adr/0007-cancel-reservation-by-delete.md), [ADR 0008](../adr/0008-atomic-schedule-update-through-the-port.md) | #26 | `crates/domain`, `Schedule` | Release v0.1.0, Release v0.2.1 | [A. Architecture Vision](A-architecture-vision.md#id-app-data-schedule), [B. Business Architecture](B-business-architecture.md#id-app-data-schedule), [Requirements Management](requirements-management.md#id-app-data-schedule) |
-| <a id="id-app-intf-reservation-api"></a>`id-app-intf-reservation-api` | Reservations HTTP API | ApplicationInterface | [ADR 0007](../adr/0007-cancel-reservation-by-delete.md), [ADR 0010](../adr/0010-openapi-specification-spec-first.md) |  |  | Release v0.1.0, Release v0.2.0 | [A. Architecture Vision](A-architecture-vision.md#id-app-intf-reservation-api), [B. Business Architecture](B-business-architecture.md#id-app-intf-reservation-api), [Requirements Management](requirements-management.md#id-app-intf-reservation-api) |
+| <a id="id-app-comp-application"></a>`id-app-comp-application` | Use cases (crate application) | ApplicationComponent | [ADR 0008](../adr/0008-atomic-schedule-update-through-the-port.md), [ADR 0012](../adr/0012-list-reservations-by-get.md) |  | `crates/application` | Release v0.1.0, Release v0.2.0, Release v0.2.1 |  |
+| <a id="id-app-comp-db"></a>`id-app-comp-db` | Persistence adapter (crate adapters-db) | ApplicationComponent | [ADR 0008](../adr/0008-atomic-schedule-update-through-the-port.md), [ADR 0012](../adr/0012-list-reservations-by-get.md) |  | `crates/adapters-db` | Release v0.1.0, Release v0.2.1 |  |
+| <a id="id-app-comp-domain"></a>`id-app-comp-domain` | Domain (crate domain) | ApplicationComponent |  |  | `crates/domain` | Release v0.1.0 |  |
+| <a id="id-app-comp-http"></a>`id-app-comp-http` | HTTP adapter (crate adapters-http) | ApplicationComponent |  |  | `crates/adapters-http` | Release v0.1.0, Release v0.2.0, Release v0.2.1 |  |
+| <a id="id-app-comp-reservation-svc"></a>`id-app-comp-reservation-svc` | Reservation service | ApplicationComponent | [ADR 0003](../adr/0003-layered-cargo-workspace.md) |  | `crates/app` | Release v0.1.0 |  |
+| <a id="id-app-data-schedule"></a>`id-app-data-schedule` | Schedule | DataObject | [ADR 0007](../adr/0007-cancel-reservation-by-delete.md), [ADR 0008](../adr/0008-atomic-schedule-update-through-the-port.md), [ADR 0012](../adr/0012-list-reservations-by-get.md) | #26 | `crates/domain`, `Schedule` | Release v0.1.0, Release v0.2.1 |  |
+| <a id="id-app-intf-reservation-api"></a>`id-app-intf-reservation-api` | Reservations HTTP API | ApplicationInterface | [ADR 0007](../adr/0007-cancel-reservation-by-delete.md), [ADR 0010](../adr/0010-openapi-specification-spec-first.md), [ADR 0012](../adr/0012-list-reservations-by-get.md) |  |  | Release v0.1.0, Release v0.2.0 |  |
 | <a id="id-app-svc-book"></a>`id-app-svc-book` | Book a slot | ApplicationService | [ADR 0010](../adr/0010-openapi-specification-spec-first.md) |  | `crates/application`, `BookSlot` | Release v0.1.0 | [A. Architecture Vision](A-architecture-vision.md#id-app-svc-book), [B. Business Architecture](B-business-architecture.md#id-app-svc-book), [Requirements Management](requirements-management.md#id-app-svc-book) |
 | <a id="id-app-svc-cancel"></a>`id-app-svc-cancel` | Cancel a reservation | ApplicationService | [ADR 0007](../adr/0007-cancel-reservation-by-delete.md), [ADR 0010](../adr/0010-openapi-specification-spec-first.md) | #17 |  | Release v0.2.0 | [A. Architecture Vision](A-architecture-vision.md#id-app-svc-cancel), [B. Business Architecture](B-business-architecture.md#id-app-svc-cancel), [Requirements Management](requirements-management.md#id-app-svc-cancel) |
+| <a id="id-app-svc-list"></a>`id-app-svc-list` | List the reservations | ApplicationService | [ADR 0010](../adr/0010-openapi-specification-spec-first.md), [ADR 0012](../adr/0012-list-reservations-by-get.md) | #79 | `crates/application`, `ListReservations` |  | [A. Architecture Vision](A-architecture-vision.md#id-app-svc-list), [B. Business Architecture](B-business-architecture.md#id-app-svc-list), [Requirements Management](requirements-management.md#id-app-svc-list) |
 | <a id="id-bus-act-customer"></a>`id-bus-act-customer` | Customer | BusinessActor |  |  |  |  | [A. Architecture Vision](A-architecture-vision.md#id-bus-act-customer), [B. Business Architecture](B-business-architecture.md#id-bus-act-customer), [Requirements Management](requirements-management.md#id-bus-act-customer) |
-| <a id="id-bus-obj-reservation"></a>`id-bus-obj-reservation` | Reservation | BusinessObject |  |  |  | Release v0.1.0 | [A. Architecture Vision](A-architecture-vision.md#id-bus-obj-reservation), [B. Business Architecture](B-business-architecture.md#id-bus-obj-reservation), [Requirements Management](requirements-management.md#id-bus-obj-reservation) |
 | <a id="id-bus-proc-cancel"></a>`id-bus-proc-cancel` | Cancel a reservation | BusinessProcess | [ADR 0007](../adr/0007-cancel-reservation-by-delete.md) | #17 |  | Release v0.2.0 | [A. Architecture Vision](A-architecture-vision.md#id-bus-proc-cancel), [B. Business Architecture](B-business-architecture.md#id-bus-proc-cancel), [Requirements Management](requirements-management.md#id-bus-proc-cancel) |
+| <a id="id-bus-proc-list"></a>`id-bus-proc-list` | List the reservations | BusinessProcess | [ADR 0012](../adr/0012-list-reservations-by-get.md) | #79 |  |  | [A. Architecture Vision](A-architecture-vision.md#id-bus-proc-list), [B. Business Architecture](B-business-architecture.md#id-bus-proc-list), [Requirements Management](requirements-management.md#id-bus-proc-list) |
 | <a id="id-bus-proc-reserve"></a>`id-bus-proc-reserve` | Reserve a slot | BusinessProcess |  |  |  | Release v0.1.0 | [A. Architecture Vision](A-architecture-vision.md#id-bus-proc-reserve), [B. Business Architecture](B-business-architecture.md#id-bus-proc-reserve), [Requirements Management](requirements-management.md#id-bus-proc-reserve) |
-| <a id="id-mot-drv-blocked-slots"></a>`id-mot-drv-blocked-slots` | Unused slots stay blocked | Driver |  | #17 |  |  | [A. Architecture Vision](A-architecture-vision.md#id-mot-drv-blocked-slots), [B. Business Architecture](B-business-architecture.md#id-mot-drv-blocked-slots), [Requirements Management](requirements-management.md#id-mot-drv-blocked-slots) |
-| <a id="id-mot-goal-free-slots"></a>`id-mot-goal-free-slots` | Customers can free slots they no longer need | Goal |  |  |  | Release v0.2.0 | [A. Architecture Vision](A-architecture-vision.md#id-mot-goal-free-slots), [B. Business Architecture](B-business-architecture.md#id-mot-goal-free-slots), [Requirements Management](requirements-management.md#id-mot-goal-free-slots) |
-| <a id="id-mot-out-rebook"></a>`id-mot-out-rebook` | Cancelled slot rebookable at once | Outcome | [ADR 0007](../adr/0007-cancel-reservation-by-delete.md) | #17 |  | Release v0.2.0 | [A. Architecture Vision](A-architecture-vision.md#id-mot-out-rebook), [B. Business Architecture](B-business-architecture.md#id-mot-out-rebook), [Requirements Management](requirements-management.md#id-mot-out-rebook) |
-| <a id="id-mot-req-cancel"></a>`id-mot-req-cancel` | Cancel a reservation by its id | Requirement | [ADR 0007](../adr/0007-cancel-reservation-by-delete.md) | #18 |  | Release v0.2.0 | [A. Architecture Vision](A-architecture-vision.md#id-mot-req-cancel), [B. Business Architecture](B-business-architecture.md#id-mot-req-cancel), [Requirements Management](requirements-management.md#id-mot-req-cancel) |
-| <a id="id-mot-req-cancel-refused"></a>`id-mot-req-cancel-refused` | Refuse cancelling an unknown reservation | Requirement | [ADR 0007](../adr/0007-cancel-reservation-by-delete.md) | #19 |  | Release v0.2.0 | [A. Architecture Vision](A-architecture-vision.md#id-mot-req-cancel-refused), [B. Business Architecture](B-business-architecture.md#id-mot-req-cancel-refused), [Requirements Management](requirements-management.md#id-mot-req-cancel-refused) |
-| <a id="id-mot-sh-customer"></a>`id-mot-sh-customer` | Customer | Stakeholder |  |  |  |  | [A. Architecture Vision](A-architecture-vision.md#id-mot-sh-customer), [B. Business Architecture](B-business-architecture.md#id-mot-sh-customer), [Requirements Management](requirements-management.md#id-mot-sh-customer) |
-| <a id="id-mot-sh-front-desk"></a>`id-mot-sh-front-desk` | Front-desk manager | Stakeholder |  |  |  |  | [A. Architecture Vision](A-architecture-vision.md#id-mot-sh-front-desk), [B. Business Architecture](B-business-architecture.md#id-mot-sh-front-desk), [Requirements Management](requirements-management.md#id-mot-sh-front-desk) |
