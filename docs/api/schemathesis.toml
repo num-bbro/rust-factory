@@ -1,3 +1,18 @@
+# The stateful phase ends early: after about 18 scenarios inside `just acceptance` (about 61 on a
+# fresh container), not at Hypothesis' default budget of 100.
+#
+# Cause: Schemathesis infers a link from GET /reservations (reservations[].id) to
+# DELETE /reservations/{id}. The service keeps its reservations between scenarios, so replayed
+# choices draw different data, Hypothesis raises FlakyStrategyDefinition, and Schemathesis 4.33.4
+# ends the phase without a failure and without a warning.
+#
+# Accepted (#96, ADR 0010): the run stays deterministic, each operation is still tested on its
+# own, and the short run still books, cancels and lists more than explicit links would. Setting
+# generation.max-examples does not change it.
+#
+# Re-open the question when the pinned Schemathesis version changes or the service gains a way to
+# start empty.
+
 [[operations]]
 include-method = "POST"
 include-path = "/reservations"

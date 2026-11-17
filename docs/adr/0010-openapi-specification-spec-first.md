@@ -122,6 +122,15 @@ already required.
   runs on the release image too, with the tool installed by the same setup step.
 - Bad: a fixed seed explores the same cases on every run; new cases are tried only when the spec,
   the tool version or the seed changes.
+- Bad: the stateful phase ends early, after about 18 scenarios inside `just acceptance` (about 61 on
+  a fresh container) instead of Hypothesis' default of 100. Schemathesis infers a link from `GET
+  /reservations` to `DELETE /reservations/{id}`; the service keeps its reservations between
+  scenarios, so replayed choices draw different data, Hypothesis raises `FlakyStrategyDefinition`,
+  and Schemathesis 4.33.4 ends the phase without a failure and without a warning. Accepted on
+  2026-11-17 (#96): the run stays deterministic, each operation is still tested on its own, and the
+  short run still books, cancels and lists more than explicit links would. Setting
+  `generation.max-examples` does not change it; re-open the question when the pinned Schemathesis
+  version changes or the service gains a way to start empty.
 - Follow-up: task #62 writes the spec, the Schemathesis configuration, `just api-check` and its call
   in `just acceptance`, the pins of `uv` and Schemathesis in `mise.toml`, the extra cached path in
   the setup action, the rule in `CLAUDE.md` and the link in `docs/index.md`.
