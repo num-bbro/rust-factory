@@ -16,8 +16,8 @@ release images in GHCR ([`id-tech-svc-ghcr`](#id-tech-svc-ghcr)); Podman on pilo
 hosts.
 
 The sample reservation service
-([`id-app-comp-reservation-svc`](A-architecture-vision.md#id-app-comp-reservation-svc)) runs as a
-container under Podman ([`id-tech-sw-podman`](#id-tech-sw-podman)) on the pilot host
+([`id-app-comp-reservation-svc`](C-information-systems-architecture.md#id-app-comp-reservation-svc))
+runs as a container under Podman ([`id-tech-sw-podman`](#id-tech-sw-podman)) on the pilot host
 ([`id-tech-node-pilot`](#id-tech-node-pilot)) and production hosts. Epics #17 and #79 need no
 technology change.
 

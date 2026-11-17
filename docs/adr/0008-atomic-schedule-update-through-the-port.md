@@ -64,10 +64,10 @@ where
   `Result<Result<…>>` and no new error enum.
 - **Commit only on success**: if the change returns `Err`, nothing is stored, *even if the change
   modified the schedule before failing*. The in-memory adapter
-  ([`id-app-comp-db`](../togaf/A-architecture-vision.md#id-app-comp-db)) holds its mutex for the
-  whole operation, applies the change to a copy and swaps the copy in only on `Ok`. The copy costs
-  one clone per change (the old `load` cloned too) and also leaves the stored schedule intact if a
-  change panics.
+  ([`id-app-comp-db`](../togaf/C-information-systems-architecture.md#id-app-comp-db)) holds its
+  mutex for the whole operation, applies the change to a copy and swaps the copy in only on `Ok`.
+  The copy costs one clone per change (the old `load` cloned too) and also leaves the stored
+  schedule intact if a change panics.
 - **A poisoned mutex is a `RepositoryError`** (answered `503` by the HTTP adapter), never a panic.
 
 ## Consequences

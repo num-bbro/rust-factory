@@ -17,15 +17,15 @@ drawn.
 | ADM phase | Document | Views | Suggested viewpoints | Factory artifacts |
 |---|---|---|---|---|
 | Preliminary | [00-preliminary.md](00-preliminary.md) | [Why the factory exists](00-preliminary.md#id-view-motivation) | — | `CLAUDE.md`, `CONTRIBUTING.md` |
-| A. Architecture Vision | [A-architecture-vision.md](A-architecture-vision.md) | [Why the factory exists](A-architecture-vision.md#id-view-motivation), [Reservations: book, cancel and list](A-architecture-vision.md#id-view-reservation-cancel) | Motivation | Epic issues |
-| B. Business Architecture | [B-business-architecture.md](B-business-architecture.md) | [Delivery lifecycle](B-business-architecture.md#id-view-lifecycle), [Reservations: book, cancel and list](B-business-architecture.md#id-view-reservation-cancel) | Business Process Cooperation, Organization | User stories |
-| C. Information Systems | [C-information-systems-architecture.md](C-information-systems-architecture.md) | [Factory overview](C-information-systems-architecture.md#id-view-layered), [Reservations: book, cancel and list](C-information-systems-architecture.md#id-view-reservation-cancel) | Application Cooperation, Information Structure | Crates, data model |
+| A. Architecture Vision | [A-architecture-vision.md](A-architecture-vision.md) | [Why the factory exists](A-architecture-vision.md#id-view-motivation), [Reservations 1/2: why and what (motivation, business)](A-architecture-vision.md#id-view-reservation-cancel) | Motivation | Epic issues |
+| B. Business Architecture | [B-business-architecture.md](B-business-architecture.md) | [Delivery lifecycle](B-business-architecture.md#id-view-lifecycle), [Reservations 1/2: why and what (motivation, business)](B-business-architecture.md#id-view-reservation-cancel) | Business Process Cooperation, Organization | User stories |
+| C. Information Systems | [C-information-systems-architecture.md](C-information-systems-architecture.md) | [Factory overview](C-information-systems-architecture.md#id-view-layered), [Reservations 2/2: how (application)](C-information-systems-architecture.md#id-view-reservation-app) | Application Cooperation, Information Structure | Crates, data model |
 | D. Technology Architecture | [D-technology-architecture.md](D-technology-architecture.md) | [Factory overview](D-technology-architecture.md#id-view-layered) | Technology, Implementation and Deployment | `deploy/`, CI |
 | E. Opportunities & Solutions | [E-opportunities-and-solutions.md](E-opportunities-and-solutions.md) | — | Project | Milestones, task split |
 | F. Migration Planning | [F-migration-planning.md](F-migration-planning.md) | [Releases](F-migration-planning.md#id-view-releases) | Migration | Releases, pilot plan |
 | G. Implementation Governance | [G-implementation-governance.md](G-implementation-governance.md) | [Delivery lifecycle](G-implementation-governance.md#id-view-lifecycle) | — | PR gates, reviews |
 | H. Architecture Change Mgmt | [H-architecture-change-management.md](H-architecture-change-management.md) | — | — | Change-request issues |
-| Requirements Management (centre) | [requirements-management.md](requirements-management.md) | [Reservations: book, cancel and list](requirements-management.md#id-view-reservation-cancel) | Requirements Realization | Requirement issues, board |
+| Requirements Management (centre) | [requirements-management.md](requirements-management.md) | [Reservations 1/2: why and what (motivation, business)](requirements-management.md#id-view-reservation-cancel) | Requirements Realization | Requirement issues, board |
 
 **How the phases run in practice:** A–D are done for each epic, iterated lightly as stories are
 refined. E–F happen when the conductor splits work and plans releases. G is every PR. H is every
